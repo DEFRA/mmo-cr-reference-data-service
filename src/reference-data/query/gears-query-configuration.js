@@ -31,8 +31,12 @@ function enrichGear(gear, categoriesById, characteristicsById) {
 }
 
 function parseBoolean(raw) {
-  if (raw === 'true') return true
-  if (raw === 'false') return false
+  if (raw === 'true') {
+    return true
+  }
+  if (raw === 'false') {
+    return false
+  }
   const error = new Error('pairFishing must be "true" or "false"')
   error.code = 'invalid_request'
   throw error

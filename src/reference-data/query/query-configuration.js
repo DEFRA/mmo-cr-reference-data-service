@@ -17,6 +17,103 @@ function assertNoDuplicateNames(entries, label) {
   }
 }
 
+function assertBasicFields(dataset, format, getGuid) {
+  if (typeof dataset !== 'string' || dataset.length === 0) {
+    throw new Error('Query configuration requires a non-empty "dataset"')
+  }
+  if (format !== 'json' && format !== 'geojson') {
+    throw new Error(`Query configuration "format" must be "json" or "geojson"`)
+  }
+  assertFunction(getGuid, 'getGuid')
+}
+
+function assertExactFilters(exactFilters) {
+  assertNoDuplicateNames(
+    exactFilters.map((filter) => filter.param),
+    'exact filter param'
+  )
+  for (const filter of exactFilters) {
+    assertFunction(filter.getValue, `exactFilters.${filter.param}.getValue`)
+  }
+}
+
+function assertCustomFilters(customFilters, exactFilterParams) {
+  assertNoDuplicateNames(Object.keys(customFilters), 'custom filter param')
+  for (const [param, filter] of Object.entries(customFilters)) {
+    assertFunction(filter.parse, `customFilters.${param}.parse`)
+    assertFunction(filter.predicate, `customFilters.${param}.predicate`)
+  }
+
+  const overlap = Object.keys(customFilters).filter((param) =>
+    exactFilterParams.has(param)
+  )
+  if (overlap.length > 0) {
+    throw new Error(
+      `Custom filter param(s) conflict with exact filter param(s): ${overlap.join(', ')}`
+    )
+  }
+}
+
+function assertCompositeFilterParams(
+  filter,
+  singleParamNames,
+  compositeParamNames
+) {
+  for (const param of filter.params) {
+    if (singleParamNames.has(param) || compositeParamNames.has(param)) {
+      throw new Error(
+        `compositeFilters param "${param}" conflicts with an existing filter param`
+      )
+    }
+    compositeParamNames.add(param)
+  }
+}
+
+function assertCompositeFilters(compositeFilters, singleParamNames) {
+  assertNoDuplicateNames(
+    compositeFilters.map((filter) => filter.name),
+    'composite filter name'
+  )
+  const compositeParamNames = new Set()
+  for (const filter of compositeFilters) {
+    if (!Array.isArray(filter.params) || filter.params.length === 0) {
+      throw new Error(
+        `compositeFilters.${filter.name}.params must be a non-empty array`
+      )
+    }
+    assertFunction(filter.parse, `compositeFilters.${filter.name}.parse`)
+    assertFunction(
+      filter.predicate,
+      `compositeFilters.${filter.name}.predicate`
+    )
+    assertCompositeFilterParams(filter, singleParamNames, compositeParamNames)
+  }
+}
+
+function assertOptionalFunctions({
+  sortFields,
+  activeField,
+  mobileProjector,
+  prepareRecords,
+  buildContext
+}) {
+  for (const accessor of Object.values(sortFields)) {
+    assertFunction(accessor, 'sortFields entry')
+  }
+  if (activeField !== null) {
+    assertFunction(activeField, 'activeField')
+  }
+  if (mobileProjector !== null) {
+    assertFunction(mobileProjector, 'mobileProjector')
+  }
+  if (prepareRecords !== null) {
+    assertFunction(prepareRecords, 'prepareRecords')
+  }
+  if (buildContext !== null) {
+    assertFunction(buildContext, 'buildContext')
+  }
+}
+
 /**
  * @param {Object} input
  * @param {string} input.dataset one of the DATASETS identifiers
@@ -55,83 +152,25 @@ export function createQueryConfiguration({
   prepareRecords = null,
   buildContext = null
 } = {}) {
-  if (typeof dataset !== 'string' || dataset.length === 0) {
-    throw new Error('Query configuration requires a non-empty "dataset"')
-  }
-  if (format !== 'json' && format !== 'geojson') {
-    throw new Error(`Query configuration "format" must be "json" or "geojson"`)
-  }
-  assertFunction(getGuid, 'getGuid')
-
-  assertNoDuplicateNames(
-    exactFilters.map((filter) => filter.param),
-    'exact filter param'
-  )
-  for (const filter of exactFilters) {
-    assertFunction(filter.getValue, `exactFilters.${filter.param}.getValue`)
-  }
-
-  assertNoDuplicateNames(Object.keys(customFilters), 'custom filter param')
-  for (const [param, filter] of Object.entries(customFilters)) {
-    assertFunction(filter.parse, `customFilters.${param}.parse`)
-    assertFunction(filter.predicate, `customFilters.${param}.predicate`)
-  }
+  assertBasicFields(dataset, format, getGuid)
+  assertExactFilters(exactFilters)
 
   const exactFilterParams = new Set(exactFilters.map((filter) => filter.param))
-  const overlap = Object.keys(customFilters).filter((param) =>
-    exactFilterParams.has(param)
-  )
-  if (overlap.length > 0) {
-    throw new Error(
-      `Custom filter param(s) conflict with exact filter param(s): ${overlap.join(', ')}`
-    )
-  }
+  assertCustomFilters(customFilters, exactFilterParams)
 
-  assertNoDuplicateNames(
-    compositeFilters.map((filter) => filter.name),
-    'composite filter name'
-  )
   const singleParamNames = new Set([
     ...exactFilterParams,
     ...Object.keys(customFilters)
   ])
-  const compositeParamNames = new Set()
-  for (const filter of compositeFilters) {
-    if (!Array.isArray(filter.params) || filter.params.length === 0) {
-      throw new Error(
-        `compositeFilters.${filter.name}.params must be a non-empty array`
-      )
-    }
-    assertFunction(filter.parse, `compositeFilters.${filter.name}.parse`)
-    assertFunction(
-      filter.predicate,
-      `compositeFilters.${filter.name}.predicate`
-    )
-    for (const param of filter.params) {
-      if (singleParamNames.has(param) || compositeParamNames.has(param)) {
-        throw new Error(
-          `compositeFilters param "${param}" conflicts with an existing filter param`
-        )
-      }
-      compositeParamNames.add(param)
-    }
-  }
+  assertCompositeFilters(compositeFilters, singleParamNames)
 
-  for (const accessor of Object.values(sortFields)) {
-    assertFunction(accessor, 'sortFields entry')
-  }
-  if (activeField !== null) {
-    assertFunction(activeField, 'activeField')
-  }
-  if (mobileProjector !== null) {
-    assertFunction(mobileProjector, 'mobileProjector')
-  }
-  if (prepareRecords !== null) {
-    assertFunction(prepareRecords, 'prepareRecords')
-  }
-  if (buildContext !== null) {
-    assertFunction(buildContext, 'buildContext')
-  }
+  assertOptionalFunctions({
+    sortFields,
+    activeField,
+    mobileProjector,
+    prepareRecords,
+    buildContext
+  })
 
   return Object.freeze({
     dataset,

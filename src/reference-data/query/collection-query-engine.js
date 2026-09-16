@@ -96,11 +96,7 @@ function compareValues(a, b) {
 }
 
 function buildSortSteps(config, requestedSort) {
-  const steps = requestedSort
-    ? [requestedSort]
-    : config.defaultSort.length > 0
-      ? config.defaultSort
-      : []
+  const steps = requestedSort ? [requestedSort] : config.defaultSort
   // A GUID tie-break is always appended so ordering is fully deterministic.
   return [...steps, { field: '__guid__', direction: 'asc' }]
 }

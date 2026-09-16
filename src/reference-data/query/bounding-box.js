@@ -9,6 +9,10 @@ const MAX_LATITUDE = 90
 const MIN_LONGITUDE = -180
 const MAX_LONGITUDE = 180
 const BBOX_VALUE_COUNT = 4
+const MIN_LONGITUDE_INDEX = 0
+const MIN_LATITUDE_INDEX = 1
+const MAX_LONGITUDE_INDEX = 2
+const MAX_LATITUDE_INDEX = 3
 const DECIMAL_PATTERN = /^-?\d+(\.\d+)?$/
 
 function raiseInvalid(message) {
@@ -29,6 +33,49 @@ function parseStrictDecimal(rawValue, label) {
   return value
 }
 
+function assertLongitudeRange(label, value) {
+  if (value < MIN_LONGITUDE || value > MAX_LONGITUDE) {
+    raiseInvalid(
+      `bbox ${label} must be between ${MIN_LONGITUDE} and ${MAX_LONGITUDE}`
+    )
+  }
+}
+
+function assertLatitudeRange(label, value) {
+  if (value < MIN_LATITUDE || value > MAX_LATITUDE) {
+    raiseInvalid(
+      `bbox ${label} must be between ${MIN_LATITUDE} and ${MAX_LATITUDE}`
+    )
+  }
+}
+
+function assertBoundingBoxRanges(
+  minLongitude,
+  minLatitude,
+  maxLongitude,
+  maxLatitude
+) {
+  assertLongitudeRange('minLongitude', minLongitude)
+  assertLongitudeRange('maxLongitude', maxLongitude)
+  assertLatitudeRange('minLatitude', minLatitude)
+  assertLatitudeRange('maxLatitude', maxLatitude)
+}
+
+function assertBoundingBoxOrdering(
+  minLongitude,
+  minLatitude,
+  maxLongitude,
+  maxLatitude
+) {
+  if (minLatitude > maxLatitude) {
+    raiseInvalid('bbox minLatitude must not exceed maxLatitude')
+  }
+  // Antimeridian-crossing boxes are explicitly rejected for now (owner decision).
+  if (minLongitude > maxLongitude) {
+    raiseInvalid('bbox must not cross the antimeridian')
+  }
+}
+
 /**
  * @param {string} rawBbox `minLongitude,minLatitude,maxLongitude,maxLatitude`
  * @returns {{minLongitude:number, minLatitude:number, maxLongitude:number, maxLatitude:number}}
@@ -46,39 +93,19 @@ export function parseBoundingBox(rawBbox) {
   }
 
   const [minLongitude, minLatitude, maxLongitude, maxLatitude] = [
-    parseStrictDecimal(parts[0], 'bbox minLongitude'),
-    parseStrictDecimal(parts[1], 'bbox minLatitude'),
-    parseStrictDecimal(parts[2], 'bbox maxLongitude'),
-    parseStrictDecimal(parts[3], 'bbox maxLatitude')
+    parseStrictDecimal(parts[MIN_LONGITUDE_INDEX], 'bbox minLongitude'),
+    parseStrictDecimal(parts[MIN_LATITUDE_INDEX], 'bbox minLatitude'),
+    parseStrictDecimal(parts[MAX_LONGITUDE_INDEX], 'bbox maxLongitude'),
+    parseStrictDecimal(parts[MAX_LATITUDE_INDEX], 'bbox maxLatitude')
   ]
 
-  for (const [label, value] of [
-    ['minLongitude', minLongitude],
-    ['maxLongitude', maxLongitude]
-  ]) {
-    if (value < MIN_LONGITUDE || value > MAX_LONGITUDE) {
-      raiseInvalid(
-        `bbox ${label} must be between ${MIN_LONGITUDE} and ${MAX_LONGITUDE}`
-      )
-    }
-  }
-  for (const [label, value] of [
-    ['minLatitude', minLatitude],
-    ['maxLatitude', maxLatitude]
-  ]) {
-    if (value < MIN_LATITUDE || value > MAX_LATITUDE) {
-      raiseInvalid(
-        `bbox ${label} must be between ${MIN_LATITUDE} and ${MAX_LATITUDE}`
-      )
-    }
-  }
-  if (minLatitude > maxLatitude) {
-    raiseInvalid('bbox minLatitude must not exceed maxLatitude')
-  }
-  // Antimeridian-crossing boxes are explicitly rejected for now (owner decision).
-  if (minLongitude > maxLongitude) {
-    raiseInvalid('bbox must not cross the antimeridian')
-  }
+  assertBoundingBoxRanges(minLongitude, minLatitude, maxLongitude, maxLatitude)
+  assertBoundingBoxOrdering(
+    minLongitude,
+    minLatitude,
+    maxLongitude,
+    maxLatitude
+  )
 
   return { minLongitude, minLatitude, maxLongitude, maxLatitude }
 }

@@ -9,6 +9,7 @@ const MIN_LONGITUDE = -180
 const MAX_LONGITUDE = 180
 const MAX_RADIUS_KM = 1000
 const EARTH_RADIUS_KM = 6371
+const DEGREES_PER_HALF_TURN = 180
 const DECIMAL_PATTERN = /^-?\d+(\.\d+)?$/
 
 function raiseInvalid(message) {
@@ -59,7 +60,7 @@ export function parseRadiusKm(rawValue) {
 }
 
 function toRadians(degrees) {
-  return (degrees * Math.PI) / 180
+  return (degrees * Math.PI) / DEGREES_PER_HALF_TURN
 }
 
 /**

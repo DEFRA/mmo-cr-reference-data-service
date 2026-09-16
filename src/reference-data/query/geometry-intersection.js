@@ -250,7 +250,9 @@ export function multiPolygonIntersectsBoundingBox(coordinates, bbox) {
  */
 export function featureGeometryIntersectsBoundingBox(geometry, bbox) {
   if (!geometry || typeof geometry !== 'object') {
-    raiseMalformedGeometry('Malformed geometry encountered during a map query.')
+    return raiseMalformedGeometry(
+      'Malformed geometry encountered during a map query.'
+    )
   }
   if (geometry.type === 'Polygon') {
     return polygonIntersectsBoundingBox(geometry.coordinates, bbox)
@@ -258,7 +260,7 @@ export function featureGeometryIntersectsBoundingBox(geometry, bbox) {
   if (geometry.type === 'MultiPolygon') {
     return multiPolygonIntersectsBoundingBox(geometry.coordinates, bbox)
   }
-  raiseMalformedGeometry(
+  return raiseMalformedGeometry(
     `Unsupported geometry type encountered during a map query: ${geometry.type}`
   )
 }

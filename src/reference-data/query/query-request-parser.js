@@ -130,7 +130,7 @@ function parseIncludeInactive(rawValue) {
   if (rawValue === 'false') {
     return false
   }
-  raiseInvalid('includeInactive must be "true" or "false"')
+  return raiseInvalid('includeInactive must be "true" or "false"')
 }
 
 function parseSort(rawSort, config) {

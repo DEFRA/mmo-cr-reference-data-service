@@ -75,7 +75,11 @@ export function projectMeasurement(characteristic) {
 
 export function projectGearToMobile(
   gear,
-  { categoriesById, characteristicsById, vesselLengthBand } = {}
+  {
+    categoriesById,
+    characteristicsById: _characteristicsById,
+    vesselLengthBand
+  } = {}
 ) {
   const applicable = selectApplicableCharacteristics(gear, vesselLengthBand)
   const { requiredMeasurementIds, variableMeasurementIds } =

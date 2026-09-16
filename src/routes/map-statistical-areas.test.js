@@ -5,18 +5,14 @@ import { createInMemoryDataStore } from '#/reference-data/in-memory-store/in-mem
 import { createCollectionQueryService } from '#/reference-data/query/collection-query-service.js'
 import { mapStatisticalAreasQueryConfiguration } from '#/reference-data/query/map-statistical-areas-query-configuration.js'
 import { createGeoJsonCollectionRouteController } from '#/reference-data/controller/geojson-collection-route-controller.js'
+import {
+  SQUARE_RING,
+  createStubAuthenticationClient
+} from '#/routes/geojson-route-test-helpers.js'
 
 const COLLECTION_PATH = '/__test/map/statistical-areas'
 const ITEM_PATH = '/__test/map/statistical-areas/{id}'
 const FEATURE_ID = '11111111-1111-4111-8111-111111111111'
-
-const SQUARE_RING = [
-  [0, 0],
-  [0, 10],
-  [10, 10],
-  [10, 0],
-  [0, 0]
-]
 
 function buildFeature(overrides = {}) {
   return {
@@ -32,21 +28,6 @@ function buildFeature(overrides = {}) {
     },
     geometry: { type: 'Polygon', coordinates: [SQUARE_RING] },
     ...overrides
-  }
-}
-
-function createStubAuthenticationClient() {
-  return {
-    authenticate: async ({ token }) =>
-      token === 'read-token'
-        ? {
-            authenticated: true,
-            actor: { actorId: 'a1', permissions: ['reference-data.read'] }
-          }
-        : {
-            authenticated: false,
-            failure: { code: 'unauthorized', message: 'x' }
-          }
   }
 }
 
