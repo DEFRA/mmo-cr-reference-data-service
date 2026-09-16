@@ -4,13 +4,17 @@ import convictFormatWithValidator from 'convict-format-with-validator'
 import { convictValidateOptionalUrl } from '#/common/helpers/convict/validate-optional-url.js'
 import { convictValidateNonEmptyString } from '#/common/helpers/convict/validate-non-empty-string.js'
 import { convictValidatePositiveInteger } from '#/common/helpers/convict/validate-positive-integer.js'
+import { convictValidateNonNegativeInteger } from '#/common/helpers/convict/validate-non-negative-integer.js'
 import { convictValidateStrictBoolean } from '#/common/helpers/convict/validate-strict-boolean.js'
+import { convictValidateDatasetList } from '#/common/helpers/convict/validate-dataset-list.js'
 
 convict.addFormats(convictFormatWithValidator)
 convict.addFormat(convictValidateOptionalUrl)
 convict.addFormat(convictValidateNonEmptyString)
 convict.addFormat(convictValidatePositiveInteger)
+convict.addFormat(convictValidateNonNegativeInteger)
 convict.addFormat(convictValidateStrictBoolean)
+convict.addFormat(convictValidateDatasetList)
 
 const isProduction = process.env.NODE_ENV === 'production'
 const isTest = process.env.NODE_ENV === 'test'
@@ -127,24 +131,85 @@ export const config = convict({
     },
     refreshIntervalMs: {
       doc: 'Interval in milliseconds between reference-data cache-refresh checks',
-      format: 'positive-integer',
+      format: convictValidatePositiveInteger.name,
       default: 60000,
       env: 'REFERENCE_DATA_REFRESH_INTERVAL_MS'
     },
     maxUploadBytes: {
       doc: 'Maximum accepted size in bytes for a reference-data collection upload',
-      format: 'positive-integer',
+      format: convictValidatePositiveInteger.name,
       default: 26214400,
       env: 'REFERENCE_DATA_MAX_UPLOAD_BYTES'
+    },
+    refreshEnabled: {
+      doc: 'Whether periodic background cache-refresh scheduling is enabled',
+      format: 'strict-boolean',
+      default: true,
+      env: 'REFERENCE_DATA_REFRESH_ENABLED'
+    },
+    refreshInitialDelayMs: {
+      doc: 'Delay in milliseconds before the first scheduled cache refresh after startup hydration completes',
+      format: convictValidateNonNegativeInteger.name,
+      default: 0,
+      env: 'REFERENCE_DATA_REFRESH_INITIAL_DELAY_MS'
+    },
+    hydrationTimeoutMs: {
+      doc: 'Maximum time in milliseconds allowed for startup cache hydration before it is treated as failed',
+      format: convictValidatePositiveInteger.name,
+      default: 10000,
+      env: 'REFERENCE_DATA_HYDRATION_TIMEOUT_MS'
+    },
+    refreshConcurrency: {
+      doc: 'Maximum number of datasets processed concurrently during a cache refresh',
+      format: convictValidatePositiveInteger.name,
+      default: 3,
+      env: 'REFERENCE_DATA_REFRESH_CONCURRENCY'
+    },
+    mandatoryDatasets: {
+      doc: 'Datasets that must be successfully hydrated before the service reports readiness',
+      format: 'dataset-list',
+      default: [
+        'vessels',
+        'gears',
+        'ports',
+        'species',
+        'map-land',
+        'map-statistical-areas'
+      ],
+      env: 'REFERENCE_DATA_MANDATORY_DATASETS'
+    },
+    autoStartCacheRefresh: {
+      doc: 'Whether to automatically hydrate and start the cache-refresh scheduler when the server starts. Disabled by default in the test environment so normal test runs never require Floci/S3.',
+      format: Boolean,
+      default: !isTest,
+      env: 'REFERENCE_DATA_AUTO_START_CACHE_REFRESH'
     }
   },
   authentication: {
     serviceUrl: {
-      doc: 'Base URL of the Authentication Service. Only consumed by the Validation Module in a later step.',
+      doc: 'Base URL of the Authentication Service. Only consumed by the Validation Module.',
       format: 'optional-url',
       nullable: true,
       default: null,
       env: 'AUTHENTICATION_SERVICE_URL'
+    },
+    timeoutMs: {
+      doc: 'Timeout in milliseconds for Authentication Service token-validation requests',
+      format: convictValidatePositiveInteger.name,
+      default: 2000,
+      env: 'AUTHENTICATION_SERVICE_TIMEOUT_MS'
+    },
+    retryCount: {
+      doc: 'Number of bounded retries for approved transient Authentication Service failures',
+      format: convictValidateNonNegativeInteger.name,
+      default: 1,
+      env: 'AUTHENTICATION_SERVICE_RETRY_COUNT'
+    },
+    retryDelayMs: {
+      doc: 'Delay in milliseconds between bounded Authentication Service retries',
+      format: convictValidateNonNegativeInteger.name,
+      default: 100,
+      env: 'AUTHENTICATION_SERVICE_RETRY_DELAY_MS'
     }
   }
 })

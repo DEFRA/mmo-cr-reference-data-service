@@ -1,470 +1,84 @@
 {
   "schemaVersion": "1.0",
   "projectName": "Reference Data Service",
-  "workspaceCreatedAt": "2026-09-16T00:35:28.883Z",
-  "workspaceUpdatedAt": "2026-09-16T08:45:30.595Z",
+  "workspaceCreatedAt": "2026-09-16T12:55:56.027Z",
+  "workspaceUpdatedAt": "2026-09-16T13:33:31.262Z",
   "extensionVersion": "0.1.0",
   "activePromptProfileId": "prompt-profile-web-application",
   "activePromptProfileName": "Web Application Workspace",
   "selectedFolderDisplayName": "design",
   "statistics": {
-    "promptsCaptured": 29,
-    "promptsSaved": 29,
-    "responsesExtracted": 13,
-    "artifactsParsed": 13,
-    "artifactsValidated": 13,
-    "textArtifactsSaved": 13,
-    "binaryArtifactsDetected": 11,
+    "promptsCaptured": 5,
+    "promptsSaved": 5,
+    "responsesExtracted": 0,
+    "artifactsParsed": 0,
+    "artifactsValidated": 0,
+    "textArtifactsSaved": 0,
+    "binaryArtifactsDetected": 7,
     "binaryArtifactsSaved": 0,
-    "companionMetadataFilesSaved": 13,
+    "companionMetadataFilesSaved": 0,
     "artifactSaveFailures": 0,
-    "artifactSaveSkips": 11
+    "artifactSaveSkips": 7
   },
   "latestActivity": {
-    "lastPromptSavedAt": "2026-09-16T08:45:17.383Z",
-    "lastArtifactSavedAt": "2026-09-16T07:42:30.230Z",
+    "lastPromptSavedAt": "2026-09-16T13:33:25.565Z",
+    "lastArtifactSavedAt": null,
     "lastBinaryArtifactSavedAt": null,
-    "lastCompanionMetadataSavedAt": "2026-09-16T07:42:30.255Z"
+    "lastCompanionMetadataSavedAt": null
   },
   "prompts": [
     {
-      "promptId": "prompt-20260916013528-ns1vra",
-      "conversationId": "conv-20260916013340-xbgy",
+      "promptId": "prompt-20260916135555-03weri",
+      "conversationId": "conv-20260916134804-i7ry",
       "sequenceNumber": 1,
-      "summary": "generate prompt for Step 03: Define shared domain types and contracts​‌",
-      "savedPath": "_conversations/prompts/conv-20260916013340-xbgy-20260916-013528-prompt-001-generate-prompt-for-step-03-define-s.md",
-      "savedAt": "2026-09-16T00:35:28.878Z"
+      "summary": "yes , the mcp ios configured as studio, please show me step by step how to use ragq( test it) using copilot cli ​‌",
+      "savedPath": "_conversations/prompts/conv-20260916134804-i7ry-20260916-135555-prompt-001-yes-the-mcp-ios-configured-as-studio.md",
+      "savedAt": "2026-09-16T12:55:55.980Z"
     },
     {
-      "promptId": "prompt-20260916021031-fxapzk",
-      "conversationId": "conv-20260916013340-xbgy",
+      "promptId": "prompt-20260916142526-rqunyu",
+      "conversationId": "conv-20260916134804-i7ry",
       "sequenceNumber": 2,
-      "summary": "i got thismessage but github is hanging , been about 10 mins a no moving ​‌Now datasets.test.js and representations.test",
-      "savedPath": "_conversations/prompts/conv-20260916013340-xbgy-20260916-021031-prompt-002-i-got-thismessage-but-github-is-hang.md",
-      "savedAt": "2026-09-16T01:10:32.267Z"
+      "summary": "how do i stop the ragq​‌",
+      "savedPath": "_conversations/prompts/conv-20260916134804-i7ry-20260916-142526-prompt-002-how-do-i-stop-the-ragq.md",
+      "savedAt": "2026-09-16T13:25:26.685Z"
     },
     {
-      "promptId": "prompt-20260916021556-i7jl4i",
-      "conversationId": "conv-20260916013340-xbgy",
+      "promptId": "prompt-20260916143012-zfh67z",
+      "conversationId": "conv-20260916134804-i7ry",
       "sequenceNumber": 3,
-      "summary": "none pf the test fails ,, the format check got multiple warnings:​‌npm run format:check> mmo-cr-reference-data-service@0",
-      "savedPath": "_conversations/prompts/conv-20260916013340-xbgy-20260916-021556-prompt-003-none-pf-the-test-fails-the-format-ch.md",
-      "savedAt": "2026-09-16T01:15:56.810Z"
+      "summary": "every time i run ps aux | grep ragq-mcp , give diffirent PIP​‌",
+      "savedPath": "_conversations/prompts/conv-20260916134804-i7ry-20260916-143012-prompt-003-every-time-i-run-ps-aux-grep-ragq-mc.md",
+      "savedAt": "2026-09-16T13:30:13.390Z"
     },
     {
-      "promptId": "prompt-20260916021814-jmbm4f",
-      "conversationId": "conv-20260916013340-xbgy",
+      "promptId": "prompt-20260916143143-v4eim0",
+      "conversationId": "conv-20260916134804-i7ry",
       "sequenceNumber": 4,
-      "summary": "fail one tet whe i running npm test:​‌⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯ FAIL src/con",
-      "savedPath": "_conversations/prompts/conv-20260916013340-xbgy-20260916-021814-prompt-004-fail-one-tet-whe-i-running-npm-test.md",
-      "savedAt": "2026-09-16T01:18:14.572Z"
+      "summary": "explain​‌ ~/Git/ragq main pgrep -af ragq-mcp➤ ~/Git/ragq main➤ ~/Git/ragq main ps aux | grep ragq-mcpjuanorte 29300 0.0 ",
+      "savedPath": "_conversations/prompts/conv-20260916134804-i7ry-20260916-143143-prompt-004-explain-git-ragq-main-pgrep-af-ragq.md",
+      "savedAt": "2026-09-16T13:31:44.015Z"
     },
     {
-      "promptId": "prompt-20260916024656-l55iqj",
-      "conversationId": "conv-20260916013340-xbgy",
+      "promptId": "prompt-20260916143325-c4y4yb",
+      "conversationId": "conv-20260916134804-i7ry",
       "sequenceNumber": 5,
-      "summary": "thanks, finally fixed, now generate prompt for Step 04: Define canonical collection schemas​‌",
-      "savedPath": "_conversations/prompts/conv-20260916013340-xbgy-20260916-024656-prompt-005-thanks-finally-fixed-now-generate-pr.md",
-      "savedAt": "2026-09-16T01:46:56.997Z"
-    },
-    {
-      "promptId": "prompt-20260916031236-1qzw7d",
-      "conversationId": "conv-20260916013340-xbgy",
-      "sequenceNumber": 6,
-      "summary": "I notice that the implemetation plan may be divided in phases, please give which steps go ineach phase ​‌",
-      "savedPath": "_conversations/prompts/conv-20260916013340-xbgy-20260916-031236-prompt-006-i-notice-that-the-implemetation-plan.md",
-      "savedAt": "2026-09-16T02:12:36.943Z"
-    },
-    {
-      "promptId": "prompt-20260916032529-qqqqsj",
-      "conversationId": "conv-20260916013340-xbgy",
-      "sequenceNumber": 7,
-      "summary": "this is the plan that i'm following , do not change it a this point when i have alrady implemeted until step 04, in this",
-      "savedPath": "_conversations/prompts/conv-20260916013340-xbgy-20260916-032529-prompt-007-this-is-the-plan-that-im-following-d.md",
-      "savedAt": "2026-09-16T02:25:30.015Z"
-    },
-    {
-      "promptId": "prompt-20260916032809-vwutk0",
-      "conversationId": "conv-20260916013340-xbgy",
-      "sequenceNumber": 8,
-      "summary": "good, give the phases again as an artifact ( do not change it , the reason for ask you again is that i was no able to ca",
-      "savedPath": "_conversations/prompts/conv-20260916013340-xbgy-20260916-032809-prompt-008-good-give-the-phases-again-as-an-art.md",
-      "savedAt": "2026-09-16T02:28:10.046Z"
-    },
-    {
-      "promptId": "prompt-20260916033137-ea6oxp",
-      "conversationId": "conv-20260916013340-xbgy",
-      "sequenceNumber": 9,
-      "summary": "you use the wrong plan again . ​‌let try again .​‌this is the plan that i'm following , do not change it a this point wh",
-      "savedPath": "_conversations/prompts/conv-20260916013340-xbgy-20260916-033137-prompt-009-you-use-the-wrong-plan-again-let-try.md",
-      "savedAt": "2026-09-16T02:31:37.731Z"
-    },
-    {
-      "promptId": "prompt-20260916041523-9dqqqh",
-      "conversationId": "conv-20260916013340-xbgy",
-      "sequenceNumber": 10,
-      "summary": "i have errors reported by sonar cloud, so i asked github to ell me how to resolve it , here the conversation :​‌me: sona",
-      "savedPath": "_conversations/prompts/conv-20260916013340-xbgy-20260916-041523-prompt-010-i-have-errors-reported-by-sonar-clou.md",
-      "savedAt": "2026-09-16T03:15:23.367Z"
-    },
-    {
-      "promptId": "prompt-20260916044655-5812ij",
-      "conversationId": "conv-20260916013340-xbgy",
-      "sequenceNumber": 11,
-      "summary": "re issue the artifact ​‌---ARTIFACT-INSTRUCTION-START--- Artifact-Instruction: schema_version: \"1.0\" artifact_type: \"pla",
-      "savedPath": "_conversations/prompts/conv-20260916013340-xbgy-20260916-044655-prompt-011-re-issue-the-artifact-artifact-instr.md",
-      "savedAt": "2026-09-16T03:46:55.885Z"
-    },
-    {
-      "promptId": "prompt-20260916045636-eebt0r",
-      "conversationId": "conv-20260916013340-xbgy",
-      "sequenceNumber": 12,
-      "summary": "this is the plan that i'm following do not deviate form itgenerat the prompt for Step 05: Implement the In-Memory Data S",
-      "savedPath": "_conversations/prompts/conv-20260916013340-xbgy-20260916-045636-prompt-012-this-is-the-plan-that-im-following-d.md",
-      "savedAt": "2026-09-16T03:56:36.693Z"
-    },
-    {
-      "promptId": "prompt-20260916045859-ko7tp6",
-      "conversationId": "conv-20260916013340-xbgy",
-      "sequenceNumber": 13,
-      "summary": "Step 06: Configure Floci S3 resources for local development​‌",
-      "savedPath": "_conversations/prompts/conv-20260916013340-xbgy-20260916-045859-prompt-013-step-06-configure-floci-s3-resources.md",
-      "savedAt": "2026-09-16T03:58:59.933Z"
-    },
-    {
-      "promptId": "prompt-20260916050209-0cqhum",
-      "conversationId": "conv-20260916013340-xbgy",
-      "sequenceNumber": 14,
-      "summary": "generate the prompt for Step 07: Implement the Persistence Module​‌",
-      "savedPath": "_conversations/prompts/conv-20260916013340-xbgy-20260916-050209-prompt-014-generate-the-prompt-for-step-07-impl.md",
-      "savedAt": "2026-09-16T04:02:09.459Z"
-    },
-    {
-      "promptId": "prompt-20260916050702-gypj2i",
-      "conversationId": "conv-20260916013340-xbgy",
-      "sequenceNumber": 15,
-      "summary": "please output it again the prompt for Step 07: Implement the Persistence Module , as it is do not change it, i was no ab",
-      "savedPath": "_conversations/prompts/conv-20260916013340-xbgy-20260916-050702-prompt-015-please-output-it-again-the-prompt-fo.md",
-      "savedAt": "2026-09-16T04:07:03.078Z"
-    },
-    {
-      "promptId": "prompt-20260916051239-qdrpwo",
-      "conversationId": "conv-20260916013340-xbgy",
-      "sequenceNumber": 16,
-      "summary": "give now a prompt for github wher ei ask to iimplement Phase 2: In-memory storage and S3-compatible persistence and that",
-      "savedPath": "_conversations/prompts/conv-20260916013340-xbgy-20260916-051239-prompt-016-give-now-a-prompt-for-github-wher-ei.md",
-      "savedAt": "2026-09-16T04:12:39.872Z"
-    },
-    {
-      "promptId": "prompt-20260916054706-dldqkg",
-      "conversationId": "conv-20260916013340-xbgy",
-      "sequenceNumber": 17,
-      "summary": "github seems to hung up: already few mins in ​‌",
-      "savedPath": "_conversations/prompts/conv-20260916013340-xbgy-20260916-054706-prompt-017-github-seems-to-hung-up-already-few.md",
-      "savedAt": "2026-09-16T04:47:07.521Z"
-    },
-    {
-      "promptId": "prompt-20260916054910-vkmmqz",
-      "conversationId": "conv-20260916013340-xbgy",
-      "sequenceNumber": 18,
-      "summary": "before it hung up i replied this quesitons​‌",
-      "savedPath": "_conversations/prompts/conv-20260916013340-xbgy-20260916-054910-prompt-018-before-it-hung-up-i-replied-this-que.md",
-      "savedAt": "2026-09-16T04:49:10.887Z"
-    },
-    {
-      "promptId": "prompt-20260916054957-g5gv7a",
-      "conversationId": "conv-20260916013340-xbgy",
-      "sequenceNumber": 19,
-      "summary": "so instruction should i give to github​‌",
-      "savedPath": "_conversations/prompts/conv-20260916013340-xbgy-20260916-054957-prompt-019-so-instruction-should-i-give-to-gith.md",
-      "savedAt": "2026-09-16T04:49:58.791Z"
-    },
-    {
-      "promptId": "prompt-20260916055135-3rhoqu",
-      "conversationId": "conv-20260916013340-xbgy",
-      "sequenceNumber": 20,
-      "summary": "it hugn in the plan stage sdo no cnages have been made ,, how the intruction shoul it be, bear in mind that i the origin",
-      "savedPath": "_conversations/prompts/conv-20260916013340-xbgy-20260916-055135-prompt-020-it-hugn-in-the-plan-stage-sdo-no-cna.md",
-      "savedAt": "2026-09-16T04:51:36.003Z"
-    },
-    {
-      "promptId": "prompt-20260916061957-ci9flv",
-      "conversationId": "conv-20260916013340-xbgy",
-      "sequenceNumber": 21,
-      "summary": "generate prompt for Step 08: Implement common structural and business validation​‌",
-      "savedPath": "_conversations/prompts/conv-20260916013340-xbgy-20260916-061957-prompt-021-generate-prompt-for-step-08-implemen.md",
-      "savedAt": "2026-09-16T05:19:58.019Z"
-    },
-    {
-      "promptId": "prompt-20260916062222-3fl5yf",
-      "conversationId": "conv-20260916013340-xbgy",
-      "sequenceNumber": 22,
-      "summary": "generate prompt for Step 09: Implement dataset-specific validation​‌",
-      "savedPath": "_conversations/prompts/conv-20260916013340-xbgy-20260916-062222-prompt-022-generate-prompt-for-step-09-implemen.md",
-      "savedAt": "2026-09-16T05:22:22.426Z"
-    },
-    {
-      "promptId": "prompt-20260916065719-9kyjdg",
-      "conversationId": "conv-20260916013340-xbgy",
-      "sequenceNumber": 23,
-      "summary": "I see the bug: my error-mapping function checks for a generic 404 status before checking the specific error name, so NoS",
-      "savedPath": "_conversations/prompts/conv-20260916013340-xbgy-20260916-065719-prompt-023-i-see-the-bug-my-error-mapping-funct.md",
-      "savedAt": "2026-09-16T05:57:19.872Z"
-    },
-    {
-      "promptId": "prompt-20260916083452-95rwei",
-      "conversationId": "conv-20260916083321-tp10",
-      "sequenceNumber": 1,
-      "summary": "generate prompt for Step 09: Implement dataset-specific validation​‌do not change it , i was no abl eto capture it last ",
-      "savedPath": "_conversations/prompts/conv-20260916083321-tp10-20260916-083452-prompt-001-generate-prompt-for-step-09-implemen.md",
-      "savedAt": "2026-09-16T07:34:53.103Z"
-    },
-    {
-      "promptId": "prompt-20260916083643-k068i1",
-      "conversationId": "conv-20260916083321-tp10",
-      "sequenceNumber": 2,
-      "summary": "generate prompt for Step 10: Implement canonical data normalisation​‌",
-      "savedPath": "_conversations/prompts/conv-20260916083321-tp10-20260916-083643-prompt-002-generate-prompt-for-step-10-implemen.md",
-      "savedAt": "2026-09-16T07:36:43.625Z"
-    },
-    {
-      "promptId": "prompt-20260916084018-aoq86r",
-      "conversationId": "conv-20260916083321-tp10",
-      "sequenceNumber": 3,
-      "summary": "generate a prompt to run phase 3 , which includes steps 08, 09, 10. let github know that the plans need to be saved and ",
-      "savedPath": "_conversations/prompts/conv-20260916083321-tp10-20260916-084018-prompt-003-generate-a-prompt-to-run-phase-3-whi.md",
-      "savedAt": "2026-09-16T07:40:18.862Z"
-    },
-    {
-      "promptId": "prompt-20260916084222-3jqvcb",
-      "conversationId": "conv-20260916083321-tp10",
-      "sequenceNumber": 4,
-      "summary": "re do Step 10: Implement canonical data normalisation prompt, i was ot able to capture it​‌",
-      "savedPath": "_conversations/prompts/conv-20260916083321-tp10-20260916-084222-prompt-004-re-do-step-10-implement-canonical-da.md",
-      "savedAt": "2026-09-16T07:42:23.947Z"
-    },
-    {
-      "promptId": "prompt-20260916093813-xdxgqt",
-      "conversationId": "conv-20260916083321-tp10",
-      "sequenceNumber": 5,
-      "summary": "github hang up : ​‌With Step 08 done, I'm moving to Step 09: implementing dataset-specific validation, and I'll write it",
-      "savedPath": "_conversations/prompts/conv-20260916083321-tp10-20260916-093813-prompt-005-github-hang-up-with-step-08-done-im.md",
-      "savedAt": "2026-09-16T08:38:15.880Z"
-    },
-    {
-      "promptId": "prompt-20260916094516-6gq622",
-      "conversationId": "conv-20260916083321-tp10",
-      "sequenceNumber": 6,
-      "summary": "fron github :The 6 unresolved points — exact schema/code stateStatistical-area parentCode — map-statistical-areas.js: pa",
-      "savedPath": "_conversations/prompts/conv-20260916083321-tp10-20260916-094516-prompt-006-fron-github-the-6-unresolved-points.md",
-      "savedAt": "2026-09-16T08:45:17.383Z"
+      "summary": "if ragq-mcp is not running, how ​‌~/Git/ragq main copilot mcp listUser servers: ragq (local)➤ ~/Git/ragq main​‌",
+      "savedPath": "_conversations/prompts/conv-20260916134804-i7ry-20260916-143325-prompt-005-if-ragq-mcp-is-not-running-how-git-r.md",
+      "savedAt": "2026-09-16T13:33:25.565Z"
     }
   ],
-  "artifacts": [
-    {
-      "id": "artifact-instruction-response-record-20260916013622-8qflbr-1",
-      "sourceArtifactKind": "text-artifact",
-      "artifactInstructionId": "artifact-instruction-response-record-20260916013622-8qflbr-1",
-      "artifactName": "Step 03 Define Shared Domain Types and Contracts",
-      "artifactType": "github-prompt",
-      "format": "markdown",
-      "savedPath": "github-prompts/step-03-define-shared-domain-types-and-contracts.md",
-      "companionMetadataPath": "github-prompts/step-03-define-shared-domain-types-and-contracts.meta.md",
-      "sourceResponseId": "response-record-20260916013622-8qflbr",
-      "sourcePromptId": "prompt-20260916013528-ns1vra",
-      "conversationId": "conv-20260916013340-xbgy",
-      "savedAt": "2026-09-16T00:36:22.373Z"
-    },
-    {
-      "id": "artifact-instruction-response-record-20260916024814-zducfx-1",
-      "sourceArtifactKind": "text-artifact",
-      "artifactInstructionId": "artifact-instruction-response-record-20260916024814-zducfx-1",
-      "artifactName": "Step 04 Define Canonical Collection Schemas",
-      "artifactType": "github-prompt",
-      "format": "markdown",
-      "savedPath": "github-prompts/step-04-define-canonical-collection-schemas.md",
-      "companionMetadataPath": "github-prompts/step-04-define-canonical-collection-schemas.meta.md",
-      "sourceResponseId": "response-record-20260916024814-zducfx",
-      "sourcePromptId": "prompt-20260916024656-l55iqj",
-      "conversationId": "conv-20260916013340-xbgy",
-      "savedAt": "2026-09-16T01:48:14.430Z"
-    },
-    {
-      "id": "artifact-instruction-response-record-20260916032822-8gqe5m-1",
-      "sourceArtifactKind": "text-artifact",
-      "artifactInstructionId": "artifact-instruction-response-record-20260916032822-8gqe5m-1",
-      "artifactName": "Reference Data Service Implementation Phases",
-      "artifactType": "plan",
-      "format": "markdown",
-      "savedPath": "plans/reference-data-service-implementation-phases.md",
-      "companionMetadataPath": "plans/reference-data-service-implementation-phases.meta.md",
-      "sourceResponseId": "response-record-20260916032822-8gqe5m",
-      "sourcePromptId": "prompt-20260916032809-vwutk0",
-      "conversationId": "conv-20260916013340-xbgy",
-      "savedAt": "2026-09-16T02:28:22.273Z"
-    },
-    {
-      "id": "artifact-instruction-response-record-20260916041552-51uujh-1",
-      "sourceArtifactKind": "text-artifact",
-      "artifactInstructionId": "artifact-instruction-response-record-20260916041552-51uujh-1",
-      "artifactName": "Resolve SonarCloud Magic Numbers in Schema Fixtures",
-      "artifactType": "github-prompt",
-      "format": "markdown",
-      "savedPath": "github-prompts/resolve-sonarcloud-magic-numbers-in-schema-fixtures.md",
-      "companionMetadataPath": "github-prompts/resolve-sonarcloud-magic-numbers-in-schema-fixtures.meta.md",
-      "sourceResponseId": "response-record-20260916041552-51uujh",
-      "sourcePromptId": "prompt-20260916041523-9dqqqh",
-      "conversationId": "conv-20260916013340-xbgy",
-      "savedAt": "2026-09-16T03:15:52.729Z"
-    },
-    {
-      "id": "artifact-instruction-response-record-20260916044707-kgmb7l-1",
-      "sourceArtifactKind": "text-artifact",
-      "artifactInstructionId": "artifact-instruction-response-record-20260916044707-kgmb7l-1",
-      "artifactName": "Reference Data Service Implementation Phases",
-      "artifactType": "plan",
-      "format": "markdown",
-      "savedPath": "plans/reference-data-service-implementation-phases.md",
-      "companionMetadataPath": "plans/reference-data-service-implementation-phases.meta.md",
-      "sourceResponseId": "response-record-20260916044707-kgmb7l",
-      "sourcePromptId": "prompt-20260916044655-5812ij",
-      "conversationId": "conv-20260916013340-xbgy",
-      "savedAt": "2026-09-16T03:47:07.809Z"
-    },
-    {
-      "id": "artifact-instruction-response-record-20260916045736-xiphac-1",
-      "sourceArtifactKind": "text-artifact",
-      "artifactInstructionId": "artifact-instruction-response-record-20260916045736-xiphac-1",
-      "artifactName": "Step 05 Implement the In-Memory Data Store",
-      "artifactType": "github-prompt",
-      "format": "markdown",
-      "savedPath": "github-prompts/step-05-implement-in-memory-data-store.md",
-      "companionMetadataPath": "github-prompts/step-05-implement-in-memory-data-store.meta.md",
-      "sourceResponseId": "response-record-20260916045736-xiphac",
-      "sourcePromptId": "prompt-20260916045636-eebt0r",
-      "conversationId": "conv-20260916013340-xbgy",
-      "savedAt": "2026-09-16T03:57:36.703Z"
-    },
-    {
-      "id": "artifact-instruction-response-record-20260916050005-hrq4lf-1",
-      "sourceArtifactKind": "text-artifact",
-      "artifactInstructionId": "artifact-instruction-response-record-20260916050005-hrq4lf-1",
-      "artifactName": "Step 06: Configure Floci S3 Resources for Local Development",
-      "artifactType": "github-prompt",
-      "format": "markdown",
-      "savedPath": "github-prompts/step-06-configure-floci-s3-resources-for-local-development.md",
-      "companionMetadataPath": "github-prompts/step-06-configure-floci-s3-resources-for-local-development.meta.md",
-      "sourceResponseId": "response-record-20260916050005-hrq4lf",
-      "sourcePromptId": "prompt-20260916045859-ko7tp6",
-      "conversationId": "conv-20260916013340-xbgy",
-      "savedAt": "2026-09-16T04:00:05.557Z"
-    },
-    {
-      "id": "artifact-instruction-response-record-20260916050751-x7vowu-1",
-      "sourceArtifactKind": "text-artifact",
-      "artifactInstructionId": "artifact-instruction-response-record-20260916050751-x7vowu-1",
-      "artifactName": "Step 07 Implement the Persistence Module",
-      "artifactType": "github-prompt",
-      "format": "markdown",
-      "savedPath": "github-prompts/step-07-implement-persistence-module.md",
-      "companionMetadataPath": "github-prompts/step-07-implement-persistence-module.meta.md",
-      "sourceResponseId": "response-record-20260916050751-x7vowu",
-      "sourcePromptId": "prompt-20260916050702-gypj2i",
-      "conversationId": "conv-20260916013340-xbgy",
-      "savedAt": "2026-09-16T04:07:51.262Z"
-    },
-    {
-      "id": "artifact-instruction-response-record-20260916051320-i522zv-1",
-      "sourceArtifactKind": "text-artifact",
-      "artifactInstructionId": "artifact-instruction-response-record-20260916051320-i522zv-1",
-      "artifactName": "Implement Phase 2 In-Memory Storage and S3-Compatible Persistence",
-      "artifactType": "github-prompt",
-      "format": "markdown",
-      "savedPath": "github-prompts/phase-02-implement-in-memory-storage-and-s3-persistence.md",
-      "companionMetadataPath": "github-prompts/phase-02-implement-in-memory-storage-and-s3-persistence.meta.md",
-      "sourceResponseId": "response-record-20260916051320-i522zv",
-      "sourcePromptId": "prompt-20260916051239-qdrpwo",
-      "conversationId": "conv-20260916013340-xbgy",
-      "savedAt": "2026-09-16T04:13:20.206Z"
-    },
-    {
-      "id": "artifact-instruction-response-record-20260916062116-yfmz3x-1",
-      "sourceArtifactKind": "text-artifact",
-      "artifactInstructionId": "artifact-instruction-response-record-20260916062116-yfmz3x-1",
-      "artifactName": "Step 08: Implement Common Structural and Business Validation",
-      "artifactType": "github-prompt",
-      "format": "markdown",
-      "savedPath": "github-prompts/step-08-implement-common-structural-and-business-validation.md",
-      "companionMetadataPath": "github-prompts/step-08-implement-common-structural-and-business-validation.meta.md",
-      "sourceResponseId": "response-record-20260916062116-yfmz3x",
-      "sourcePromptId": "prompt-20260916061957-ci9flv",
-      "conversationId": "conv-20260916013340-xbgy",
-      "savedAt": "2026-09-16T05:21:16.179Z"
-    },
-    {
-      "id": "artifact-instruction-response-record-20260916083541-bnewxv-1",
-      "sourceArtifactKind": "text-artifact",
-      "artifactInstructionId": "artifact-instruction-response-record-20260916083541-bnewxv-1",
-      "artifactName": "Step 09 Implement Dataset-Specific Validation",
-      "artifactType": "github-prompt",
-      "format": "markdown",
-      "savedPath": "github-prompts/step-09-implement-dataset-specific-validation.md",
-      "companionMetadataPath": "github-prompts/step-09-implement-dataset-specific-validation.meta.md",
-      "sourceResponseId": "response-record-20260916083541-bnewxv",
-      "sourcePromptId": "prompt-20260916083452-95rwei",
-      "conversationId": "conv-20260916083321-tp10",
-      "savedAt": "2026-09-16T07:35:41.416Z"
-    },
-    {
-      "id": "artifact-instruction-response-record-20260916084113-y25wmi-1",
-      "sourceArtifactKind": "text-artifact",
-      "artifactInstructionId": "artifact-instruction-response-record-20260916084113-y25wmi-1",
-      "artifactName": "Run Phase 3: Steps 08, 09, and 10",
-      "artifactType": "github-prompt",
-      "format": "markdown",
-      "savedPath": "github-prompts/phase-03-run-steps-08-09-10.md",
-      "companionMetadataPath": "github-prompts/phase-03-run-steps-08-09-10.meta.md",
-      "sourceResponseId": "response-record-20260916084113-y25wmi",
-      "sourcePromptId": "prompt-20260916084018-aoq86r",
-      "conversationId": "conv-20260916083321-tp10",
-      "savedAt": "2026-09-16T07:41:13.407Z"
-    },
-    {
-      "id": "artifact-instruction-response-record-20260916084230-7yf5gm-1",
-      "sourceArtifactKind": "text-artifact",
-      "artifactInstructionId": "artifact-instruction-response-record-20260916084230-7yf5gm-1",
-      "artifactName": "Step 10: Implement Canonical Data Normalisation",
-      "artifactType": "github-prompt",
-      "format": "markdown",
-      "savedPath": "github-prompts/step-10-implement-canonical-data-normalisation.md",
-      "companionMetadataPath": "github-prompts/step-10-implement-canonical-data-normalisation.meta.md",
-      "sourceResponseId": "response-record-20260916084230-7yf5gm",
-      "sourcePromptId": "prompt-20260916084222-3jqvcb",
-      "conversationId": "conv-20260916083321-tp10",
-      "savedAt": "2026-09-16T07:42:30.230Z"
-    }
-  ],
+  "artifacts": [],
   "bundles": [],
   "conversations": [
     {
-      "conversationId": "conv-20260916013340-xbgy",
-      "startedAt": "2026-09-16T00:35:28.490Z",
-      "lastUpdatedAt": "2026-09-16T05:57:19.872Z",
-      "promptCount": 23,
-      "responseCount": 10,
-      "savedArtifactCount": 10,
-      "lastPromptId": "prompt-20260916065719-9kyjdg",
-      "lastResponseId": "response-record-20260916062116-yfmz3x"
-    },
-    {
-      "conversationId": "conv-20260916083321-tp10",
-      "startedAt": "2026-09-16T07:34:52.350Z",
-      "lastUpdatedAt": "2026-09-16T08:45:17.383Z",
-      "promptCount": 6,
-      "responseCount": 3,
-      "savedArtifactCount": 3,
-      "lastPromptId": "prompt-20260916094516-6gq622",
-      "lastResponseId": "response-record-20260916084230-7yf5gm"
+      "conversationId": "conv-20260916134804-i7ry",
+      "startedAt": "2026-09-16T12:55:55.409Z",
+      "lastUpdatedAt": "2026-09-16T13:33:25.565Z",
+      "promptCount": 5,
+      "responseCount": 0,
+      "savedArtifactCount": 0,
+      "lastPromptId": "prompt-20260916143325-c4y4yb"
     }
   ]
 }
