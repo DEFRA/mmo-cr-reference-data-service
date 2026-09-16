@@ -178,6 +178,34 @@ A reference-data `collection` is a complete, versioned JSON or GeoJSON file repr
 
 Four infrastructure-independent contracts define the seams later steps implement against, each substitutable with a test double via a `create*Contract(overrides)` factory: `referenceDataRepository` (Persistence Module), `inMemoryDataStore` (In-Memory Data Store), `authenticationClient` (Validation Module), and `referenceDataProjector` (canonical-to-mobile projection).
 
+## Canonical Schemas
+
+Versioned, machine-validatable structural schemas for every persisted collection live under [src/common/schemas](./src/common/schemas), built with [Joi](https://joi.dev) (already a repository dependency — no new schema library was introduced). They validate structure only; business validation (uniqueness, cross-record references, date ordering, etc.) belongs to later steps.
+
+### Schema version
+
+The only supported schema version is `1.0`, centrally defined in [schema-versions.js](./src/common/schemas/schema-versions.js). Unknown versions are rejected deterministically; there is no automatic migration. Future versions must be registered explicitly in the [schema registry](./src/common/schemas/schema-registry.js).
+
+### Schema registry
+
+`getCollectionSchema(dataset, schemaVersion)` and `getManifestSchema(schemaVersion)` resolve the correct schema for a dataset/version, reusing the Step 03 dataset constants. `map-ports` can never resolve as a persisted, uploadable schema because it is not in the persisted-dataset list.
+
+### Collection envelope and manifest
+
+Every persisted collection shares one metadata shape (`dataset`, `collectionId`, `schemaVersion`, `version`, `generatedAt`, optional `effectiveFrom`, `itemCount`) combined with dataset-specific content (`items`, or `categories`/`characteristics`/`items` for gears, or `type`/`features` for GeoJSON datasets) — see [v1/collection-envelope.js](./src/common/schemas/v1/collection-envelope.js). The active manifest ([v1/manifest.js](./src/common/schemas/v1/manifest.js)) tracks one entry per persisted dataset and never includes an independent `map-ports` entry.
+
+### JSON vs GeoJSON
+
+`vessels`, `gears`, `ports`, and `species` are JSON item collections. `map-land` and `map-statistical-areas` are GeoJSON `FeatureCollection`s with structurally validated `Polygon`/`MultiPolygon` geometry (coordinates must be JSON numbers, longitude-first). `map-ports` has only a reusable, non-persisted response shape ([v1/map-ports.js](./src/common/schemas/v1/map-ports.js)) since it is derived, not uploadable, and not part of the manifest.
+
+### Structural vs business validation
+
+This step validates required properties, types, GUID/date/timestamp formats, enumerated structural values, array/object shapes, and additional-property policy. It deliberately does **not** validate cross-record uniqueness, business-code ownership, relationship resolution, or date ordering — those belong to Steps 08 and 09.
+
+### Fixtures
+
+Small, synthetic, schema-valid example collections and 18 focused invalid fixtures (one per common structural failure) live under [src/common/schemas/fixtures](./src/common/schemas/fixtures), used only for tests — not production seed data.
+
 ## Development helpers
 
 ### Proxy

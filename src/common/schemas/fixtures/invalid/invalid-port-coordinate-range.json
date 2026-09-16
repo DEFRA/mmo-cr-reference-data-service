@@ -1,0 +1,18 @@
+{
+  "dataset": "ports",
+  "collectionId": "0be553de-f430-49f7-b120-1e8e5ad972dc",
+  "schemaVersion": "1.0",
+  "version": "2026.09.11.1",
+  "generatedAt": "2026-09-11T08:30:00Z",
+  "itemCount": 1,
+  "items": [
+    {
+      "id": "73168db4-1996-46f8-91cb-2288fe2e689c",
+      "code": "GBPLY",
+      "name": "Plymouth",
+      "countryCode": "GBR",
+      "coordinate": { "latitude": 91, "longitude": -4.1427 },
+      "active": true
+    }
+  ]
+}
