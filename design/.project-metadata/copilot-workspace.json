@@ -1,84 +1,158 @@
 {
   "schemaVersion": "1.0",
   "projectName": "Reference Data Service",
-  "workspaceCreatedAt": "2026-09-16T12:55:56.027Z",
-  "workspaceUpdatedAt": "2026-09-16T13:33:31.262Z",
+  "workspaceCreatedAt": "2026-09-16T18:57:54.804Z",
+  "workspaceUpdatedAt": "2026-09-16T20:06:28.828Z",
   "extensionVersion": "0.1.0",
   "activePromptProfileId": "prompt-profile-web-application",
   "activePromptProfileName": "Web Application Workspace",
   "selectedFolderDisplayName": "design",
   "statistics": {
-    "promptsCaptured": 5,
-    "promptsSaved": 5,
-    "responsesExtracted": 0,
-    "artifactsParsed": 0,
-    "artifactsValidated": 0,
-    "textArtifactsSaved": 0,
-    "binaryArtifactsDetected": 7,
+    "promptsCaptured": 7,
+    "promptsSaved": 7,
+    "responsesExtracted": 4,
+    "artifactsParsed": 4,
+    "artifactsValidated": 4,
+    "textArtifactsSaved": 4,
+    "binaryArtifactsDetected": 2,
     "binaryArtifactsSaved": 0,
-    "companionMetadataFilesSaved": 0,
+    "companionMetadataFilesSaved": 4,
     "artifactSaveFailures": 0,
-    "artifactSaveSkips": 7
+    "artifactSaveSkips": 2
   },
   "latestActivity": {
-    "lastPromptSavedAt": "2026-09-16T13:33:25.565Z",
-    "lastArtifactSavedAt": null,
+    "lastPromptSavedAt": "2026-09-16T20:06:21.788Z",
+    "lastArtifactSavedAt": "2026-09-16T19:30:09.349Z",
     "lastBinaryArtifactSavedAt": null,
-    "lastCompanionMetadataSavedAt": null
+    "lastCompanionMetadataSavedAt": "2026-09-16T19:30:09.432Z"
   },
   "prompts": [
     {
-      "promptId": "prompt-20260916135555-03weri",
-      "conversationId": "conv-20260916134804-i7ry",
+      "promptId": "prompt-20260916195750-13w048",
+      "conversationId": "conv-20260916195647-dkg3",
       "sequenceNumber": 1,
-      "summary": "yes , the mcp ios configured as studio, please show me step by step how to use ragq( test it) using copilot cli ​‌",
-      "savedPath": "_conversations/prompts/conv-20260916134804-i7ry-20260916-135555-prompt-001-yes-the-mcp-ios-configured-as-studio.md",
-      "savedAt": "2026-09-16T12:55:55.980Z"
+      "summary": "generate Step 21: Implement full collection upload validation mode prompt​‌",
+      "savedPath": "_conversations/prompts/conv-20260916195647-dkg3-20260916-195750-prompt-001-generate-step-21-implement-full-coll.md",
+      "savedAt": "2026-09-16T18:57:54.254Z"
     },
     {
-      "promptId": "prompt-20260916142526-rqunyu",
-      "conversationId": "conv-20260916134804-i7ry",
+      "promptId": "prompt-20260916195802-4nsytl",
+      "conversationId": "conv-20260916195647-dkg3",
       "sequenceNumber": 2,
-      "summary": "how do i stop the ragq​‌",
-      "savedPath": "_conversations/prompts/conv-20260916134804-i7ry-20260916-142526-prompt-002-how-do-i-stop-the-ragq.md",
-      "savedAt": "2026-09-16T13:25:26.685Z"
+      "summary": "generate Step 21: Implement full collection upload validation mode prompt​‌",
+      "savedPath": "_conversations/prompts/conv-20260916195647-dkg3-20260916-195802-prompt-002-generate-step-21-implement-full-coll.md",
+      "savedAt": "2026-09-16T18:58:02.685Z"
     },
     {
-      "promptId": "prompt-20260916143012-zfh67z",
-      "conversationId": "conv-20260916134804-i7ry",
+      "promptId": "prompt-20260916200057-b4o9ho",
+      "conversationId": "conv-20260916195647-dkg3",
       "sequenceNumber": 3,
-      "summary": "every time i run ps aux | grep ragq-mcp , give diffirent PIP​‌",
-      "savedPath": "_conversations/prompts/conv-20260916134804-i7ry-20260916-143012-prompt-003-every-time-i-run-ps-aux-grep-ragq-mc.md",
-      "savedAt": "2026-09-16T13:30:13.390Z"
+      "summary": "generate Step 22: Implement atomic full collection replacement prompt​‌",
+      "savedPath": "_conversations/prompts/conv-20260916195647-dkg3-20260916-200057-prompt-003-generate-step-22-implement-atomic-fu.md",
+      "savedAt": "2026-09-16T19:00:58.309Z"
     },
     {
-      "promptId": "prompt-20260916143143-v4eim0",
-      "conversationId": "conv-20260916134804-i7ry",
+      "promptId": "prompt-20260916202418-kpez51",
+      "conversationId": "conv-20260916195647-dkg3",
       "sequenceNumber": 4,
-      "summary": "explain​‌ ~/Git/ragq main pgrep -af ragq-mcp➤ ~/Git/ragq main➤ ~/Git/ragq main ps aux | grep ragq-mcpjuanorte 29300 0.0 ",
-      "savedPath": "_conversations/prompts/conv-20260916134804-i7ry-20260916-143143-prompt-004-explain-git-ragq-main-pgrep-af-ragq.md",
-      "savedAt": "2026-09-16T13:31:44.015Z"
+      "summary": "generate Step 23: Add seed reference data and deterministic local bootstrap prompt​‌",
+      "savedPath": "_conversations/prompts/conv-20260916195647-dkg3-20260916-202418-prompt-004-generate-step-23-add-seed-reference.md",
+      "savedAt": "2026-09-16T19:24:18.648Z"
     },
     {
-      "promptId": "prompt-20260916143325-c4y4yb",
-      "conversationId": "conv-20260916134804-i7ry",
+      "promptId": "prompt-20260916202825-n6x537",
+      "conversationId": "conv-20260916195647-dkg3",
       "sequenceNumber": 5,
-      "summary": "if ragq-mcp is not running, how ​‌~/Git/ragq main copilot mcp listUser servers: ragq (local)➤ ~/Git/ragq main​‌",
-      "savedPath": "_conversations/prompts/conv-20260916134804-i7ry-20260916-143325-prompt-005-if-ragq-mcp-is-not-running-how-git-r.md",
-      "savedAt": "2026-09-16T13:33:25.565Z"
+      "summary": "generate Step 24: Implement health, readiness, and dependency status prompt​‌",
+      "savedPath": "_conversations/prompts/conv-20260916195647-dkg3-20260916-202825-prompt-005-generate-step-24-implement-health-re.md",
+      "savedAt": "2026-09-16T19:28:26.609Z"
+    },
+    {
+      "promptId": "prompt-20260916203027-z4ihhl",
+      "conversationId": "conv-20260916195647-dkg3",
+      "sequenceNumber": 6,
+      "summary": "## Step 20 — Context gathered, but real ambiguities found before implementingFollowing the same discipline from Step 19:",
+      "savedPath": "_conversations/prompts/conv-20260916195647-dkg3-20260916-203027-prompt-006-step-20-context-gathered-but-real-am.md",
+      "savedAt": "2026-09-16T19:30:28.317Z"
+    },
+    {
+      "promptId": "prompt-20260916210621-qbbzcn",
+      "conversationId": "conv-20260916195647-dkg3",
+      "sequenceNumber": 7,
+      "summary": "github hang ​‌these geometry tests before proceeding, to validate the algorithm correctness.Loading​‌",
+      "savedPath": "_conversations/prompts/conv-20260916195647-dkg3-20260916-210621-prompt-007-github-hang-these-geometry-tests-bef.md",
+      "savedAt": "2026-09-16T20:06:21.788Z"
     }
   ],
-  "artifacts": [],
+  "artifacts": [
+    {
+      "id": "artifact-instruction-response-record-20260916195810-h03dd1-1",
+      "sourceArtifactKind": "text-artifact",
+      "artifactInstructionId": "artifact-instruction-response-record-20260916195810-h03dd1-1",
+      "artifactName": "Step 21: Implement Full Collection Upload Validation Mode",
+      "artifactType": "github-prompt",
+      "format": "markdown",
+      "savedPath": "github-prompts/step-21-implement-full-collection-upload-validation-mode.md",
+      "companionMetadataPath": "github-prompts/step-21-implement-full-collection-upload-validation-mode.meta.md",
+      "sourceResponseId": "response-record-20260916195810-h03dd1",
+      "sourcePromptId": "prompt-20260916195802-4nsytl",
+      "conversationId": "conv-20260916195647-dkg3",
+      "savedAt": "2026-09-16T18:58:10.154Z"
+    },
+    {
+      "id": "artifact-instruction-response-record-20260916200253-dbo2nz-1",
+      "sourceArtifactKind": "text-artifact",
+      "artifactInstructionId": "artifact-instruction-response-record-20260916200253-dbo2nz-1",
+      "artifactName": "Step 22: Implement Atomic Full Collection Replacement",
+      "artifactType": "github-prompt",
+      "format": "markdown",
+      "savedPath": "github-prompts/step-22-implement-atomic-full-collection-replacement.md",
+      "companionMetadataPath": "github-prompts/step-22-implement-atomic-full-collection-replacement.meta.md",
+      "sourceResponseId": "response-record-20260916200253-dbo2nz",
+      "sourcePromptId": "prompt-20260916200057-b4o9ho",
+      "conversationId": "conv-20260916195647-dkg3",
+      "savedAt": "2026-09-16T19:03:03.287Z"
+    },
+    {
+      "id": "artifact-instruction-response-record-20260916202620-x56tqx-1",
+      "sourceArtifactKind": "text-artifact",
+      "artifactInstructionId": "artifact-instruction-response-record-20260916202620-x56tqx-1",
+      "artifactName": "Step 23: Add Seed Reference Data and Deterministic Local Bootstrap",
+      "artifactType": "github-prompt",
+      "format": "markdown",
+      "savedPath": "github-prompts/step-23-add-seed-reference-data-and-deterministic-local-bootstrap.md",
+      "companionMetadataPath": "github-prompts/step-23-add-seed-reference-data-and-deterministic-local-bootstrap.meta.md",
+      "sourceResponseId": "response-record-20260916202620-x56tqx",
+      "sourcePromptId": "prompt-20260916202418-kpez51",
+      "conversationId": "conv-20260916195647-dkg3",
+      "savedAt": "2026-09-16T19:26:20.219Z"
+    },
+    {
+      "id": "artifact-instruction-response-record-20260916203009-e0r9kr-1",
+      "sourceArtifactKind": "text-artifact",
+      "artifactInstructionId": "artifact-instruction-response-record-20260916203009-e0r9kr-1",
+      "artifactName": "Step 24: Implement Health, Readiness, and Dependency Status",
+      "artifactType": "github-prompt",
+      "format": "markdown",
+      "savedPath": "github-prompts/step-24-implement-health-readiness-and-dependency-status.md",
+      "companionMetadataPath": "github-prompts/step-24-implement-health-readiness-and-dependency-status.meta.md",
+      "sourceResponseId": "response-record-20260916203009-e0r9kr",
+      "sourcePromptId": "prompt-20260916202825-n6x537",
+      "conversationId": "conv-20260916195647-dkg3",
+      "savedAt": "2026-09-16T19:30:09.349Z"
+    }
+  ],
   "bundles": [],
   "conversations": [
     {
-      "conversationId": "conv-20260916134804-i7ry",
-      "startedAt": "2026-09-16T12:55:55.409Z",
-      "lastUpdatedAt": "2026-09-16T13:33:25.565Z",
-      "promptCount": 5,
-      "responseCount": 0,
-      "savedArtifactCount": 0,
-      "lastPromptId": "prompt-20260916143325-c4y4yb"
+      "conversationId": "conv-20260916195647-dkg3",
+      "startedAt": "2026-09-16T18:57:50.757Z",
+      "lastUpdatedAt": "2026-09-16T20:06:21.788Z",
+      "promptCount": 7,
+      "responseCount": 4,
+      "savedArtifactCount": 4,
+      "lastPromptId": "prompt-20260916210621-qbbzcn",
+      "lastResponseId": "response-record-20260916203009-e0r9kr"
     }
   ]
 }
