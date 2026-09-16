@@ -51,6 +51,81 @@ function isUsableStructure(collection) {
   )
 }
 
+function addIssues(addFn, issues, dataset, correlationId) {
+  for (const issue of issues) {
+    addFn({ ...issue, dataset, correlationId })
+  }
+}
+
+// Returns a single blocking issue when the dataset or schema version cannot be
+// resolved at all, or null when it is safe to proceed to structural validation.
+function findRequestGuardIssue({ dataset, schemaVersion }) {
+  if (!isSupportedDataset(dataset) || !isUploadableDataset(dataset)) {
+    return {
+      code: VALIDATION_ISSUE_CODE.UNSUPPORTED_DATASET,
+      message: `"${dataset}" is not a supported, uploadable dataset.`
+    }
+  }
+  if (!isSupportedSchemaVersion(schemaVersion)) {
+    return {
+      code: VALIDATION_ISSUE_CODE.UNSUPPORTED_SCHEMA_VERSION,
+      message: `Schema version "${schemaVersion}" is not supported.`
+    }
+  }
+  return null
+}
+
+function runStructuralValidation({
+  dataset,
+  schemaVersion,
+  collection,
+  collector,
+  correlationId
+}) {
+  const schema = getCollectionSchema(dataset, schemaVersion)
+  const { error } = validateAgainstSchema(schema, collection)
+
+  if (error) {
+    addIssues(
+      collector.addError,
+      mapStructuralIssues(error),
+      dataset,
+      correlationId
+    )
+  }
+}
+
+function runBusinessValidation({
+  dataset,
+  collection,
+  collector,
+  correlationId
+}) {
+  addIssues(
+    collector.addError,
+    validateCommonEnvelope({ dataset, collection }),
+    dataset,
+    correlationId
+  )
+
+  const businessResult = resolveDatasetBusinessValidator(dataset)(collection, {
+    correlationId
+  })
+
+  addIssues(
+    collector.addError,
+    businessResult?.errors ?? [],
+    dataset,
+    correlationId
+  )
+  addIssues(
+    collector.addWarning,
+    businessResult?.warnings ?? [],
+    dataset,
+    correlationId
+  )
+}
+
 /**
  * Full common validation pipeline for one uploaded collection:
  * structural (Step 04 schema) -> common business (this step) -> dataset-specific
@@ -66,53 +141,25 @@ export function validateCollection({
   const collector = createIssueCollector()
   const receivedCount = countRecords(collection)
 
-  if (!isSupportedDataset(dataset) || !isUploadableDataset(dataset)) {
-    collector.addError({
-      code: VALIDATION_ISSUE_CODE.UNSUPPORTED_DATASET,
-      message: `"${dataset}" is not a supported, uploadable dataset.`,
-      dataset,
-      correlationId
-    })
+  const guardIssue = findRequestGuardIssue({ dataset, schemaVersion })
+  if (guardIssue) {
+    collector.addError({ ...guardIssue, dataset, correlationId })
     return collector.toResult({ receivedCount })
   }
 
-  if (!isSupportedSchemaVersion(schemaVersion)) {
-    collector.addError({
-      code: VALIDATION_ISSUE_CODE.UNSUPPORTED_SCHEMA_VERSION,
-      message: `Schema version "${schemaVersion}" is not supported.`,
-      dataset,
-      correlationId
-    })
-    return collector.toResult({ receivedCount })
-  }
-
-  const schema = getCollectionSchema(dataset, schemaVersion)
-  const { error } = validateAgainstSchema(schema, collection)
-
-  if (error) {
-    for (const issue of mapStructuralIssues(error)) {
-      collector.addError({ ...issue, dataset, correlationId })
-    }
-  }
+  runStructuralValidation({
+    dataset,
+    schemaVersion,
+    collection,
+    collector,
+    correlationId
+  })
 
   if (!isUsableStructure(collection)) {
     return collector.toResult({ receivedCount })
   }
 
-  for (const issue of validateCommonEnvelope({ dataset, collection })) {
-    collector.addError({ ...issue, dataset, correlationId })
-  }
-
-  const businessResult = resolveDatasetBusinessValidator(dataset)(collection, {
-    correlationId
-  })
-
-  for (const issue of businessResult?.errors ?? []) {
-    collector.addError({ ...issue, dataset, correlationId })
-  }
-  for (const issue of businessResult?.warnings ?? []) {
-    collector.addWarning({ ...issue, dataset, correlationId })
-  }
+  runBusinessValidation({ dataset, collection, collector, correlationId })
 
   return collector.toResult({
     receivedCount,

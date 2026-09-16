@@ -97,6 +97,10 @@ function validateGeometry(geometry, path, itemIndex, issues) {
       itemIndex,
       issues
     )
+  } else {
+    // Unreachable once structural validation has run: geometrySchema only permits
+    // Polygon/MultiPolygon. No-op here rather than throwing, since this module must
+    // stay usable independently of structural validation having already run.
   }
 }
 
