@@ -9,8 +9,11 @@ services:
       - 'compose/aws.env'
     environment:
       FLOCI_DEFAULT_REGION: eu-west-2
+      # hybrid: in-memory speed, flushed to disk every ~5s, so local S3 state survives container restarts.
+      FLOCI_STORAGE_MODE: hybrid
     volumes:
       - ./compose/floci/start.d:/etc/floci/init/start.d:ro
+      - floci-data:/app/data
     networks:
       - cdp-tenant
 
@@ -46,3 +49,6 @@ networks:
   cdp-tenant:
     driver: bridge
     name: cdp-tenant
+
+volumes:
+  floci-data:

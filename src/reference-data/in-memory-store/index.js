@@ -1,2 +1,6 @@
-// Establishes the In-Memory Data Store boundary; active collection/manifest storage is added in later steps.
-export const inMemoryStore = { name: 'in-memory-store' }
+import { createInMemoryDataStore } from './in-memory-data-store.js'
+
+export { createInMemoryDataStore }
+
+// Production composition root for this component; tests should create isolated instances via createInMemoryDataStore().
+export const inMemoryStore = createInMemoryDataStore()

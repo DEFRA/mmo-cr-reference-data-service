@@ -92,6 +92,14 @@ To test the application run:
 npm run test
 ```
 
+Floci integration tests for the Persistence Module live alongside their unit tests
+(`*.floci.test.js`) and are skipped automatically by `npm test` when Floci is not reachable, so
+the default test run never requires Docker. To run them explicitly against a real local S3:
+
+```bash
+npm run test:floci
+```
+
 ### Production
 
 To mimic the application running in `production` mode locally run:
@@ -206,6 +214,32 @@ This step validates required properties, types, GUID/date/timestamp formats, enu
 
 Small, synthetic, schema-valid example collections and 18 focused invalid fixtures (one per common structural failure) live under [src/common/schemas/fixtures](./src/common/schemas/fixtures), used only for tests — not production seed data.
 
+## In-Memory Data Store
+
+[src/reference-data/in-memory-store](./src/reference-data/in-memory-store) implements the Step 03 `inMemoryDataStore` contract. It is the only process-local cache of active canonical collections, collection metadata, and the active manifest.
+
+- **Process-local and non-durable**: state lives only in application memory and is lost on restart. S3-compatible storage (via the Persistence Module) remains the durable source of truth; rebuilding the cache after a restart is implemented by the Step 11 Cache Refresh Module, not by this store.
+- **No database, no Redis**: the store is a plain in-process `Map`, not backed by any external system.
+- **Atomic per-dataset replacement**: `setCollection(dataset, collection, metadata)` both creates and replaces a dataset's active entry. The collection and metadata are defensively cloned before the internal map is mutated, so a failed clone (e.g. non-cloneable input) throws and leaves the previous entry — if any — completely unchanged. Readers never observe a collection paired with the wrong metadata.
+- **Defensive access**: `structuredClone` (Node ≥24) is used on every write and every read, so callers can never mutate active store state through a reference they passed in or received back, including nested arrays/objects.
+- **Loaded-state distinction**: `getCollection`/`getCollectionMetadata`/`getManifest` return `undefined` when nothing is loaded, which is distinguishable from a validly stored `null`/empty collection. `hasCollection` reports the loaded state explicitly.
+- **Stable dataset ordering**: `listLoadedDatasets()` returns loaded datasets in the canonical `DATASETS` declaration order, not Map insertion order.
+- **`map-ports` cannot be stored**: it is a derived dataset (from `ports`) and `setCollection` rejects it.
+- **Test isolation**: call `createInMemoryDataStore()` to get a fresh, independent instance (used throughout [in-memory-data-store.test.js](./src/reference-data/in-memory-store/in-memory-data-store.test.js)). The `inMemoryStore` singleton exported from `index.js` is the production composition root and should not be relied on for test isolation.
+
+## Persistence Module
+
+[src/reference-data/persistence](./src/reference-data/persistence) implements the Step 03 `referenceDataRepository` contract. It is the **only** component in this repository permitted to import `@aws-sdk/client-s3`, construct an S3 client, or talk to S3/Floci directly — enforced automatically by [src/architecture-boundaries.test.js](./src/architecture-boundaries.test.js).
+
+- **Exclusive S3 ownership**: no other module constructs an S3 client or sends S3 commands. The domain layer, In-Memory Data Store, and every other component depend only on the `referenceDataRepository` contract.
+- **Local Floci vs deployed AWS**: the S3 client (`s3-client.js`) is built from central config (`aws.region`, `aws.endpointUrl`, `aws.forcePathStyle`). Locally, `aws.endpointUrl` points at Floci (`http://floci:4566` in Compose, `http://localhost:4566` on the host) and `forcePathStyle` is `true`. In deployed AWS environments the endpoint is left unset, so the SDK uses the normal AWS S3 endpoint and its default credential provider chain — no static credentials are read from config. Constructing the client never makes a network call.
+- **Object keys**: centralised in `object-keys.js`. The manifest is always `reference-data/manifest.json`; collections are `reference-data/{dataset}/{collectionVersion}.json`. Collection versions are restricted to `[A-Za-z0-9._-]+`, rejecting traversal, separators, whitespace, and URL-like content. `map-ports` and unsupported datasets are rejected before any object key is built.
+- **JSON and GeoJSON**: `writeCollection` selects `application/json` or `application/geo+json` from the Step 03 dataset capabilities; the Persistence Module never inspects or normalises the content itself.
+- **Checksums vs ETags**: SHA-256 is the approved checksum algorithm. Where available, the S3-native `ChecksumSHA256` (requested via `ChecksumAlgorithm`/`ChecksumMode`) is used so metadata can often be read without downloading the object body; a manual SHA-256 is computed as a fallback when reading a body directly. The S3 `ETag` is always kept as a separate field and is never assumed to be a content checksum.
+- **Conflict protection**: `writeCollection` never overwrites an existing collection version; `writeManifest` supports optimistic concurrency via an `expectedEtag`. Both send the correct conditional S3 headers (`IfNoneMatch`/`IfMatch`) for real AWS S3, **and** perform an explicit existence/ETag pre-check, because Floci does not currently enforce conditional-write headers (verified empirically — see the Step 07 plan file for details). This keeps local development safe without weakening production behaviour.
+- **Error translation**: AWS SDK and network failures are mapped to the existing Step 03 service-error codes (e.g. `dataset_not_found`, `collection_version_exists`, `collection_modified`, `invalid_json`, `forbidden`, `reference_store_unavailable`). Access-denied is never reported as not-found; only a confirmed missing object is. Internal causes (`error.cause`) are preserved for diagnostics but are not part of the public error shape.
+- **No database, no Redis**: S3-compatible object storage is the only durable persistence mechanism this module talks to.
+
 ## Development helpers
 
 ### Proxy
@@ -247,6 +281,51 @@ docker compose up --build -d
 ```
 
 Mock AWS resources can be created when Floci starts up by editing the scripts in `./compose/floci/start.d/`.
+
+#### Floci S3-compatible storage
+
+Floci provides the local S3-compatible endpoint used by the Reference Data Service; no LocalStack or MinIO is used. `AWS_ENDPOINT_URL` selects the endpoint: `http://floci:4566` for the app running inside Docker Compose (already set in [compose.yml](./compose.yml)), `http://localhost:4566` for the app running directly on the host (already set in [compose/aws.env](./compose/aws.env)).
+
+On every start, [compose/floci/start.d/10-setup-resources.sh](./compose/floci/start.d/10-setup-resources.sh) runs automatically as a Floci startup hook and idempotently:
+
+- creates the `REFERENCE_DATA_BUCKET` bucket (default `mmo-cr-reference-data-service`) if it does not already exist,
+- enables bucket versioning,
+- blocks public access.
+
+Floci's built-in health check (`GET /_floci/health`) backs `depends_on: condition: service_healthy` for the app service. Local S3 state is kept in the `floci-data` named volume with `FLOCI_STORAGE_MODE=hybrid`, so buckets survive a normal container restart; it is not durable production storage.
+
+The approved local object-key convention (created by the Persistence Module in a later step) is:
+
+```text
+reference-data/manifest.json
+reference-data/vessels/{version}.json
+reference-data/gears/{version}.json
+reference-data/ports/{version}.json
+reference-data/species/{version}.json
+reference-data/map-land/{version}.json
+reference-data/map-statistical-areas/{version}.json
+```
+
+Seed reference-data objects and the initial manifest are added later (Step 23); until then the bucket exists but is empty.
+
+Useful commands:
+
+| Command                  | Purpose                                                      |
+| ------------------------ | ------------------------------------------------------------ |
+| `npm run floci:up`       | Start Floci and wait until it reports healthy                |
+| `npm run floci:down`     | Stop Floci, keeping persisted local S3 state                 |
+| `npm run floci:reset`    | Remove persisted local S3 state and reprovision from scratch |
+| `npm run floci:logs`     | Follow Floci's logs                                          |
+| `npm run floci:buckets`  | List local buckets                                           |
+| `npm run floci:objects`  | List objects in the reference-data bucket                    |
+| `npm run floci:manifest` | Print the active manifest object (404 until seeded)          |
+
+Equivalent raw AWS CLI (from the host, with the CLI installed and pointed at the local endpoint):
+
+```bash
+aws --endpoint-url http://localhost:4566 --region eu-west-2 s3api list-buckets
+aws --endpoint-url http://localhost:4566 --region eu-west-2 s3api list-objects-v2 --bucket mmo-cr-reference-data-service
+```
 
 ### Dependabot
 
