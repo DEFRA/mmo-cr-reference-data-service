@@ -1,50 +1,65 @@
 import { describe, expect, test } from 'vitest'
 
 import { getCollectionSchema } from '#/common/schemas/schema-registry.js'
-import * as missingRequiredCollectionField from './missing-required-collection-field.js'
-import * as unsupportedDataset from './unsupported-dataset.js'
-import * as invalidCollectionGuid from './invalid-collection-guid.js'
-import * as unsupportedSchemaVersion from './unsupported-schema-version.js'
-import * as invalidGeneratedTimestamp from './invalid-generated-timestamp.js'
-import * as negativeItemCount from './negative-item-count.js'
-import * as invalidItemGuid from './invalid-item-guid.js'
-import * as wrongPropertyType from './wrong-property-type.js'
-import * as unexpectedAdditionalProperty from './unexpected-additional-property.js'
-import * as invalidPortCoordinateRange from './invalid-port-coordinate-range.js'
-import * as incompletePortCoordinate from './incomplete-port-coordinate.js'
-import * as invalidSpeciesCommonName from './invalid-species-common-name.js'
-import * as invalidSpeciesLocalName from './invalid-species-local-name.js'
-import * as invalidGearApplicability from './invalid-gear-applicability.js'
-import * as invalidGeojsonRootType from './invalid-geojson-root-type.js'
-import * as invalidGeojsonGeometryType from './invalid-geojson-geometry-type.js'
-import * as nonNumericGeojsonCoordinate from './non-numeric-geojson-coordinate.js'
-import * as missingStatisticalAreaCode from './missing-statistical-area-code.js'
+import missingRequiredCollectionField from './missing-required-collection-field.json' with { type: 'json' }
+import unsupportedDataset from './unsupported-dataset.json' with { type: 'json' }
+import invalidCollectionGuid from './invalid-collection-guid.json' with { type: 'json' }
+import unsupportedSchemaVersion from './unsupported-schema-version.json' with { type: 'json' }
+import invalidGeneratedTimestamp from './invalid-generated-timestamp.json' with { type: 'json' }
+import negativeItemCount from './negative-item-count.json' with { type: 'json' }
+import invalidItemGuid from './invalid-item-guid.json' with { type: 'json' }
+import wrongPropertyType from './wrong-property-type.json' with { type: 'json' }
+import unexpectedAdditionalProperty from './unexpected-additional-property.json' with { type: 'json' }
+import invalidPortCoordinateRange from './invalid-port-coordinate-range.json' with { type: 'json' }
+import incompletePortCoordinate from './incomplete-port-coordinate.json' with { type: 'json' }
+import invalidSpeciesCommonName from './invalid-species-common-name.json' with { type: 'json' }
+import invalidSpeciesLocalName from './invalid-species-local-name.json' with { type: 'json' }
+import invalidGearApplicability from './invalid-gear-applicability.json' with { type: 'json' }
+import invalidGeojsonRootType from './invalid-geojson-root-type.json' with { type: 'json' }
+import invalidGeojsonGeometryType from './invalid-geojson-geometry-type.json' with { type: 'json' }
+import nonNumericGeojsonCoordinate from './non-numeric-geojson-coordinate.json' with { type: 'json' }
+import missingStatisticalAreaCode from './missing-statistical-area-code.json' with { type: 'json' }
 
 const FIXTURES = [
-  ['missing required collection field', missingRequiredCollectionField],
-  ['unsupported dataset', unsupportedDataset],
-  ['invalid collection GUID', invalidCollectionGuid],
-  ['unsupported schema version', unsupportedSchemaVersion],
-  ['invalid generated timestamp', invalidGeneratedTimestamp],
-  ['negative item count', negativeItemCount],
-  ['invalid item GUID', invalidItemGuid],
-  ['wrong property type', wrongPropertyType],
-  ['unexpected additional property', unexpectedAdditionalProperty],
-  ['invalid port coordinate range', invalidPortCoordinateRange],
-  ['incomplete port coordinate', incompletePortCoordinate],
-  ['invalid species common-name structure', invalidSpeciesCommonName],
-  ['invalid species local-name structure', invalidSpeciesLocalName],
-  ['invalid gear applicability structure', invalidGearApplicability],
-  ['invalid GeoJSON root type', invalidGeojsonRootType],
-  ['invalid GeoJSON geometry type', invalidGeojsonGeometryType],
-  ['non-numeric GeoJSON coordinate', nonNumericGeojsonCoordinate],
-  ['missing statistical-area code', missingStatisticalAreaCode]
+  [
+    'missing required collection field',
+    'ports',
+    missingRequiredCollectionField
+  ],
+  ['unsupported dataset', 'ports', unsupportedDataset],
+  ['invalid collection GUID', 'ports', invalidCollectionGuid],
+  ['unsupported schema version', 'ports', unsupportedSchemaVersion],
+  ['invalid generated timestamp', 'ports', invalidGeneratedTimestamp],
+  ['negative item count', 'ports', negativeItemCount],
+  ['invalid item GUID', 'ports', invalidItemGuid],
+  ['wrong property type', 'ports', wrongPropertyType],
+  ['unexpected additional property', 'ports', unexpectedAdditionalProperty],
+  ['invalid port coordinate range', 'ports', invalidPortCoordinateRange],
+  ['incomplete port coordinate', 'ports', incompletePortCoordinate],
+  [
+    'invalid species common-name structure',
+    'species',
+    invalidSpeciesCommonName
+  ],
+  ['invalid species local-name structure', 'species', invalidSpeciesLocalName],
+  ['invalid gear applicability structure', 'gears', invalidGearApplicability],
+  ['invalid GeoJSON root type', 'map-land', invalidGeojsonRootType],
+  ['invalid GeoJSON geometry type', 'map-land', invalidGeojsonGeometryType],
+  ['non-numeric GeoJSON coordinate', 'map-land', nonNumericGeojsonCoordinate],
+  [
+    'missing statistical-area code',
+    'map-statistical-areas',
+    missingStatisticalAreaCode
+  ]
 ]
 
 describe('#invalidFixtures', () => {
-  test.each(FIXTURES)('%s fails structural validation', (_label, fixture) => {
-    const schema = getCollectionSchema(fixture.dataset, '1.0')
+  test.each(FIXTURES)(
+    '%s fails structural validation',
+    (_label, targetDataset, invalidPayload) => {
+      const schema = getCollectionSchema(targetDataset, '1.0')
 
-    expect(schema.validate(fixture.invalidPayload).error).toBeDefined()
-  })
+      expect(schema.validate(invalidPayload).error).toBeDefined()
+    }
+  )
 })
