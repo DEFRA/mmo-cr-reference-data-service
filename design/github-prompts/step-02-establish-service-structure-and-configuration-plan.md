@@ -19,30 +19,24 @@
 ## Steps
 
 **Phase A — Component boundaries**
+
 1. Create `src/reference-data/{controller,validation,query,command,normalisation,in-memory-store,cache-refresh,persistence}/index.js`, each a minimal named-marker module.
 2. Create `src/reference-data/reference-data-components.test.js` asserting each module loads and exposes its expected `name`.
 
-**Phase B — Configuration** *(independent of Phase A)*
-3. Create `src/common/helpers/convict/validate-optional-url.js` (+ test) — custom format, validates URL only when value is non-null.
-4. Create `src/common/helpers/convict/validate-non-empty-string.js` (+ test) — custom format, rejects empty/whitespace-only strings.
-5. Create `src/common/helpers/convict/validate-positive-integer.js` (+ test) — custom format, requires integer > 0.
-6. Edit `src/config.js` — register the three custom formats; add `aws` (`region`, `endpointUrl`, `forcePathStyle`), `referenceData` (`bucket`, `refreshIntervalMs`, `maxUploadBytes`), `authentication` (`serviceUrl`) sections.
-7. Create `src/config.test.js` — valid local config, valid deployed-style config (no custom endpoint), invalid port, invalid endpoint URL, invalid boolean, invalid refresh interval, invalid upload limit, empty bucket name rejected, no secret values in validation errors.
+**Phase B — Configuration** _(independent of Phase A)_ 3. Create `src/common/helpers/convict/validate-optional-url.js` (+ test) — custom format, validates URL only when value is non-null. 4. Create `src/common/helpers/convict/validate-non-empty-string.js` (+ test) — custom format, rejects empty/whitespace-only strings. 5. Create `src/common/helpers/convict/validate-positive-integer.js` (+ test) — custom format, requires integer > 0. 6. Edit `src/config.js` — register the three custom formats; add `aws` (`region`, `endpointUrl`, `forcePathStyle`), `referenceData` (`bucket`, `refreshIntervalMs`, `maxUploadBytes`), `authentication` (`serviceUrl`) sections. 7. Create `src/config.test.js` — valid local config, valid deployed-style config (no custom endpoint), invalid port, invalid endpoint URL, invalid boolean, invalid refresh interval, invalid upload limit, empty bucket name rejected, no secret values in validation errors.
 
-**Phase C — Compose host/container endpoint** *(independent)*
-8. Edit `compose.yml` — add `AWS_ENDPOINT_URL: http://floci:4566` and `S3_FORCE_PATH_STYLE: true` to the app service's `environment:` block (overrides the host-relative value from `compose/aws.env` only inside the container).
+**Phase C — Compose host/container endpoint** _(independent)_ 8. Edit `compose.yml` — add `AWS_ENDPOINT_URL: http://floci:4566` and `S3_FORCE_PATH_STYLE: true` to the app service's `environment:` block (overrides the host-relative value from `compose/aws.env` only inside the container).
 
-**Phase D — Documentation** *(depends on Phase B)*
-9. Edit `README.md` — add a "Configuration" section documenting each variable (purpose, required/optional, local example, deployed-AWS behaviour, sensitivity).
+**Phase D — Documentation** _(depends on Phase B)_ 9. Edit `README.md` — add a "Configuration" section documenting each variable (purpose, required/optional, local example, deployed-AWS behaviour, sensitivity).
 
-**Phase E — Verification**
-10. Run `npm run lint`, `npm run format:check`, `npm test`.
-11. Start the app with valid local configuration and confirm `/health` still responds.
+**Phase E — Verification** 10. Run `npm run lint`, `npm run format:check`, `npm test`. 11. Start the app with valid local configuration and confirm `/health` still responds.
 
 ## Relevant files
+
 - New: `src/reference-data/**` (8 component folders + test), `src/common/helpers/convict/validate-optional-url.js` (+test), `validate-non-empty-string.js` (+test), `validate-positive-integer.js` (+test), `src/config.test.js`, this plan file.
 - Modified: `src/config.js`, `compose.yml`, `README.md`.
 - Unchanged: `src/server.js`, `src/plugins/router.js`, `src/routes/health.js`, Dockerfile, npm scripts.
 
 ## Out of scope
+
 S3 clients/repositories, bucket creation, schemas, normalisation, in-memory store behaviour, cache-refresh behaviour, Authentication Service calls, query/search logic, reference-data API routes, OpenAPI, Mongo/Redis (already handled in Step 01).

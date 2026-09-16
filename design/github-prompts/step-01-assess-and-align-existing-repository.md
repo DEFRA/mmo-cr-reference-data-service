@@ -6,6 +6,7 @@ mode: plan-then-implement
 ARTIFACT-INSTRUCTION-END
 
 ARTIFACT-CONTENT
+
 # Step 01: Assess and align the existing repository
 
 ## Recommended reasoning effort

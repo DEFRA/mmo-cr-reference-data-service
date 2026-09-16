@@ -4,6 +4,7 @@
 
 - Planning phase: High
 - Implementation phase: High
+
 ## Objective
 
 Define the stable shared domain types, constants, and component contracts required by the Reference Data Service.
@@ -21,27 +22,31 @@ Before proposing any changes:
 3. Read the approved Step 01 and Step 02 plans.
 4. Inspect all changes completed during Steps 01 and 02.
 5. Inspect the source structure established for:
-  - Reference Data Controller
-  - Validation Module
-  - Query Module
-  - Command Module
-  - Data Normalisation Module
-  - In-Memory Data Store
-  - Cache Refresh Module
-  - Persistence Module
+
+- Reference Data Controller
+- Validation Module
+- Query Module
+- Command Module
+- Data Normalisation Module
+- In-Memory Data Store
+- Cache Refresh Module
+- Persistence Module
+
 6. Inspect `package.json` , the application configuration, test structure, lint rules, formatting rules, and module conventions.
 7. Determine whether the repository uses:
-  - JavaScript with JSDoc
-  - TypeScript
-  - Runtime validation schemas
-  - Immutable constants
-  - Factory functions
-  - Classes
-  - Plain object contracts
+
+- JavaScript with JSDoc
+- TypeScript
+- Runtime validation schemas
+- Immutable constants
+- Factory functions
+- Classes
+- Plain object contracts
+
 8. Search for existing constants, contracts, errors, and shared types that should be reused.
 9. Confirm that the service has no database connection or database abstraction.
 10. Identify any conflict between this prompt and the current repository.
-Do not modify files during the planning phase.
+    Do not modify files during the planning phase.
 
 Produce a file-by-file implementation plan and wait for approval.
 
@@ -52,6 +57,7 @@ Plain Text
 ```text
 github-prompts/Step 03-define-shared-domain-types-and-contracts-plan.md
 ```
+
 Only after saving the approved plan may implementation begin.
 
 ## Project context
@@ -67,7 +73,7 @@ The supported reference-data domains are:
 - Map land
 - Map statistical areas
 - A derived map-port representation
-The service architecture includes:
+  The service architecture includes:
 
 - Reference Data Controller
 - Validation Module
@@ -77,12 +83,13 @@ The service architecture includes:
 - In-Memory Data Store
 - Cache Refresh Module
 - Persistence Module
-External dependencies are:
+  External dependencies are:
 
 - Authentication Service
 - AWS S3-compatible Reference Data Store
 - API Gateway
 - Catch Recording Service as a consumer
+
 ## Mandatory architectural constraints
 
 ### No database
@@ -105,7 +112,7 @@ Do not introduce:
 - Database plugins
 - Database connection configuration
 - Database sessions or transactions
-A reference-data `collection` means a complete versioned JSON or GeoJSON reference-data file. It does not mean a database collection.
+  A reference-data `collection` means a complete versioned JSON or GeoJSON reference-data file. It does not mean a database collection.
 
 ### Persistence ownership
 
@@ -113,23 +120,26 @@ A reference-data `collection` means a complete versioned JSON or GeoJSON referen
 - Only the Persistence Module may access AWS S3 or Floci.
 - Shared contracts must not import or expose AWS SDK types.
 - The Persistence Module implementation belongs to a later step.
+
 ### In-memory storage
 
 - Active canonical collections will be held as process-local JSON objects.
 - The In-Memory Data Store is a cache, not a database.
 - Redis must not be introduced.
 - The In-Memory Data Store implementation belongs to a later step.
+
 ### Authentication ownership
 
 - Only the Validation Module may communicate with the Authentication Service.
 - Shared contracts must not import or expose HTTP-client implementation types.
 - Authentication Service integration belongs to a later step.
+
 ### Identity
 
 - Every canonical reference-data resource uses a GUID as its stable technical `id` .
 - Existing UUIDs must be preserved.
 - Business identifiers remain separate from GUIDs.
-Business identifiers include:
+  Business identifiers include:
 
 - Vessel CFR
 - Vessel registration number
@@ -138,13 +148,14 @@ Business identifiers include:
 - Port code
 - Species FAO code
 - Statistical-area code
+
 ### Representations
 
 The service supports:
 
 - `canonical` , representing the complete authoritative service model
 - `mobile` , representing a consumer projection generated from canonical data
-Mobile representations must not be independently persisted.
+  Mobile representations must not be independently persisted.
 
 ### Collection management
 
@@ -152,6 +163,7 @@ Mobile representations must not be independently persisted.
 - Item-level create, update, patch, and delete operations are not supported.
 - `map-ports` is derived from the active ports collection.
 - `map-ports` cannot be uploaded or persisted as an independent authoritative collection.
+
 ## Implementation scope
 
 ### 1. Dataset identifiers
@@ -169,6 +181,7 @@ map-land
 map-statistical-areas
 map-ports
 ```
+
 Do not duplicate dataset-name arrays across components.
 
 Provide repository-compatible types, constants, or helpers for determining whether a value is a supported dataset.
@@ -185,7 +198,7 @@ The contract must express whether a dataset is:
 - Derived
 - JSON
 - GeoJSON
-Use these required capabilities:
+  Use these required capabilities:
 
 #### Vessels
 
@@ -194,6 +207,7 @@ Use these required capabilities:
 - Persisted: yes
 - Derived: no
 - Format: JSON
+
 #### Gears
 
 - Queryable: yes
@@ -201,6 +215,7 @@ Use these required capabilities:
 - Persisted: yes
 - Derived: no
 - Format: JSON
+
 #### Ports
 
 - Queryable: yes
@@ -208,6 +223,7 @@ Use these required capabilities:
 - Persisted: yes
 - Derived: no
 - Format: JSON
+
 #### Species
 
 - Queryable: yes
@@ -215,6 +231,7 @@ Use these required capabilities:
 - Persisted: yes
 - Derived: no
 - Format: JSON
+
 #### Map land
 
 - Queryable: yes
@@ -222,6 +239,7 @@ Use these required capabilities:
 - Persisted: yes
 - Derived: no
 - Format: GeoJSON
+
 #### Map statistical areas
 
 - Queryable: yes
@@ -229,6 +247,7 @@ Use these required capabilities:
 - Persisted: yes
 - Derived: no
 - Format: GeoJSON
+
 #### Map ports
 
 - Queryable: yes
@@ -237,7 +256,7 @@ Use these required capabilities:
 - Derived: yes
 - Format: GeoJSON
 - Source dataset: ports
-Provide reusable capability helpers where consistent with existing repository conventions.
+  Provide reusable capability helpers where consistent with existing repository conventions.
 
 ### 3. Representation identifiers
 
@@ -249,6 +268,7 @@ Plain Text
 canonical
 mobile
 ```
+
 Provide a safe mechanism for determining whether an input is a supported representation.
 
 Do not implement projection behaviour.
@@ -263,7 +283,7 @@ If appropriate for the repository language, define a reusable JSON-compatible va
 - String
 - Arrays
 - Objects
-Avoid unrestricted `any` where a safer repository-compatible type can be used.
+  Avoid unrestricted `any` where a safer repository-compatible type can be used.
 
 Do not convert the project from JavaScript to TypeScript merely to support this contract.
 
@@ -281,7 +301,7 @@ It must support:
 - Optional effective-from timestamp
 - Item or feature count
 - Complete collection content
-Keep collection content generic enough for Step 04 to define the detailed vessel, gear, port, species, and map schemas.
+  Keep collection content generic enough for Step 04 to define the detailed vessel, gear, port, species, and map schemas.
 
 Support both JSON item collections and GeoJSON feature collections without prematurely implementing either schema.
 
@@ -303,7 +323,7 @@ Define internal collection metadata capable of representing:
 - Actor identifier where available
 - Internal object reference where required
 - Active status where required
-Separate internal persistence metadata from future public API projections.
+  Separate internal persistence metadata from future public API projections.
 
 Do not expose internal S3 object keys as part of an assumed public API contract.
 
@@ -313,7 +333,7 @@ Define contracts for:
 
 - Active manifest
 - Manifest dataset entry
-The manifest must be able to identify the active persisted version of each authoritative dataset.
+  The manifest must be able to identify the active persisted version of each authoritative dataset.
 
 The manifest contract should support:
 
@@ -322,7 +342,7 @@ The manifest contract should support:
 - Generated timestamp
 - Dataset entries
 - ETag or checksum where appropriate
-A manifest dataset entry should support:
+  A manifest dataset entry should support:
 
 - Dataset
 - Collection GUID
@@ -335,7 +355,7 @@ A manifest dataset entry should support:
 - Size in bytes
 - Last-modified timestamp
 - Internal object reference where required
-Do not create an independent persisted manifest entry for `map-ports` . The map-port representation is derived from ports.
+  Do not create an independent persisted manifest entry for `map-ports` . The map-port representation is derived from ports.
 
 ### 8. Validation contracts
 
@@ -345,7 +365,7 @@ Define contracts for:
 - Validation issue
 - Validation error
 - Validation warning
-A validation issue should support:
+  A validation issue should support:
 
 - Machine-readable code
 - Safe human-readable message
@@ -355,14 +375,14 @@ A validation issue should support:
 - Optional dataset
 - Severity
 - Optional correlation identifier
-A validation result should support:
+  A validation result should support:
 
 - Valid or invalid outcome
 - Errors
 - Warnings
 - Received item or feature count where applicable
 - Normalised item or feature count where applicable
-Do not implement validation rules or runtime collection schemas.
+  Do not implement validation rules or runtime collection schemas.
 
 Do not couple validation contracts to Hapi response objects.
 
@@ -376,7 +396,7 @@ Define contracts for:
 - Sorting request
 - Query result
 - Query metadata
-The query request should be able to represent future support for:
+  The query request should be able to represent future support for:
 
 - Dataset
 - Representation
@@ -390,7 +410,7 @@ The query request should be able to represent future support for:
 - Include-inactive option
 - Dataset-specific filters
 - Correlation identifier
-The query result should support:
+  The query result should support:
 
 - Dataset
 - Collection GUID
@@ -401,7 +421,7 @@ The query result should support:
 - Limit
 - Returned items
 - Optional query context
-Do not implement searching, filtering, sorting, pagination, or item retrieval.
+  Do not implement searching, filtering, sorting, pagination, or item retrieval.
 
 ### 10. Upload contracts
 
@@ -413,7 +433,7 @@ Define contracts for:
 - Previous collection metadata
 - Upload warnings
 - Optimistic concurrency information
-The upload command should support:
+  The upload command should support:
 
 - Dataset
 - Uploaded content
@@ -427,7 +447,7 @@ The upload command should support:
 - Expected ETag from `If-Match`
 - Correlation identifier
 - Authorised actor identifier
-The upload result should support:
+  The upload result should support:
 
 - Dataset
 - Collection GUID
@@ -442,7 +462,7 @@ The upload result should support:
 - Actor identifier
 - Previous active collection metadata
 - Validation or normalisation warnings
-Do not implement:
+  Do not implement:
 
 - Multipart parsing
 - JSON parsing
@@ -450,6 +470,7 @@ Do not implement:
 - S3 writing
 - Manifest activation
 - In-memory replacement
+
 ### 11. Reference Data Repository contract
 
 Define the infrastructure-independent interface that later Persistence Module code will implement.
@@ -462,7 +483,7 @@ It should support future operations for:
 - Writing or replacing the active manifest
 - Retrieving object metadata
 - Determining whether an object exists
-The contract must:
+  The contract must:
 
 - Use internal domain types.
 - Avoid AWS SDK request and response types.
@@ -471,7 +492,7 @@ The contract must:
 - Support JSON and GeoJSON.
 - Support future optimistic concurrency requirements.
 - Be replaceable with a test double.
-Do not implement the repository.
+  Do not implement the repository.
 
 ### 12. In-Memory Data Store contract
 
@@ -487,7 +508,7 @@ It should support future operations for:
 - Removing a collection for controlled test or recovery scenarios
 - Setting and retrieving the active manifest
 - Clearing state for tests
-The contract must not imply:
+  The contract must not imply:
 
 - Database persistence
 - Cross-process consistency
@@ -495,7 +516,7 @@ The contract must not imply:
 - Transactions
 - Database queries
 - Database indexes
-Do not implement the in-memory store.
+  Do not implement the in-memory store.
 
 ### 13. Authentication and authorisation contract
 
@@ -512,7 +533,7 @@ It should support:
 - Authorisation failure
 - Authentication Service unavailability
 - Correlation propagation
-Provisional permissions are:
+  Provisional permissions are:
 
 Plain Text
 
@@ -520,6 +541,7 @@ Plain Text
 reference-data.read
 reference-data.write
 ```
+
 Keep these values centralised and easy to change if the Authentication Service uses different permission names.
 
 Do not implement HTTP calls.
@@ -539,13 +561,13 @@ The contract should:
 - Preserve GUID identifiers.
 - Avoid persistence and transport concerns.
 - Allow dataset-specific implementations.
-Projection context may later include:
+  Projection context may later include:
 
 - Vessel length
 - Country code
 - Language code
 - Other approved consumer context
-Do not implement any mobile projector.
+  Do not implement any mobile projector.
 
 ### 15. Common service-error contract
 
@@ -561,7 +583,7 @@ It should support:
 - Correlation or trace identifier
 - Internal diagnostic cause that is excluded from public serialisation
 - Optional recommended HTTP status if this follows repository conventions
-Provide central error-code definitions for future categories including:
+  Provide central error-code definitions for future categories including:
 
 Plain Text
 
@@ -587,6 +609,7 @@ reference_store_unavailable
 reference_data_unavailable
 internal_error
 ```
+
 Do not implement the final Hapi error mapper.
 
 Ensure internal causes and stack traces cannot be accidentally exposed by normal public serialisation.
@@ -605,6 +628,7 @@ Shared domain contracts must not import:
 - Redis types
 - Database-driver types
 - ORM or ODM types
+
 ### Dependency direction
 
 Concrete component implementations may depend on shared contracts.
@@ -618,6 +642,7 @@ Shared contracts must not depend on:
 - Authentication adapters
 - Concrete stores
 - Concrete repositories
+
 ### Substitutability
 
 External-boundary contracts must support:
@@ -626,7 +651,7 @@ External-boundary contracts must support:
 - Unit-test mocks
 - Local adapters
 - Production implementations
-Tests for this step must not require:
+  Tests for this step must not require:
 
 - Docker
 - Floci
@@ -635,6 +660,7 @@ Tests for this step must not require:
 - MongoDB
 - Redis
 - Any database
+
 ### Immutability
 
 Prefer immutable or read-only properties where supported by the existing project language and conventions.
@@ -649,13 +675,13 @@ If the repository uses JavaScript:
 - Use immutable constants and documented object shapes where appropriate.
 - Do not convert the repository to TypeScript.
 - Do not present JSDoc as runtime validation.
-If the repository uses TypeScript:
+  If the repository uses TypeScript:
 
 - Use explicit types and interfaces.
 - Prefer discriminated unions for dataset capabilities and result outcomes where useful.
 - Avoid `any` .
 - Use read-only properties where appropriate.
-Runtime collection validation belongs to later steps.
+  Runtime collection validation belongs to later steps.
 
 ### Naming
 
@@ -671,7 +697,7 @@ Use the agreed domain language consistently:
 - GUID
 - In-memory store
 - Persistence repository
-Avoid database-specific terms.
+  Avoid database-specific terms.
 
 ## File organisation
 
@@ -699,6 +725,7 @@ src/
       authentication-client
       reference-data-projector
 ```
+
 Do not force this structure if the repository already has an equivalent coherent convention.
 
 Do not define the same contract in multiple component directories.
@@ -725,7 +752,7 @@ Add focused tests proving that:
 16. Internal diagnostic causes are not publicly serialised.
 17. Shared modules can be imported without circular-dependency failures.
 18. No test requires a database or external infrastructure.
-Use the existing test framework and naming conventions.
+    Use the existing test framework and naming conventions.
 
 Do not add Docker or integration tests in this step.
 
@@ -745,7 +772,7 @@ Add or update concise documentation covering:
 - Process-local JSON objects as the cache
 - Explicit absence of a database
 - Explicit absence of Redis
-Use the documentation location established by the repository. Avoid duplicate design documents.
+  Use the documentation location established by the repository. Avoid duplicate design documents.
 
 ## Security and privacy considerations
 
@@ -757,6 +784,7 @@ Use the documentation location established by the repository. Avoid duplicate de
 - Treat actor identifiers as generic audit references.
 - Do not include real vessel or production reference data in tests.
 - Avoid exposing file-system paths, environment variables, credentials, or stack traces through service-error serialisation.
+
 ## In scope
 
 - Shared dataset identifiers
@@ -776,6 +804,7 @@ Use the documentation location established by the repository. Avoid duplicate de
 - Common service-error model
 - Unit tests for constants, helpers, and safe-error behaviour
 - Minimal contract documentation
+
 ## Out of scope
 
 Do not implement:
@@ -812,14 +841,16 @@ Do not implement:
 - Seed data
 - OpenAPI definitions
 - Deployment infrastructure
+
 ## Expected deliverables
 
 1. Approved plan saved as:
-Plain Text
+   Plain Text
 
 ```text
 github-prompts/Step 03-define-shared-domain-types-and-contracts-plan.md
 ```
+
 1. Central dataset definitions.
 2. Dataset capability definitions.
 3. Canonical and mobile representation definitions.
@@ -835,6 +866,7 @@ github-prompts/Step 03-define-shared-domain-types-and-contracts-plan.md
 13. Safe service-error contract.
 14. Focused unit tests.
 15. Updated contract documentation.
+
 ## Acceptance criteria
 
 This step is complete only when:
@@ -868,6 +900,7 @@ This step is complete only when:
 - Formatting checks pass.
 - Existing application startup remains functional.
 - Documentation is updated.
+
 ## Verification
 
 Inspect `package.json` and use the actual repository commands.
@@ -883,6 +916,7 @@ npm test
 npm run test:coverage
 npm start
 ```
+
 Do not add duplicate scripts when equivalent scripts already exist.
 
 If a pre-existing failure is discovered:
@@ -892,7 +926,7 @@ If a pre-existing failure is discovered:
 3. Determine whether the failure was introduced by this step.
 4. Do not broaden the scope silently.
 5. Ask for clarification when resolution requires unrelated work.
-No database, Docker, Floci, S3, or Authentication Service testing is expected in this step.
+   No database, Docker, Floci, S3, or Authentication Service testing is expected in this step.
 
 ## Final response requirements
 
@@ -913,4 +947,4 @@ After implementation, report:
 13. Confirmation that no Authentication Service implementation was added.
 14. Work deferred to later steps.
 15. Remaining assumptions, risks, or owner decisions.
-If you reach any ambiguity, ask me to clarify.
+    If you reach any ambiguity, ask me to clarify.

@@ -4,7 +4,7 @@
 
 - Project name: Reference Data Service
 - Workspace created: 2026-09-16T00:35:28.883Z
-- Workspace updated: 2026-09-16T01:18:20.803Z
+- Workspace updated: 2026-09-16T01:48:16.198Z
 - Extension version: 0.1.0
 - Active prompt profile: Web Application Workspace
 - Selected folder: design
@@ -12,15 +12,15 @@
 
 ## Workspace Statistics
 
-- Prompts captured: 4
-- Prompts saved: 4
-- Responses extracted: 1
-- Artifacts parsed: 1
-- Artifacts validated: 1
-- Text artifacts saved: 1
+- Prompts captured: 5
+- Prompts saved: 5
+- Responses extracted: 2
+- Artifacts parsed: 2
+- Artifacts validated: 2
+- Text artifacts saved: 2
 - Binary artifacts detected: 3
 - Binary artifacts saved: 0
-- Companion metadata files saved: 1
+- Companion metadata files saved: 2
 - Artifact save failures: 0
 - Artifact save skips: 3
 
@@ -34,27 +34,31 @@
   Conversation: conv-20260916013340-xbgy | Saved: 2026-09-16T01:15:56.810Z
 - [Prompt 004: fail one tet whe i running npm test:​‌⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯ FAIL src/con](_conversations/prompts/conv-20260916013340-xbgy-20260916-021814-prompt-004-fail-one-tet-whe-i-running-npm-test.md)  
   Conversation: conv-20260916013340-xbgy | Saved: 2026-09-16T01:18:14.572Z
+- [Prompt 005: thanks, finally fixed, now generate prompt for Step 04: Define canonical collection schemas​‌](_conversations/prompts/conv-20260916013340-xbgy-20260916-024656-prompt-005-thanks-finally-fixed-now-generate-pr.md)  
+  Conversation: conv-20260916013340-xbgy | Saved: 2026-09-16T01:46:56.997Z
 
 ## GitHub Prompts
 
-- [Step 03 Define Shared Domain Types and Contracts](github-prompts/step-03-define-shared-domain-types-and-contracts.md)    Type: github-prompt | Format: markdown | Saved: 2026-09-16T00:36:22.373Z | Conversation: conv-20260916013340-xbgy
+- [Step 03 Define Shared Domain Types and Contracts](github-prompts/step-03-define-shared-domain-types-and-contracts.md) Type: github-prompt | Format: markdown | Saved: 2026-09-16T00:36:22.373Z | Conversation: conv-20260916013340-xbgy
   Metadata: [Companion Metadata](github-prompts/step-03-define-shared-domain-types-and-contracts.meta.md)
+- [Step 04 Define Canonical Collection Schemas](github-prompts/step-04-define-canonical-collection-schemas.md) Type: github-prompt | Format: markdown | Saved: 2026-09-16T01:48:14.430Z | Conversation: conv-20260916013340-xbgy
+  Metadata: [Companion Metadata](github-prompts/step-04-define-canonical-collection-schemas.meta.md)
 
 ## Companion Metadata Files
 
-- Companion metadata files linked under artifacts: 1
+- Companion metadata files linked under artifacts: 2
 
 ## Conversations
 
-- Conversation: conv-20260916013340-xbgy    Started: 2026-09-16T00:35:28.490Z | Updated: 2026-09-16T01:18:14.572Z | Prompts: 4 | Responses: 1 | Saved artifacts: 1
+- Conversation: conv-20260916013340-xbgy Started: 2026-09-16T00:35:28.490Z | Updated: 2026-09-16T01:48:14.430Z | Prompts: 5 | Responses: 2 | Saved artifacts: 2
 
 ## Latest Activity
 
-- Last prompt saved: 2026-09-16T01:18:14.572Z
-- Last artifact saved: 2026-09-16T00:36:22.373Z
+- Last prompt saved: 2026-09-16T01:46:56.997Z
+- Last artifact saved: 2026-09-16T01:48:14.430Z
 - Last binary artifact saved: Not available
-- Last companion metadata saved: 2026-09-16T00:36:22.414Z
-- Workspace updated: 2026-09-16T01:18:20.803Z
+- Last companion metadata saved: 2026-09-16T01:48:16.050Z
+- Workspace updated: 2026-09-16T01:48:16.198Z
 
 ## Notes
 

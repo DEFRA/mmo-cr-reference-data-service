@@ -10,4 +10,4 @@
 
 ## Prompt
 
-the Reference Data service is a service that will provide access and managment for the reference data of the catch recording app , as such it is a backend service, base on the design i have provided and all the information that you have about the Reference Data Service , generate a step by step plan that I can follow to implement the Reference Data Service ,  each step should be implmeted by a single github prompt that i will ask you to generate at a later stage ​‌​‌
+the Reference Data service is a service that will provide access and managment for the reference data of the catch recording app , as such it is a backend service, base on the design i have provided and all the information that you have about the Reference Data Service , generate a step by step plan that I can follow to implement the Reference Data Service , each step should be implmeted by a single github prompt that i will ask you to generate at a later stage ​‌​‌
