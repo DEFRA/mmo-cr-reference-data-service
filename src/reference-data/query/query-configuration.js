@@ -1,9 +1,12 @@
 // Step 15: reusable dataset query-configuration mechanism. Each dataset step (16-20)
 // registers one of these instead of modifying the common query engine.
 
+const DEFAULT_PAGINATION_LIMIT = 50
+const MAX_PAGINATION_LIMIT = 500
+
 function assertFunction(value, name) {
   if (typeof value !== 'function') {
-    throw new Error(`Query configuration "${name}" must be a function`)
+    throw new TypeError(`Query configuration "${name}" must be a function`)
   }
 }
 
@@ -187,8 +190,8 @@ export function createQueryConfiguration({
     activeField,
     mobileProjector,
     pagination: Object.freeze({
-      defaultLimit: pagination.defaultLimit ?? 50,
-      maxLimit: pagination.maxLimit ?? 500,
+      defaultLimit: pagination.defaultLimit ?? DEFAULT_PAGINATION_LIMIT,
+      maxLimit: pagination.maxLimit ?? MAX_PAGINATION_LIMIT,
       allowPagination: pagination.allowPagination ?? true
     })
   })
