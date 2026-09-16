@@ -47,7 +47,7 @@ describe('#createInMemoryDataStore construction', () => {
 
   test('a new store has no active manifest', () => {
     const store = createInMemoryDataStore()
-    expect(store.getManifest()).toBeUndefined()
+    expect(store.getManifest()).toBeNull()
   })
 
   test('two store instances do not share state', () => {
@@ -329,7 +329,7 @@ describe('#manifest', () => {
 
   test('the no-manifest state is deterministic', () => {
     const store = createInMemoryDataStore()
-    expect(store.getManifest()).toBeUndefined()
+    expect(store.getManifest()).toBeNull()
   })
 
   test('a missing manifest argument is rejected', () => {
@@ -425,7 +425,7 @@ describe('#clear', () => {
 
     expect(store.listLoadedDatasets()).toEqual([])
     expect(store.getCollection(DATASETS.VESSELS)).toBeUndefined()
-    expect(store.getManifest()).toBeUndefined()
+    expect(store.getManifest()).toBeNull()
 
     store.setCollection(
       DATASETS.VESSELS,

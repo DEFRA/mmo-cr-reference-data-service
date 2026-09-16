@@ -11,7 +11,7 @@ import { calculateChecksum } from './checksum.js'
  */
 export async function readJsonBody(response, dataset) {
   if (!response?.Body) {
-    raisePersistenceError(
+    return raisePersistenceError(
       SERVICE_ERROR_CODES.REFERENCE_DATA_UNAVAILABLE,
       'Reference-data object has no readable body',
       dataset
@@ -23,7 +23,7 @@ export async function readJsonBody(response, dataset) {
   try {
     return { data: JSON.parse(text), checksum: calculateChecksum(text) }
   } catch (cause) {
-    raisePersistenceError(
+    return raisePersistenceError(
       SERVICE_ERROR_CODES.INVALID_JSON,
       'Stored reference-data object is not valid JSON',
       dataset,

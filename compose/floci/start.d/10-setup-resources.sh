@@ -12,7 +12,7 @@ if aws s3api head-bucket --bucket "$BUCKET" 2>/dev/null; then
   echo "[floci-init] Bucket '${BUCKET}' already exists; skipping creation."
 else
   # us-east-1 rejects an explicit LocationConstraint; every other region requires one.
-  if [ "$REGION" = "us-east-1" ]; then
+  if [[ "$REGION" == "us-east-1" ]]; then
     aws s3api create-bucket --bucket "$BUCKET"
   else
     aws s3api create-bucket \

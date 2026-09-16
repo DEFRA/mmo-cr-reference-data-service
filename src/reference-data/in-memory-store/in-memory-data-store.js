@@ -46,7 +46,7 @@ function cloneOrThrow(value, label, dataset) {
   try {
     return structuredClone(value)
   } catch (cause) {
-    raiseStoreError(
+    return raiseStoreError(
       SERVICE_ERROR_CODES.INVALID_REQUEST,
       `Unable to store ${label}: value is not cloneable`,
       dataset,
@@ -55,55 +55,69 @@ function cloneOrThrow(value, label, dataset) {
   }
 }
 
+function assertValidCollectionInput(dataset, collection, metadata) {
+  if (collection === undefined || metadata === undefined) {
+    raiseStoreError(
+      SERVICE_ERROR_CODES.INVALID_REQUEST,
+      'A collection and its metadata are both required',
+      dataset
+    )
+  }
+  if (metadata?.dataset !== undefined && metadata.dataset !== dataset) {
+    raiseStoreError(
+      SERVICE_ERROR_CODES.INVALID_REQUEST,
+      `Collection metadata dataset "${metadata.dataset}" does not match "${dataset}"`,
+      dataset
+    )
+  }
+}
+
+// Validates and clones before returning, so a failed clone never leaves a partially prepared entry.
+function prepareCollectionEntry(dataset, collection, metadata) {
+  assertValidCollectionInput(dataset, collection, metadata)
+  return {
+    collection: cloneOrThrow(collection, 'collection', dataset),
+    metadata: cloneOrThrow(metadata, 'collection metadata', dataset)
+  }
+}
+
+function prepareManifest(nextManifest) {
+  if (nextManifest === undefined) {
+    raiseStoreError(
+      SERVICE_ERROR_CODES.INVALID_REQUEST,
+      'A manifest is required',
+      null
+    )
+  }
+  return cloneOrThrow(nextManifest, 'manifest', null)
+}
+
+function getEntry(collections, dataset) {
+  assertSupportedDataset(dataset)
+  return collections.get(dataset)
+}
+
 /**
  * Creates an isolated In-Memory Data Store instance implementing the Step 03 contract.
  */
 export function createInMemoryDataStore() {
   const collections = new Map()
-  let manifest
+  let manifest = null
 
   function setCollection(dataset, collection, metadata) {
     assertStorableDataset(dataset)
-
-    if (collection === undefined || metadata === undefined) {
-      raiseStoreError(
-        SERVICE_ERROR_CODES.INVALID_REQUEST,
-        'A collection and its metadata are both required',
-        dataset
-      )
-    }
-
-    if (metadata?.dataset !== undefined && metadata.dataset !== dataset) {
-      raiseStoreError(
-        SERVICE_ERROR_CODES.INVALID_REQUEST,
-        `Collection metadata dataset "${metadata.dataset}" does not match "${dataset}"`,
-        dataset
-      )
-    }
-
-    const preparedCollection = cloneOrThrow(collection, 'collection', dataset)
-    const preparedMetadata = cloneOrThrow(
-      metadata,
-      'collection metadata',
-      dataset
-    )
-
-    // Both clones succeed before the map is mutated, so a failed replacement leaves the previous entry intact.
-    collections.set(dataset, {
-      collection: preparedCollection,
-      metadata: preparedMetadata
-    })
+    const entry = prepareCollectionEntry(dataset, collection, metadata)
+    // Preparation succeeds before the map is mutated, so a failed replacement leaves the previous entry intact.
+    collections.set(dataset, entry)
   }
 
   function getCollection(dataset) {
-    assertSupportedDataset(dataset)
-    const entry = collections.get(dataset)
+    const entry = getEntry(collections, dataset)
     return entry ? structuredClone(entry.collection) : undefined
   }
 
   function getCollectionMetadata(dataset) {
-    assertSupportedDataset(dataset)
-    const entry = collections.get(dataset)
+    const entry = getEntry(collections, dataset)
     return entry ? structuredClone(entry.metadata) : undefined
   }
 
@@ -123,23 +137,16 @@ export function createInMemoryDataStore() {
   }
 
   function setManifest(nextManifest) {
-    if (nextManifest === undefined) {
-      raiseStoreError(
-        SERVICE_ERROR_CODES.INVALID_REQUEST,
-        'A manifest is required',
-        null
-      )
-    }
-    manifest = cloneOrThrow(nextManifest, 'manifest', null)
+    manifest = prepareManifest(nextManifest)
   }
 
   function getManifest() {
-    return manifest === undefined ? undefined : structuredClone(manifest)
+    return manifest === null ? null : structuredClone(manifest)
   }
 
   function clear() {
     collections.clear()
-    manifest = undefined
+    manifest = null
   }
 
   return createInMemoryDataStoreContract({

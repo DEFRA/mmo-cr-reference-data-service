@@ -21,81 +21,110 @@ function withRetryable(error, retryable) {
 }
 
 // Node system errors (connection failures) surface as `error.code`; AWS SDK service errors use `error.name`.
-function mapKnownError(error, { dataset }) {
-  const name = error?.name
-  const systemCode = error?.code
-  const httpStatus = error?.$metadata?.httpStatusCode
+const NOT_FOUND_NAMES = new Set(['NoSuchKey', 'NotFound'])
+const INVALID_CREDENTIAL_NAMES = new Set([
+  'InvalidAccessKeyId',
+  'SignatureDoesNotMatch',
+  'UnrecognizedClientException'
+])
+const THROTTLING_NAMES = new Set(['SlowDown', 'ThrottlingException'])
+const TIMEOUT_SYSTEM_CODES = new Set(['ETIMEDOUT'])
+const UNREACHABLE_SYSTEM_CODES = new Set(['ECONNREFUSED', 'ENOTFOUND'])
 
-  if (name === 'NoSuchBucket') {
-    return {
+const HTTP_STATUS_NOT_FOUND = 404
+const HTTP_STATUS_FORBIDDEN = 403
+const HTTP_STATUS_PRECONDITION_FAILED = 412
+const HTTP_STATUS_TOO_MANY_REQUESTS = 429
+const HTTP_STATUS_SERVICE_UNAVAILABLE = 503
+const THROTTLING_STATUS_CODES = new Set([
+  HTTP_STATUS_SERVICE_UNAVAILABLE,
+  HTTP_STATUS_TOO_MANY_REQUESTS
+])
+
+const DEFAULT_ERROR_RESULT = {
+  code: SERVICE_ERROR_CODES.REFERENCE_STORE_UNAVAILABLE,
+  message: 'Reference-data storage is unavailable',
+  retryable: true
+}
+
+// Ordered, data-driven rules keep each predicate trivial rather than one long conditional chain.
+const ERROR_RULES = [
+  {
+    matches: ({ name }) => name === 'NoSuchBucket',
+    result: {
       code: SERVICE_ERROR_CODES.REFERENCE_STORE_UNAVAILABLE,
       message: 'Configured reference-data bucket does not exist'
     }
-  }
-  if (name === 'NoSuchKey' || name === 'NotFound' || httpStatus === 404) {
-    return {
+  },
+  {
+    matches: ({ name, httpStatus }) =>
+      NOT_FOUND_NAMES.has(name) || httpStatus === HTTP_STATUS_NOT_FOUND,
+    result: {
       code: SERVICE_ERROR_CODES.DATASET_NOT_FOUND,
       message: 'Reference-data object not found'
     }
-  }
-  if (name === 'AccessDenied' || httpStatus === 403) {
-    return {
+  },
+  {
+    matches: ({ name, httpStatus }) =>
+      name === 'AccessDenied' || httpStatus === HTTP_STATUS_FORBIDDEN,
+    result: {
       code: SERVICE_ERROR_CODES.FORBIDDEN,
       message: 'Access to reference-data storage was denied'
     }
-  }
-  if (name === 'PreconditionFailed' || httpStatus === 412) {
-    return {
+  },
+  {
+    matches: ({ name, httpStatus }) =>
+      name === 'PreconditionFailed' ||
+      httpStatus === HTTP_STATUS_PRECONDITION_FAILED,
+    result: {
       code: SERVICE_ERROR_CODES.COLLECTION_MODIFIED,
       message: 'Reference-data object was modified concurrently'
     }
-  }
-  if (
-    name === 'InvalidAccessKeyId' ||
-    name === 'SignatureDoesNotMatch' ||
-    name === 'UnrecognizedClientException'
-  ) {
-    return {
+  },
+  {
+    matches: ({ name }) => INVALID_CREDENTIAL_NAMES.has(name),
+    result: {
       code: SERVICE_ERROR_CODES.REFERENCE_STORE_UNAVAILABLE,
       message: 'Reference-data storage credentials are invalid'
     }
-  }
-  if (
-    name === 'SlowDown' ||
-    name === 'ThrottlingException' ||
-    httpStatus === 503 ||
-    httpStatus === 429
-  ) {
-    return {
+  },
+  {
+    matches: ({ name, httpStatus }) =>
+      THROTTLING_NAMES.has(name) || THROTTLING_STATUS_CODES.has(httpStatus),
+    result: {
       code: SERVICE_ERROR_CODES.REFERENCE_STORE_UNAVAILABLE,
       message: 'Reference-data storage is throttling requests',
       retryable: true
     }
-  }
-  if (name === 'TimeoutError' || systemCode === 'ETIMEDOUT') {
-    return {
+  },
+  {
+    matches: ({ name, systemCode }) =>
+      name === 'TimeoutError' || TIMEOUT_SYSTEM_CODES.has(systemCode),
+    result: {
       code: SERVICE_ERROR_CODES.REFERENCE_STORE_UNAVAILABLE,
       message: 'Reference-data storage timed out',
       retryable: true
     }
-  }
-  if (
-    systemCode === 'ECONNREFUSED' ||
-    systemCode === 'ENOTFOUND' ||
-    name === 'UnknownEndpoint'
-  ) {
-    return {
+  },
+  {
+    matches: ({ name, systemCode }) =>
+      UNREACHABLE_SYSTEM_CODES.has(systemCode) || name === 'UnknownEndpoint',
+    result: {
       code: SERVICE_ERROR_CODES.REFERENCE_STORE_UNAVAILABLE,
       message: 'Reference-data storage endpoint is unreachable',
       retryable: true
     }
   }
+]
 
-  return {
-    code: SERVICE_ERROR_CODES.REFERENCE_STORE_UNAVAILABLE,
-    message: 'Reference-data storage is unavailable',
-    retryable: true
+function mapKnownError(error) {
+  const context = {
+    name: error?.name,
+    systemCode: error?.code,
+    httpStatus: error?.$metadata?.httpStatusCode
   }
+  const rule = ERROR_RULES.find((candidate) => candidate.matches(context))
+  return rule ? rule.result : DEFAULT_ERROR_RESULT
 }
 
 /**
@@ -103,7 +132,7 @@ function mapKnownError(error, { dataset }) {
  * @param {{ dataset?: string }} [context]
  */
 export function mapS3Error(cause, { dataset } = {}) {
-  const { code, message, retryable = false } = mapKnownError(cause, { dataset })
+  const { code, message, retryable = false } = mapKnownError(cause)
   const error = new Error(message)
   error.code = code
   error.dataset = dataset ?? null
