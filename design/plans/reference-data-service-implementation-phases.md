@@ -467,14 +467,17 @@ Review implementation evidence against:
 - Step 08: Implement common structural and business validation
 - Step 09: Implement dataset-specific validation
 - Step 10: Implement canonical data normalisation
+- Step 11: Implement the Cache Refresh Module and startup hydration
+- Step 12: Implement Authentication Service integration
+- Step 13: Implement common API behaviour and error handling
 
 ## Next approved step
 
-- Step 11: Implement the Cache Refresh Module and startup hydration
+- Step 14: Implement the manifest API
 
 ## Remaining steps
 
-- Steps 11 through 32, in the exact order and scope defined by the approved implementation plan.
+- Steps 14 through 32, in the exact order and scope defined by the approved implementation plan.
 
 ---
 

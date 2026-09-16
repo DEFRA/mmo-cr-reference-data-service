@@ -15,14 +15,20 @@ describe('#referenceDataComponents', () => {
     ['validation', validation, 'validation'],
     ['query', query, 'query'],
     ['command', command, 'command'],
-    ['normalisation', normalisation, 'normalisation'],
-    ['cacheRefresh', cacheRefresh, 'cache-refresh']
+    ['normalisation', normalisation, 'normalisation']
   ])(
     '%s component loads with expected name',
     (_label, component, expectedName) => {
       expect(component).toEqual({ name: expectedName })
     }
   )
+
+  // cacheRefresh is implemented (Step 11); its behaviour is covered by cache-refresh/cache-refresh-service.test.js.
+  test('cacheRefresh component implements the Cache Refresh Module contract', () => {
+    expect(Object.keys(cacheRefresh).sort()).toEqual(
+      ['getReadinessState', 'hydrate', 'markShuttingDown', 'refresh'].sort()
+    )
+  })
 
   // inMemoryStore is implemented (Step 05); its behaviour is covered by in-memory-store/in-memory-data-store.test.js.
   test('inMemoryStore component implements the In-Memory Data Store contract', () => {

@@ -28,7 +28,23 @@ describe('#config', () => {
     )
     expect(config.get('referenceData.refreshIntervalMs')).toBe(60000)
     expect(config.get('referenceData.maxUploadBytes')).toBe(26214400)
+    expect(config.get('referenceData.refreshEnabled')).toBe(true)
+    expect(config.get('referenceData.refreshInitialDelayMs')).toBe(0)
+    expect(config.get('referenceData.hydrationTimeoutMs')).toBe(10000)
+    expect(config.get('referenceData.refreshConcurrency')).toBe(3)
+    expect(config.get('referenceData.mandatoryDatasets')).toEqual([
+      'vessels',
+      'gears',
+      'ports',
+      'species',
+      'map-land',
+      'map-statistical-areas'
+    ])
+    expect(config.get('referenceData.autoStartCacheRefresh')).toBe(false)
     expect(config.get('authentication.serviceUrl')).toBeNull()
+    expect(config.get('authentication.timeoutMs')).toBe(2000)
+    expect(config.get('authentication.retryCount')).toBe(1)
+    expect(config.get('authentication.retryDelayMs')).toBe(100)
   })
 
   test('loads valid deployed-style configuration without a custom AWS endpoint', async () => {
@@ -107,6 +123,61 @@ describe('#config', () => {
 
   test('rejects an invalid upload limit', async () => {
     process.env.REFERENCE_DATA_MAX_UPLOAD_BYTES = '-1'
+
+    await expect(loadConfig()).rejects.toThrow()
+  })
+
+  test('rejects an invalid hydration timeout', async () => {
+    process.env.REFERENCE_DATA_HYDRATION_TIMEOUT_MS = '0'
+
+    await expect(loadConfig()).rejects.toThrow()
+  })
+
+  test('rejects an invalid refresh concurrency', async () => {
+    process.env.REFERENCE_DATA_REFRESH_CONCURRENCY = '0'
+
+    await expect(loadConfig()).rejects.toThrow()
+  })
+
+  test('rejects a negative refresh initial delay', async () => {
+    process.env.REFERENCE_DATA_REFRESH_INITIAL_DELAY_MS = '-1'
+
+    await expect(loadConfig()).rejects.toThrow()
+  })
+
+  test('accepts a zero refresh initial delay', async () => {
+    process.env.REFERENCE_DATA_REFRESH_INITIAL_DELAY_MS = '0'
+
+    const config = await loadConfig()
+
+    expect(config.get('referenceData.refreshInitialDelayMs')).toBe(0)
+  })
+
+  test('parses a comma-separated mandatory dataset list', async () => {
+    process.env.REFERENCE_DATA_MANDATORY_DATASETS = 'vessels,ports'
+
+    const config = await loadConfig()
+
+    expect(config.get('referenceData.mandatoryDatasets')).toEqual([
+      'vessels',
+      'ports'
+    ])
+  })
+
+  test('rejects an unsupported mandatory dataset', async () => {
+    process.env.REFERENCE_DATA_MANDATORY_DATASETS = 'vessels,not-a-dataset'
+
+    await expect(loadConfig()).rejects.toThrow()
+  })
+
+  test('rejects the derived map-ports dataset as mandatory', async () => {
+    process.env.REFERENCE_DATA_MANDATORY_DATASETS = 'map-ports'
+
+    await expect(loadConfig()).rejects.toThrow()
+  })
+
+  test('rejects an empty mandatory dataset list', async () => {
+    process.env.REFERENCE_DATA_MANDATORY_DATASETS = ''
 
     await expect(loadConfig()).rejects.toThrow()
   })
