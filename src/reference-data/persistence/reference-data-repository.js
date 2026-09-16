@@ -26,6 +26,9 @@ import {
 import { readJsonBody } from './response-body.js'
 import { mapS3Error, raisePersistenceError } from './error-mapping.js'
 
+const HTTP_STATUS_NOT_FOUND = 404
+const HTTP_STATUS_PRECONDITION_FAILED = 412
+
 const CONTENT_TYPE_BY_FORMAT = Object.freeze({
   [DATASET_FORMAT.JSON]: 'application/json',
   [DATASET_FORMAT.GEOJSON]: 'application/geo+json'
@@ -33,6 +36,20 @@ const CONTENT_TYPE_BY_FORMAT = Object.freeze({
 
 function resolveContentType(dataset) {
   return CONTENT_TYPE_BY_FORMAT[getDatasetCapabilities(dataset).format]
+}
+
+function isNotFoundError(cause) {
+  return (
+    cause?.name === 'NotFound' ||
+    cause?.$metadata?.httpStatusCode === HTTP_STATUS_NOT_FOUND
+  )
+}
+
+function isPreconditionFailedError(cause) {
+  return (
+    cause?.name === 'PreconditionFailed' ||
+    cause?.$metadata?.httpStatusCode === HTTP_STATUS_PRECONDITION_FAILED
+  )
 }
 
 function toObjectMetadata({
@@ -65,6 +82,234 @@ function resolveTargetKey(target) {
     : buildCollectionObjectKey(target.dataset, target.collectionVersion)
 }
 
+function resolveTargetDataset(target) {
+  return target?.manifest ? null : target.dataset
+}
+
+async function headObjectAt(s3Client, bucket, key) {
+  return s3Client.send(
+    new HeadObjectCommand({ Bucket: bucket, Key: key, ChecksumMode: 'ENABLED' })
+  )
+}
+
+// Returns null for a confirmed-absent object; throws a mapped error for any other failure.
+async function getExistingEtag(s3Client, bucket, key) {
+  try {
+    const response = await headObjectAt(s3Client, bucket, key)
+    return normaliseEtag(response.ETag)
+  } catch (cause) {
+    if (isNotFoundError(cause)) {
+      return null
+    }
+    throw mapS3Error(cause, {})
+  }
+}
+
+async function fetchCollection(s3Client, bucket, dataset, collectionVersion) {
+  const objectKey = buildCollectionObjectKey(dataset, collectionVersion)
+  try {
+    const response = await s3Client.send(
+      new GetObjectCommand({
+        Bucket: bucket,
+        Key: objectKey,
+        ChecksumMode: 'ENABLED'
+      })
+    )
+    const { data, checksum } = await readJsonBody(response, dataset)
+    return {
+      content: data,
+      metadata: toObjectMetadata({
+        dataset,
+        collectionVersion,
+        objectKey,
+        response,
+        checksum: response.ChecksumSHA256 ?? checksum
+      })
+    }
+  } catch (cause) {
+    if (cause?.isServiceError) {
+      throw cause
+    }
+    throw mapS3Error(cause, { dataset })
+  }
+}
+
+function raiseCollectionVersionExists(dataset, collectionVersion, cause) {
+  raisePersistenceError(
+    SERVICE_ERROR_CODES.COLLECTION_VERSION_EXISTS,
+    `Collection version already exists: ${dataset}/${collectionVersion}`,
+    dataset,
+    cause
+  )
+}
+
+async function putCollection(
+  s3Client,
+  bucket,
+  dataset,
+  collectionVersion,
+  content
+) {
+  const objectKey = buildCollectionObjectKey(dataset, collectionVersion)
+  const contentType = resolveContentType(dataset)
+  const body = JSON.stringify(content)
+
+  // Floci does not enforce If-None-Match, so a pre-check guards local development;
+  // the header still protects genuine concurrent writes on real AWS S3.
+  const preExistingEtag = await getExistingEtag(s3Client, bucket, objectKey)
+  if (preExistingEtag !== null) {
+    raiseCollectionVersionExists(dataset, collectionVersion)
+  }
+
+  try {
+    const response = await s3Client.send(
+      new PutObjectCommand({
+        Bucket: bucket,
+        Key: objectKey,
+        Body: body,
+        ContentType: contentType,
+        ChecksumAlgorithm: CHECKSUM_ALGORITHM.toUpperCase(),
+        IfNoneMatch: '*'
+      })
+    )
+    return toObjectMetadata({
+      dataset,
+      collectionVersion,
+      objectKey,
+      contentType,
+      response: {
+        ...response,
+        ContentType: contentType,
+        ContentLength: Buffer.byteLength(body)
+      },
+      checksum: response.ChecksumSHA256 ?? calculateChecksum(body)
+    })
+  } catch (cause) {
+    if (isPreconditionFailedError(cause)) {
+      raiseCollectionVersionExists(dataset, collectionVersion, cause)
+    }
+    throw mapS3Error(cause, { dataset })
+  }
+}
+
+async function fetchManifest(s3Client, bucket) {
+  const objectKey = buildManifestObjectKey()
+  try {
+    const response = await s3Client.send(
+      new GetObjectCommand({
+        Bucket: bucket,
+        Key: objectKey,
+        ChecksumMode: 'ENABLED'
+      })
+    )
+    const { data, checksum } = await readJsonBody(response, null)
+    return {
+      manifest: data,
+      metadata: toObjectMetadata({
+        dataset: null,
+        objectKey,
+        response,
+        contentType: 'application/json',
+        checksum: response.ChecksumSHA256 ?? checksum
+      })
+    }
+  } catch (cause) {
+    if (cause?.isServiceError) {
+      throw cause
+    }
+    throw mapS3Error(cause, {})
+  }
+}
+
+function raiseManifestModified(cause) {
+  raisePersistenceError(
+    SERVICE_ERROR_CODES.COLLECTION_MODIFIED,
+    'Manifest was modified since it was last read',
+    null,
+    cause
+  )
+}
+
+async function assertManifestNotModified(
+  s3Client,
+  bucket,
+  objectKey,
+  expectedEtag
+) {
+  if (expectedEtag === undefined || expectedEtag === null) {
+    return
+  }
+  const currentEtag = await getExistingEtag(s3Client, bucket, objectKey)
+  if (currentEtag !== expectedEtag) {
+    raiseManifestModified()
+  }
+}
+
+async function putManifest(s3Client, bucket, manifest, expectedEtag) {
+  const objectKey = buildManifestObjectKey()
+  const body = JSON.stringify(manifest)
+
+  await assertManifestNotModified(s3Client, bucket, objectKey, expectedEtag)
+
+  try {
+    const response = await s3Client.send(
+      new PutObjectCommand({
+        Bucket: bucket,
+        Key: objectKey,
+        Body: body,
+        ContentType: 'application/json',
+        ChecksumAlgorithm: CHECKSUM_ALGORITHM.toUpperCase(),
+        ...(expectedEtag ? { IfMatch: `"${expectedEtag}"` } : {})
+      })
+    )
+    return toObjectMetadata({
+      dataset: null,
+      objectKey,
+      response: {
+        ...response,
+        ContentType: 'application/json',
+        ContentLength: Buffer.byteLength(body)
+      },
+      checksum: response.ChecksumSHA256 ?? calculateChecksum(body)
+    })
+  } catch (cause) {
+    if (isPreconditionFailedError(cause)) {
+      raiseManifestModified(cause)
+    }
+    throw mapS3Error(cause, {})
+  }
+}
+
+async function fetchObjectMetadata(s3Client, bucket, target) {
+  const objectKey = resolveTargetKey(target)
+  const dataset = resolveTargetDataset(target)
+  try {
+    const response = await headObjectAt(s3Client, bucket, objectKey)
+    return toObjectMetadata({
+      dataset,
+      collectionVersion: target?.collectionVersion,
+      objectKey,
+      response
+    })
+  } catch (cause) {
+    throw mapS3Error(cause, { dataset })
+  }
+}
+
+async function checkObjectExists(s3Client, bucket, target) {
+  const objectKey = resolveTargetKey(target)
+  const dataset = resolveTargetDataset(target)
+  try {
+    await headObjectAt(s3Client, bucket, objectKey)
+    return true
+  } catch (cause) {
+    if (isNotFoundError(cause)) {
+      return false
+    }
+    throw mapS3Error(cause, { dataset })
+  }
+}
+
 /**
  * @param {Object} [options]
  * @param {string} [options.region]
@@ -87,235 +332,16 @@ export function createReferenceDataRepository({
     client
   })
 
-  async function headObject(key) {
-    return s3Client.send(
-      new HeadObjectCommand({
-        Bucket: bucket,
-        Key: key,
-        ChecksumMode: 'ENABLED'
-      })
-    )
-  }
-
-  async function existingEtag(key) {
-    try {
-      const response = await headObject(key)
-      return normaliseEtag(response.ETag)
-    } catch (cause) {
-      if (
-        cause?.name === 'NotFound' ||
-        cause?.$metadata?.httpStatusCode === 404
-      ) {
-        return null
-      }
-      throw mapS3Error(cause, {})
-    }
-  }
-
-  async function readCollection({ dataset, collectionVersion }) {
-    const objectKey = buildCollectionObjectKey(dataset, collectionVersion)
-    try {
-      const response = await s3Client.send(
-        new GetObjectCommand({
-          Bucket: bucket,
-          Key: objectKey,
-          ChecksumMode: 'ENABLED'
-        })
-      )
-      const { data, checksum } = await readJsonBody(response, dataset)
-      return {
-        content: data,
-        metadata: toObjectMetadata({
-          dataset,
-          collectionVersion,
-          objectKey,
-          response,
-          checksum: response.ChecksumSHA256 ?? checksum
-        })
-      }
-    } catch (cause) {
-      if (cause?.isServiceError) {
-        throw cause
-      }
-      throw mapS3Error(cause, { dataset })
-    }
-  }
-
-  async function writeCollection({ dataset, collectionVersion, content }) {
-    const objectKey = buildCollectionObjectKey(dataset, collectionVersion)
-    const contentType = resolveContentType(dataset)
-    const body = JSON.stringify(content)
-
-    // Floci does not enforce If-None-Match, so a pre-check guards local development;
-    // the header still protects genuine concurrent writes on real AWS S3.
-    const preExistingEtag = await existingEtag(objectKey)
-    if (preExistingEtag !== null) {
-      raisePersistenceError(
-        SERVICE_ERROR_CODES.COLLECTION_VERSION_EXISTS,
-        `Collection version already exists: ${dataset}/${collectionVersion}`,
-        dataset
-      )
-    }
-
-    try {
-      const response = await s3Client.send(
-        new PutObjectCommand({
-          Bucket: bucket,
-          Key: objectKey,
-          Body: body,
-          ContentType: contentType,
-          ChecksumAlgorithm: CHECKSUM_ALGORITHM.toUpperCase(),
-          IfNoneMatch: '*'
-        })
-      )
-      return toObjectMetadata({
-        dataset,
-        collectionVersion,
-        objectKey,
-        contentType,
-        response: {
-          ...response,
-          ContentType: contentType,
-          ContentLength: Buffer.byteLength(body)
-        },
-        checksum: response.ChecksumSHA256 ?? calculateChecksum(body)
-      })
-    } catch (cause) {
-      if (
-        cause?.name === 'PreconditionFailed' ||
-        cause?.$metadata?.httpStatusCode === 412
-      ) {
-        raisePersistenceError(
-          SERVICE_ERROR_CODES.COLLECTION_VERSION_EXISTS,
-          `Collection version already exists: ${dataset}/${collectionVersion}`,
-          dataset,
-          cause
-        )
-      }
-      throw mapS3Error(cause, { dataset })
-    }
-  }
-
-  async function readManifest() {
-    const objectKey = buildManifestObjectKey()
-    try {
-      const response = await s3Client.send(
-        new GetObjectCommand({
-          Bucket: bucket,
-          Key: objectKey,
-          ChecksumMode: 'ENABLED'
-        })
-      )
-      const { data, checksum } = await readJsonBody(response, null)
-      return {
-        manifest: data,
-        metadata: toObjectMetadata({
-          dataset: null,
-          objectKey,
-          response,
-          contentType: 'application/json',
-          checksum: response.ChecksumSHA256 ?? checksum
-        })
-      }
-    } catch (cause) {
-      if (cause?.isServiceError) {
-        throw cause
-      }
-      throw mapS3Error(cause, {})
-    }
-  }
-
-  async function writeManifest({ manifest, expectedEtag } = {}) {
-    const objectKey = buildManifestObjectKey()
-    const body = JSON.stringify(manifest)
-
-    if (expectedEtag !== undefined && expectedEtag !== null) {
-      const currentEtag = await existingEtag(objectKey)
-      if (currentEtag !== expectedEtag) {
-        raisePersistenceError(
-          SERVICE_ERROR_CODES.COLLECTION_MODIFIED,
-          'Manifest was modified since it was last read',
-          null
-        )
-      }
-    }
-
-    try {
-      const response = await s3Client.send(
-        new PutObjectCommand({
-          Bucket: bucket,
-          Key: objectKey,
-          Body: body,
-          ContentType: 'application/json',
-          ChecksumAlgorithm: CHECKSUM_ALGORITHM.toUpperCase(),
-          ...(expectedEtag ? { IfMatch: `"${expectedEtag}"` } : {})
-        })
-      )
-      return toObjectMetadata({
-        dataset: null,
-        objectKey,
-        response: {
-          ...response,
-          ContentType: 'application/json',
-          ContentLength: Buffer.byteLength(body)
-        },
-        checksum: response.ChecksumSHA256 ?? calculateChecksum(body)
-      })
-    } catch (cause) {
-      if (
-        cause?.name === 'PreconditionFailed' ||
-        cause?.$metadata?.httpStatusCode === 412
-      ) {
-        raisePersistenceError(
-          SERVICE_ERROR_CODES.COLLECTION_MODIFIED,
-          'Manifest was modified since it was last read',
-          null,
-          cause
-        )
-      }
-      throw mapS3Error(cause, {})
-    }
-  }
-
-  async function getObjectMetadata(target) {
-    const objectKey = resolveTargetKey(target)
-    const dataset = target?.manifest ? null : target.dataset
-    try {
-      const response = await headObject(objectKey)
-      return toObjectMetadata({
-        dataset,
-        collectionVersion: target?.collectionVersion,
-        objectKey,
-        response
-      })
-    } catch (cause) {
-      throw mapS3Error(cause, { dataset })
-    }
-  }
-
-  async function objectExists(target) {
-    const objectKey = resolveTargetKey(target)
-    const dataset = target?.manifest ? null : target.dataset
-    try {
-      await headObject(objectKey)
-      return true
-    } catch (cause) {
-      if (
-        cause?.name === 'NotFound' ||
-        cause?.$metadata?.httpStatusCode === 404
-      ) {
-        return false
-      }
-      throw mapS3Error(cause, { dataset })
-    }
-  }
-
   return createReferenceDataRepositoryContract({
-    readCollection,
-    writeCollection,
-    readManifest,
-    writeManifest,
-    getObjectMetadata,
-    objectExists
+    readCollection: ({ dataset, collectionVersion }) =>
+      fetchCollection(s3Client, bucket, dataset, collectionVersion),
+    writeCollection: ({ dataset, collectionVersion, content }) =>
+      putCollection(s3Client, bucket, dataset, collectionVersion, content),
+    readManifest: () => fetchManifest(s3Client, bucket),
+    writeManifest: ({ manifest, expectedEtag } = {}) =>
+      putManifest(s3Client, bucket, manifest, expectedEtag),
+    getObjectMetadata: (target) =>
+      fetchObjectMetadata(s3Client, bucket, target),
+    objectExists: (target) => checkObjectExists(s3Client, bucket, target)
   })
 }
