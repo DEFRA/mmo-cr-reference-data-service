@@ -1,0 +1,47 @@
+// Synthetic, schema-valid example gears collection (structural fixture, not seed data).
+export const validGearsCollection = {
+  dataset: 'gears',
+  collectionId: 'a1b2c3d4-1111-4111-8111-111111111111',
+  schemaVersion: '1.0',
+  version: '2026.09.11.1',
+  generatedAt: '2026-09-11T08:30:00Z',
+  itemCount: 1,
+  categories: [
+    {
+      id: '11111111-1111-4111-8111-111111111111',
+      code: 'TOWED',
+      name: 'Towed gear'
+    }
+  ],
+  characteristics: [
+    {
+      id: '22222222-2222-4222-8222-222222222222',
+      code: 'MESH_SIZE',
+      name: 'Mesh size',
+      dataType: 'number',
+      unit: 'mm',
+      minValue: 20,
+      maxValue: 300
+    }
+  ],
+  items: [
+    {
+      id: '44444444-4444-4444-8444-444444444444',
+      code: 'OTB',
+      name: 'Otter trawl',
+      type: 'trawl',
+      categoryId: '11111111-1111-4111-8111-111111111111',
+      pairFishing: false,
+      applicableCharacteristics: [
+        {
+          id: '33333333-3333-4333-8333-333333333333',
+          characteristicId: '22222222-2222-4222-8222-222222222222',
+          fixed: true,
+          required: false,
+          vesselLengthApplicability: ['under-10m', '10-to-12m']
+        }
+      ],
+      active: true
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+// Synthetic, schema-valid example map-land collection (structural fixture, not seed data).
+export const validMapLandCollection = {
+  dataset: 'map-land',
+  collectionId: 'c3d4e5f6-3333-4333-8333-333333333333',
+  schemaVersion: '1.0',
+  version: '2026.09.11.1',
+  generatedAt: '2026-09-11T08:30:00Z',
+  itemCount: 1,
+  type: 'FeatureCollection',
+  features: [
+    {
+      type: 'Feature',
+      id: '12639177-7614-4616-83cd-6141ecb83924',
+      properties: {
+        id: '12639177-7614-4616-83cd-6141ecb83924',
+        name: 'Rame Head'
+      },
+      geometry: {
+        type: 'Polygon',
+        coordinates: [
+          [
+            [-4.2, 50.3],
+            [-4.2, 50.4],
+            [-4.1, 50.4],
+            [-4.2, 50.3]
+          ]
+        ]
+      }
+    }
+  ]
+}
