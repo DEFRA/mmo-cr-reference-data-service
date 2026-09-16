@@ -1,10 +1,16 @@
 import convict from 'convict'
 import convictFormatWithValidator from 'convict-format-with-validator'
 
-import { convictValidateMongoUri } from '#/common/helpers/convict/validate-mongo-uri.js'
+import { convictValidateOptionalUrl } from '#/common/helpers/convict/validate-optional-url.js'
+import { convictValidateNonEmptyString } from '#/common/helpers/convict/validate-non-empty-string.js'
+import { convictValidatePositiveInteger } from '#/common/helpers/convict/validate-positive-integer.js'
+import { convictValidateStrictBoolean } from '#/common/helpers/convict/validate-strict-boolean.js'
 
-convict.addFormat(convictValidateMongoUri)
 convict.addFormats(convictFormatWithValidator)
+convict.addFormat(convictValidateOptionalUrl)
+convict.addFormat(convictValidateNonEmptyString)
+convict.addFormat(convictValidatePositiveInteger)
+convict.addFormat(convictValidateStrictBoolean)
 
 const isProduction = process.env.NODE_ENV === 'production'
 const isTest = process.env.NODE_ENV === 'test'
@@ -76,42 +82,6 @@ export const config = convict({
         : ['req', 'res', 'responseTime']
     }
   },
-  mongo: {
-    mongoUrl: {
-      doc: 'URI for mongodb',
-      format: String,
-      default: 'mongodb://127.0.0.1:27017/',
-      env: 'MONGO_URI'
-    },
-    databaseName: {
-      doc: 'database for mongodb',
-      format: String,
-      default: 'mmo-cr-reference-data-service',
-      env: 'MONGO_DATABASE'
-    },
-    mongoOptions: {
-      retryWrites: {
-        doc: 'Enable Mongo write retries, overrides mongo URI when set.',
-        format: Boolean,
-        default: null,
-        nullable: true,
-        env: 'MONGO_RETRY_WRITES'
-      },
-      readPreference: {
-        doc: 'Mongo read preference, overrides mongo URI when set.',
-        format: [
-          'primary',
-          'primaryPreferred',
-          'secondary',
-          'secondaryPreferred',
-          'nearest'
-        ],
-        default: null,
-        nullable: true,
-        env: 'MONGO_READ_PREFERENCE'
-      }
-    }
-  },
   httpProxy: {
     doc: 'HTTP Proxy URL',
     format: String,
@@ -125,6 +95,56 @@ export const config = convict({
       format: String,
       default: 'x-cdp-request-id',
       env: 'TRACING_HEADER'
+    }
+  },
+  aws: {
+    region: {
+      doc: 'AWS region used for S3-compatible reference-data storage',
+      format: 'non-empty-string',
+      default: 'eu-west-2',
+      env: 'AWS_REGION'
+    },
+    endpointUrl: {
+      doc: 'Optional S3-compatible endpoint override, e.g. Floci for local development. Leave unset in deployed AWS environments to use the default AWS endpoint.',
+      format: 'optional-url',
+      nullable: true,
+      default: null,
+      env: 'AWS_ENDPOINT_URL'
+    },
+    forcePathStyle: {
+      doc: 'Use path-style S3 addressing, required by Floci and most S3-compatible local emulators. Accepts only "true" or "false".',
+      format: 'strict-boolean',
+      default: false,
+      env: 'S3_FORCE_PATH_STYLE'
+    }
+  },
+  referenceData: {
+    bucket: {
+      doc: 'S3-compatible bucket name storing reference-data collections. Deployed environments must set an explicit, environment-specific value.',
+      format: 'non-empty-string',
+      default: 'mmo-cr-reference-data-service',
+      env: 'REFERENCE_DATA_BUCKET'
+    },
+    refreshIntervalMs: {
+      doc: 'Interval in milliseconds between reference-data cache-refresh checks',
+      format: 'positive-integer',
+      default: 60000,
+      env: 'REFERENCE_DATA_REFRESH_INTERVAL_MS'
+    },
+    maxUploadBytes: {
+      doc: 'Maximum accepted size in bytes for a reference-data collection upload',
+      format: 'positive-integer',
+      default: 26214400,
+      env: 'REFERENCE_DATA_MAX_UPLOAD_BYTES'
+    }
+  },
+  authentication: {
+    serviceUrl: {
+      doc: 'Base URL of the Authentication Service. Only consumed by the Validation Module in a later step.',
+      format: 'optional-url',
+      nullable: true,
+      default: null,
+      env: 'AUTHENTICATION_SERVICE_URL'
     }
   }
 })

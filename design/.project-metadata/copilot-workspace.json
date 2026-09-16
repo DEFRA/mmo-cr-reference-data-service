@@ -1,0 +1,114 @@
+{
+  "schemaVersion": "1.0",
+  "projectName": "Reference Data Service",
+  "workspaceCreatedAt": "2026-09-16T00:35:28.883Z",
+  "workspaceUpdatedAt": "2026-09-16T01:48:16.198Z",
+  "extensionVersion": "0.1.0",
+  "activePromptProfileId": "prompt-profile-web-application",
+  "activePromptProfileName": "Web Application Workspace",
+  "selectedFolderDisplayName": "design",
+  "statistics": {
+    "promptsCaptured": 5,
+    "promptsSaved": 5,
+    "responsesExtracted": 2,
+    "artifactsParsed": 2,
+    "artifactsValidated": 2,
+    "textArtifactsSaved": 2,
+    "binaryArtifactsDetected": 3,
+    "binaryArtifactsSaved": 0,
+    "companionMetadataFilesSaved": 2,
+    "artifactSaveFailures": 0,
+    "artifactSaveSkips": 3
+  },
+  "latestActivity": {
+    "lastPromptSavedAt": "2026-09-16T01:46:56.997Z",
+    "lastArtifactSavedAt": "2026-09-16T01:48:14.430Z",
+    "lastBinaryArtifactSavedAt": null,
+    "lastCompanionMetadataSavedAt": "2026-09-16T01:48:16.050Z"
+  },
+  "prompts": [
+    {
+      "promptId": "prompt-20260916013528-ns1vra",
+      "conversationId": "conv-20260916013340-xbgy",
+      "sequenceNumber": 1,
+      "summary": "generate prompt for Step 03: Define shared domain types and contracts​‌",
+      "savedPath": "_conversations/prompts/conv-20260916013340-xbgy-20260916-013528-prompt-001-generate-prompt-for-step-03-define-s.md",
+      "savedAt": "2026-09-16T00:35:28.878Z"
+    },
+    {
+      "promptId": "prompt-20260916021031-fxapzk",
+      "conversationId": "conv-20260916013340-xbgy",
+      "sequenceNumber": 2,
+      "summary": "i got thismessage but github is hanging , been about 10 mins a no moving ​‌Now datasets.test.js and representations.test",
+      "savedPath": "_conversations/prompts/conv-20260916013340-xbgy-20260916-021031-prompt-002-i-got-thismessage-but-github-is-hang.md",
+      "savedAt": "2026-09-16T01:10:32.267Z"
+    },
+    {
+      "promptId": "prompt-20260916021556-i7jl4i",
+      "conversationId": "conv-20260916013340-xbgy",
+      "sequenceNumber": 3,
+      "summary": "none pf the test fails ,, the format check got multiple warnings:​‌npm run format:check> mmo-cr-reference-data-service@0",
+      "savedPath": "_conversations/prompts/conv-20260916013340-xbgy-20260916-021556-prompt-003-none-pf-the-test-fails-the-format-ch.md",
+      "savedAt": "2026-09-16T01:15:56.810Z"
+    },
+    {
+      "promptId": "prompt-20260916021814-jmbm4f",
+      "conversationId": "conv-20260916013340-xbgy",
+      "sequenceNumber": 4,
+      "summary": "fail one tet whe i running npm test:​‌⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯ FAIL src/con",
+      "savedPath": "_conversations/prompts/conv-20260916013340-xbgy-20260916-021814-prompt-004-fail-one-tet-whe-i-running-npm-test.md",
+      "savedAt": "2026-09-16T01:18:14.572Z"
+    },
+    {
+      "promptId": "prompt-20260916024656-l55iqj",
+      "conversationId": "conv-20260916013340-xbgy",
+      "sequenceNumber": 5,
+      "summary": "thanks, finally fixed, now generate prompt for Step 04: Define canonical collection schemas​‌",
+      "savedPath": "_conversations/prompts/conv-20260916013340-xbgy-20260916-024656-prompt-005-thanks-finally-fixed-now-generate-pr.md",
+      "savedAt": "2026-09-16T01:46:56.997Z"
+    }
+  ],
+  "artifacts": [
+    {
+      "id": "artifact-instruction-response-record-20260916013622-8qflbr-1",
+      "sourceArtifactKind": "text-artifact",
+      "artifactInstructionId": "artifact-instruction-response-record-20260916013622-8qflbr-1",
+      "artifactName": "Step 03 Define Shared Domain Types and Contracts",
+      "artifactType": "github-prompt",
+      "format": "markdown",
+      "savedPath": "github-prompts/step-03-define-shared-domain-types-and-contracts.md",
+      "companionMetadataPath": "github-prompts/step-03-define-shared-domain-types-and-contracts.meta.md",
+      "sourceResponseId": "response-record-20260916013622-8qflbr",
+      "sourcePromptId": "prompt-20260916013528-ns1vra",
+      "conversationId": "conv-20260916013340-xbgy",
+      "savedAt": "2026-09-16T00:36:22.373Z"
+    },
+    {
+      "id": "artifact-instruction-response-record-20260916024814-zducfx-1",
+      "sourceArtifactKind": "text-artifact",
+      "artifactInstructionId": "artifact-instruction-response-record-20260916024814-zducfx-1",
+      "artifactName": "Step 04 Define Canonical Collection Schemas",
+      "artifactType": "github-prompt",
+      "format": "markdown",
+      "savedPath": "github-prompts/step-04-define-canonical-collection-schemas.md",
+      "companionMetadataPath": "github-prompts/step-04-define-canonical-collection-schemas.meta.md",
+      "sourceResponseId": "response-record-20260916024814-zducfx",
+      "sourcePromptId": "prompt-20260916024656-l55iqj",
+      "conversationId": "conv-20260916013340-xbgy",
+      "savedAt": "2026-09-16T01:48:14.430Z"
+    }
+  ],
+  "bundles": [],
+  "conversations": [
+    {
+      "conversationId": "conv-20260916013340-xbgy",
+      "startedAt": "2026-09-16T00:35:28.490Z",
+      "lastUpdatedAt": "2026-09-16T01:48:14.430Z",
+      "promptCount": 5,
+      "responseCount": 2,
+      "savedArtifactCount": 2,
+      "lastPromptId": "prompt-20260916024656-l55iqj",
+      "lastResponseId": "response-record-20260916024814-zducfx"
+    }
+  ]
+}
