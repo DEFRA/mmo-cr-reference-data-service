@@ -464,14 +464,17 @@ Review implementation evidence against:
 - Step 05: Implement the In-Memory Data Store
 - Step 06: Configure Floci S3 resources for local development
 - Step 07: Implement the Persistence Module
+- Step 08: Implement common structural and business validation
+- Step 09: Implement dataset-specific validation
+- Step 10: Implement canonical data normalisation
 
 ## Next approved step
 
-- Step 08: Implement common structural and business validation
+- Step 11: Implement the Cache Refresh Module and startup hydration
 
 ## Remaining steps
 
-- Steps 08 through 32, in the exact order and scope defined by the approved implementation plan.
+- Steps 11 through 32, in the exact order and scope defined by the approved implementation plan.
 
 ---
 
