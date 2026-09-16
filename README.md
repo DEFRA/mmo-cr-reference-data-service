@@ -15,7 +15,6 @@ Core delivery platform Node.js Backend Template.
     - [Windows prettier issue](#windows-prettier-issue)
 - [API endpoints](#api-endpoints)
 - [Development helpers](#development-helpers)
-  - [MongoDB Locks](#mongodb-locks)
   - [Proxy](#proxy)
 - [Docker](#docker)
   - [Development image](#development-image)
@@ -66,6 +65,25 @@ To run the application in `development` mode run:
 npm run dev
 ```
 
+### Configuration
+
+Configuration is loaded and validated at startup from environment variables (see [src/config.js](./src/config.js)). All variables have safe local defaults, so the service runs without any `.env` file.
+
+| Variable                                      | Purpose                                                                       | Required                                         | Local example                   | Deployed AWS behaviour                                 | Sensitive |
+| --------------------------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------ | ------------------------------- | ------------------------------------------------------ | --------- |
+| `PORT`                                        | Port the server binds to                                                      | No (defaults to `3001`)                          | `3001`                          | Provided by the platform                               | No        |
+| `AWS_REGION`                                  | AWS region for S3-compatible reference-data storage                           | No (defaults to `eu-west-2`)                     | `eu-west-2`                     | Set by the deployment environment                      | No        |
+| `AWS_ENDPOINT_URL`                            | S3-compatible endpoint override for local development                         | No                                               | `http://floci:4566`             | Must be unset so the AWS SDK uses the default endpoint | No        |
+| `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | Static credentials, consumed directly by the AWS SDK (not part of app config) | Local only                                       | `test` (via `compose/aws.env`)  | Must not be set; use the platform's IAM role instead   | **Yes**   |
+| `REFERENCE_DATA_BUCKET`                       | S3-compatible bucket storing reference-data collections                       | No (defaults to `mmo-cr-reference-data-service`) | `mmo-cr-reference-data-service` | Deployed environments must set an explicit bucket name | No        |
+| `S3_FORCE_PATH_STYLE`                         | Use path-style S3 addressing (required by Floci)                              | No (defaults to `false`)                         | `true`                          | Leave unset/`false` for real AWS S3                    | No        |
+| `AUTHENTICATION_SERVICE_URL`                  | Base URL of the Authentication Service (not yet integrated)                   | No                                               | unset                           | Set once the Validation Module integrates with it      | No        |
+| `REFERENCE_DATA_REFRESH_INTERVAL_MS`          | Interval between reference-data cache-refresh checks                          | No (defaults to `60000`)                         | `60000`                         | Same as local unless tuned                             | No        |
+| `REFERENCE_DATA_MAX_UPLOAD_BYTES`             | Maximum accepted reference-data collection upload size                        | No (defaults to `26214400`)                      | `26214400`                      | Same as local unless tuned                             | No        |
+| `LOG_LEVEL`                                   | Logging verbosity                                                             | No (defaults to `info`)                          | `info`                          | Same as local unless tuned                             | No        |
+
+Invalid mandatory configuration (e.g. an out-of-range port or a malformed URL) prevents the service from starting and produces a validation error. Secret values are never logged or included in validation errors.
+
 ### Testing
 
 To test the application run:
@@ -114,56 +132,53 @@ git config --global core.autocrlf false
 
 ## API endpoints
 
-| Endpoint             | Description                    |
-| :------------------- | :----------------------------- |
-| `GET: /health`       | Health                         |
-| `GET: /example    `  | Example API (remove as needed) |
-| `GET: /example/<id>` | Example API (remove as needed) |
+| Endpoint       | Description |
+| :------------- | :---------- |
+| `GET: /health` | Health      |
+
+## Reference Data Domain Model
+
+Shared domain types and contracts live under [src/common/domain](./src/common/domain) and [src/common/contracts](./src/common/contracts). They define the vocabulary and boundaries later steps implement against; none of them implement business behaviour.
+
+### Datasets and capabilities
+
+Seven datasets are supported (see [datasets.js](./src/common/domain/datasets.js)): `vessels`, `gears`, `ports`, `species`, `map-land`, `map-statistical-areas`, and `map-ports`. Each has explicit capabilities:
+
+| Dataset                 | Queryable | Uploadable | Persisted | Derived            | Format  |
+| ----------------------- | --------- | ---------- | --------- | ------------------ | ------- |
+| `vessels`               | Yes       | Yes        | Yes       | No                 | JSON    |
+| `gears`                 | Yes       | Yes        | Yes       | No                 | JSON    |
+| `ports`                 | Yes       | Yes        | Yes       | No                 | JSON    |
+| `species`               | Yes       | Yes        | Yes       | No                 | JSON    |
+| `map-land`              | Yes       | Yes        | Yes       | No                 | GeoJSON |
+| `map-statistical-areas` | Yes       | Yes        | Yes       | No                 | GeoJSON |
+| `map-ports`             | Yes       | No         | No        | Yes (from `ports`) | GeoJSON |
+
+`map-ports` is always derived from the active `ports` collection: it cannot be uploaded and has no independent manifest entry.
+
+### Canonical vs mobile representations
+
+Every dataset supports two representations: `canonical` (the complete authoritative model) and `mobile` (a consumer projection generated from canonical data for the Catch Recording mobile app). Mobile representations are never independently persisted.
+
+### GUID identity vs business identifiers
+
+Every canonical reference-data resource has a stable GUID as its technical `id`. Existing business identifiers (vessel CFR, registration number, external mark, gear code, port code, species FAO code, statistical-area code) remain separate from — and are never replaced by — the GUID.
+
+### What a "collection" means
+
+A reference-data `collection` is a complete, versioned JSON or GeoJSON file representing one dataset — not a database collection. Updates always replace a complete collection; there are no item-level create/update/patch/delete operations.
+
+### Persistence and caching
+
+- S3-compatible object storage (via Floci locally) is the durable source of truth. Only the Persistence Module accesses it.
+- Active collections are held as process-local JSON objects in the In-Memory Data Store — a cache, not a database.
+- There is no database and no Redis dependency anywhere in this service.
+
+### External-boundary contracts
+
+Four infrastructure-independent contracts define the seams later steps implement against, each substitutable with a test double via a `create*Contract(overrides)` factory: `referenceDataRepository` (Persistence Module), `inMemoryDataStore` (In-Memory Data Store), `authenticationClient` (Validation Module), and `referenceDataProjector` (canonical-to-mobile projection).
 
 ## Development helpers
-
-### MongoDB Locks
-
-If you require a write lock for Mongo you can acquire it via `server.locker` or `request.locker`:
-
-```javascript
-async function doStuff(server) {
-  const lock = await server.locker.lock('unique-resource-name')
-
-  if (!lock) {
-    // Lock unavailable
-    return
-  }
-
-  try {
-    // do stuff
-  } finally {
-    await lock.free()
-  }
-}
-```
-
-Keep it small and atomic.
-
-You may use **using** for the lock resource management.
-Note test coverage reports do not like that syntax.
-
-```javascript
-async function doStuff(server) {
-  await using lock = await server.locker.lock('unique-resource-name')
-
-  if (!lock) {
-    // Lock unavailable
-    return
-  }
-
-  // do stuff
-
-  // lock automatically released
-}
-```
-
-Helper methods are also available in `/src/helpers/mongo-lock.js`.
 
 ### Proxy
 
@@ -196,8 +211,6 @@ docker run -e PORT=3001 -p 3001:3001 mmo-cr-reference-data-service
 A local environment with:
 
 - Floci for AWS services (S3, SQS, SNS etc)
-- Redis
-- MongoDB
 - This service.
 - A commented out frontend example.
 
@@ -206,7 +219,6 @@ docker compose up --build -d
 ```
 
 Mock AWS resources can be created when Floci starts up by editing the scripts in `./compose/floci/start.d/`.
-MongoDB records can also be created when Mongo starts by editing the scripts in `./compose/mongo/`.
 
 ### Dependabot
 
