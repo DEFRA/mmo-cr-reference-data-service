@@ -1,0 +1,13 @@
+# Prompt 010
+
+## Metadata
+
+- Prompt ID: prompt-20260916041523-9dqqqh
+- Conversation ID: conv-20260916013340-xbgy
+- Timestamp: 2026-09-16T03:15:23.047Z
+- Sequence Number: 10
+- Source URL: https://m365.cloud.microsoft/chat/conversation/6ebae526-f9e8-45bf-9af3-dff9279d7bae
+
+## Prompt
+
+i have errors reported by sonar cloud, so i asked github to ell me how to resolve it , here the conversation :​‌me: sonarcloud is erroring because the harcoded data , in a js file , can this files be moved to be json files to comply with the sonarcloud no magic numbers" rule.do not intent to resolve it , only suggest the solution​‌github: Updated todo listYes — moving the fixture data to `.json` files would resolve this cleanly, and is actually the more idiomatic fix here.**Why it works:** SonarCloud's "no magic numbers" rule (`S109`) is a JavaScript/TypeScript _code_ rule — it flags numeric literals appearing in executable logic. It does not apply to `.json` files, since those are parsed as pure data, not code, under a different Sonar language profile. Moving coordinate values, item counts, GUIDs, etc. out of `.js` object literals and into `.json` files removes them from the code-quality analysis entirely rather than requiring you to extract every number into a named constant (which would be awkward and meaningless for one-off fixture data).**What that would involve:**- Convert each fixture module (`src/common/schemas/fixtures/valid/*.js`, `src/common/schemas/fixtures/invalid/*.js`) into a `.json` file containing just the data (dataset name + payload, or split into two files per fixture: the payload as JSON, plus a tiny `.js` wrapper only for the invalid ones that need `dataset` metadata alongside).- Import them via Node's JSON module import attributes, e.g. `import validPorts from './ports.json' with { type: 'json' }` (supported in Node ≥ 22/24, and Vitest 4 supports this natively).- The schema/registry/logic files (`geojson.js`, `schema-registry.js`, etc.) stay as `.js` — they contain real logic, not hardcoded data, so they shouldn't trigger `S109` and shouldn't be converted.**One caveat worth flagging:** the "invalid" fixtures currently derive their payload from the valid fixture via spread/destructuring (e.g. `{ ...validPortsCollection, itemCount: -1 }`). Pure JSON files can't do that composition — each invalid fixture would need to become a fully inlined JSON payload (some duplication), or you'd keep a thin `.js` file that imports the JSON and applies the one-field mutation (which still keeps the module a `.js` file, just with far fewer/no raw literals of its own).Let me know if you'd like me to go ahead and implement this conversion.​‌how should i reply so the issue gets resolve ​‌generate the you answer as github prompt artifact​‌
