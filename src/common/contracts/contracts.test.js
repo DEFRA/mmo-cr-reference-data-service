@@ -18,11 +18,11 @@ describe('#createReferenceDataRepositoryContract', () => {
     expect(() => repository[methodName]()).toThrow(/is not implemented/)
   })
 
-  test('accepts a test-double override', () => {
+  test('accepts a test-double override', async () => {
     const readCollection = vi.fn().mockResolvedValue({ dataset: 'vessels' })
     const repository = createReferenceDataRepositoryContract({ readCollection })
 
-    expect(repository.readCollection()).resolves.toEqual({
+    await expect(repository.readCollection()).resolves.toEqual({
       dataset: 'vessels'
     })
   })

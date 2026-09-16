@@ -30,5 +30,3 @@
  * @property {string} [objectRef] internal persistence reference, not part of any public API projection
  * @property {boolean} [active]
  */
-
-export {}

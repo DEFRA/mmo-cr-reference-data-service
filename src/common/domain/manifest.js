@@ -23,5 +23,3 @@
  * @property {string} [etag]
  * @property {string} [checksum]
  */
-
-export {}

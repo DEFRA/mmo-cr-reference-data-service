@@ -43,5 +43,3 @@
  * @property {PreviousCollectionMetadata} [previousCollection]
  * @property {UploadWarning[]} [warnings]
  */
-
-export {}

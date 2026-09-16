@@ -23,5 +23,3 @@ export const VALIDATION_SEVERITY = Object.freeze({
  * @property {number} [receivedCount] item or feature count received, where applicable
  * @property {number} [normalisedCount] item or feature count after normalisation, where applicable
  */
-
-export {}

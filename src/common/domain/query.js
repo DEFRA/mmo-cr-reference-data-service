@@ -40,5 +40,3 @@
  * @property {*[]} items returned items or features
  * @property {QueryMetadata} [context]
  */
-
-export {}
