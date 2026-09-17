@@ -6,6 +6,11 @@ import {
   PutObjectCommand
 } from '@aws-sdk/client-s3'
 
+vi.mock('#/common/helpers/observability/metrics.js', async (importOriginal) => {
+  const actual = await importOriginal()
+  return { ...actual, recordCounter: vi.fn(), recordDuration: vi.fn() }
+})
+
 import { createReferenceDataRepository } from './reference-data-repository.js'
 import { DATASETS } from '#/common/domain/datasets.js'
 
@@ -932,5 +937,125 @@ describe('#errorSafety', () => {
       .catch((caught) => caught)
 
     expect(error.cause).toBe(awsError)
+  })
+})
+
+describe('#observability', () => {
+  function createSpyLogger() {
+    return { debug: vi.fn(), warn: vi.fn() }
+  }
+
+  test('a successful operation logs a safe completion summary and records metrics', async () => {
+    const { recordDuration } =
+      await import('#/common/helpers/observability/metrics.js')
+    const content = { items: [{ id: 'v-1', cfr: 'GBR123' }] }
+    const client = createFakeS3Client({
+      'reference-data/vessels/v1.json': seededObject({
+        body: JSON.stringify(content)
+      })
+    })
+    const logger = createSpyLogger()
+    const repository = createReferenceDataRepository({
+      bucket: BUCKET,
+      client,
+      logger
+    })
+
+    await repository.readCollection({
+      dataset: DATASETS.VESSELS,
+      collectionVersion: 'v1'
+    })
+
+    expect(logger.debug).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'reference_data.persistence_operation_completed',
+        operation: 'readCollection',
+        dataset: DATASETS.VESSELS
+      }),
+      'persistence: operation completed'
+    )
+    expect(recordDuration).toHaveBeenCalledWith(
+      'reference_data_persistence_operation_duration_ms',
+      expect.any(Number),
+      { operation: 'readCollection', dataset: DATASETS.VESSELS }
+    )
+  })
+
+  test('a failed operation logs a safe warning with the classified error code and records a failure metric', async () => {
+    const { recordCounter } =
+      await import('#/common/helpers/observability/metrics.js')
+    const awsError = createAwsError('AccessDenied', 403)
+    const logger = createSpyLogger()
+    const repository = createReferenceDataRepository({
+      bucket: BUCKET,
+      client: createFailingS3Client(awsError),
+      logger
+    })
+
+    await repository
+      .readCollection({ dataset: DATASETS.VESSELS, collectionVersion: 'v1' })
+      .catch(() => {})
+
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'reference_data.persistence_operation_failed',
+        operation: 'readCollection',
+        dataset: DATASETS.VESSELS,
+        errorCode: 'forbidden'
+      }),
+      'persistence: operation failed'
+    )
+    expect(recordCounter).toHaveBeenCalledWith(
+      'reference_data_persistence_failures_total',
+      1,
+      {
+        operation: 'readCollection',
+        dataset: DATASETS.VESSELS,
+        error_code: 'forbidden'
+      }
+    )
+  })
+
+  test('never logs object content, credentials, or raw AWS responses', async () => {
+    const content = { items: [{ id: 'v-1', cfr: 'GBR123', secret: 'nope' }] }
+    const client = createFakeS3Client({
+      'reference-data/vessels/v1.json': seededObject({
+        body: JSON.stringify(content)
+      })
+    })
+    const logger = createSpyLogger()
+    const repository = createReferenceDataRepository({
+      bucket: BUCKET,
+      client,
+      logger
+    })
+
+    await repository.readCollection({
+      dataset: DATASETS.VESSELS,
+      collectionVersion: 'v1'
+    })
+
+    const serialised = JSON.stringify(logger.debug.mock.calls)
+    expect(serialised).not.toContain('GBR123')
+    expect(serialised).not.toContain('secret')
+  })
+
+  test('manifest operations record no dataset dimension', async () => {
+    const { recordDuration } =
+      await import('#/common/helpers/observability/metrics.js')
+    const client = createFakeS3Client({
+      'reference-data/manifest.json': seededObject({
+        body: JSON.stringify({ manifestId: 'm1', datasets: [] })
+      })
+    })
+    const repository = createReferenceDataRepository({ bucket: BUCKET, client })
+
+    await repository.readManifest()
+
+    expect(recordDuration).toHaveBeenCalledWith(
+      'reference_data_persistence_operation_duration_ms',
+      expect.any(Number),
+      { operation: 'readManifest', dataset: null }
+    )
   })
 })

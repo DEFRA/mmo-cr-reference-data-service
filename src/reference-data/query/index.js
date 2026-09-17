@@ -1,4 +1,5 @@
 import { inMemoryStore } from '#/reference-data/in-memory-store/index.js'
+import { createLogger } from '#/common/helpers/logging/logger.js'
 import { createQueryService } from './query-service.js'
 import { createCollectionQueryService } from './collection-query-service.js'
 import { createMapPortsQueryService } from './map-ports-query-service.js'
@@ -19,6 +20,9 @@ export { calculateDeterministicEtag } from './result-etag.js'
 // are composed in Steps 16-20.
 export const query = {
   ...createQueryService({ store: inMemoryStore }),
-  ...createCollectionQueryService({ store: inMemoryStore }),
+  ...createCollectionQueryService({
+    store: inMemoryStore,
+    logger: createLogger()
+  }),
   ...createMapPortsQueryService({ store: inMemoryStore })
 }

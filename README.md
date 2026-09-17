@@ -143,9 +143,40 @@ git config --global core.autocrlf false
 
 | Endpoint                               | Description                                      |
 | :------------------------------------- | :----------------------------------------------- |
-| `GET: /health`                         | Health                                           |
+| `GET: /health`                         | Liveness                                         |
 | `GET: /health/ready`                   | Readiness (cache-hydration state)                |
+| `GET: /health/dependencies`            | Safe dependency status summary (see below)       |
 | `GET: /api/v1/reference-data/manifest` | Active dataset versions and metadata (see below) |
+
+### Health, readiness, and dependency status
+
+All three operational endpoints are unauthenticated (consistent with platform
+health-probe conventions) and always return `Cache-Control: no-store`.
+
+- `GET /health` — **liveness** only. Returns `200` with
+  `{ status: 'ok', service, timestamp }` whenever the process can handle
+  requests, regardless of S3/Floci, Authentication Service, or startup
+  hydration state. Never makes a dependency call.
+- `GET /health/ready` — **readiness**. Returns `200` with `status: 'ready'`
+  once startup hydration has loaded every mandatory dataset
+  (`vessels`, `gears`, `ports`, `species`, `map-land`,
+  `map-statistical-areas`), `503` with `status: 'not-ready'` while hydration is
+  incomplete or a mandatory dataset has never loaded, and `status:
+'shutting-down'` once graceful shutdown has started. A later failed refresh
+  does not flip readiness back to `false` while the previously loaded
+  mandatory data remains valid. The response also includes a
+  `datasets.mandatory { expected, loaded, missing }` summary.
+- `GET /health/dependencies` — diagnostic-only summary of `referenceStore`
+  (S3/Floci reachability, probed via the existing Persistence Module's
+  `objectExists` check with a bounded timeout —
+  `health.dependencyProbeTimeoutMs`, default `2000`ms), `authenticationService`
+  (passive/config-derived: `unknown` when `AUTHENTICATION_SERVICE_URL` is
+  configured, `disabled` otherwise — no approved Authentication Service health
+  contract exists, so no real probe is made), and `referenceData` (the same
+  mandatory-dataset signal used by `/health/ready`). Only `referenceData` is
+  `requiredForReadiness`; the endpoint returns `503` only when it is
+  `unavailable`, `200` otherwise. Never exposes bucket names, object keys,
+  Authentication Service URLs, or raw dependency errors.
 
 ### Manifest API
 
@@ -163,6 +194,80 @@ provisional Authentication Service integration (`Authorization: Bearer <token>`)
 - Returns `503` (`reference_data_unavailable`) if startup hydration has not yet produced a valid
   active manifest — never an empty successful manifest.
 - Reads only from the in-memory active manifest (Step 11); it never calls S3/Floci per request.
+
+## Observability
+
+### Structured logging
+
+Deployed logs are structured JSON (ECS format via `@elastic/ecs-pino-format`; `pino-pretty`
+locally). Every instrumented operation logs a stable, machine-readable `event` name in the form
+`reference_data.<area>_<action>` (see [src/common/domain/log-events.js](./src/common/domain/log-events.js)),
+plus safe fields such as `correlationId` (HTTP requests) or `operationId` (background hydration/
+refresh runs), `dataset`, `durationMs`, `result`, and `errorCode`. Log levels: `info` for
+completed milestones, `warn` for recoverable failures (one dataset failed while previous data is
+retained, validation failure, replacement conflict), `error` for mandatory-hydration or
+unexpected failures, `debug` for per-query completions.
+
+HTTP request/response logging is already provided by `hapi-pino` (one completion log per
+request) — instrumentation never adds a second, duplicate completion log.
+
+**Correlation vs operation IDs**: request-scoped operations reuse the existing `x-cdp-request-id`
+tracing header end-to-end (`request.app.correlationId`, unchanged since Step 13). Background
+operations (startup hydration, scheduled cache refresh) generate their own `operationId`
+(`randomUUID()`) per invocation, shared by every log line for that run.
+
+**Redaction**: tokens, credentials, uploaded/canonical collection content, GeoJSON geometry,
+object keys, and full vessel business identifiers are never logged, metered, or audited — only
+dataset names, counts, durations, and stable codes.
+
+### Metrics
+
+`@defra/cdp-metrics` (already a dependency, disabled locally via `AWS_EMF_ENVIRONMENT=Local` —
+already set by the `dev`/`dev:debug` scripts) is wrapped by
+[src/common/helpers/observability/metrics.js](./src/common/helpers/observability/metrics.js).
+Business modules call `recordCounter`/`recordDuration`/`recordGauge` — never the vendor SDK
+directly. A metrics failure is caught, logged, and never fails the calling operation.
+
+Set `METRICS_ENABLED=false` to disable metric emission entirely (defaults to enabled outside the
+test environment).
+
+Metric names (all prefixed `reference_data_`): `http_requests_total`,
+`http_request_duration_ms`, `query_requests_total`, `query_duration_ms`,
+`hydration_duration_ms`, `hydration_failures_total`, `refresh_duration_ms`,
+`refresh_failures_total`, `refresh_changed_datasets_total`,
+`validation_upload_duration_ms`, `validation_upload_failures_total`,
+`collection_replacement_duration_ms`, `collection_replacement_failures_total`,
+`persistence_operation_duration_ms`, `persistence_failures_total`, `readiness` (gauge, `1`/`0`).
+
+**Allowed dimension keys** (enforced centrally, not trusted per call site): `route`, `method`,
+`status_code`, `dataset`, `view`, `operation`, `result`, `failure_stage`, `error_code`, `trigger`.
+Correlation/operation IDs, GUIDs, collection versions, object keys, filenames, and business
+identifiers are never used as dimensions — any such key is silently stripped.
+
+### Audit events
+
+`@defra/cdp-auditing` (already a dependency) writes a `log.level: "audit"` line, routed to a
+separate audit stream on the CDP platform (printed to console locally). Wrapped by
+[src/common/helpers/observability/audit.js](./src/common/helpers/observability/audit.js) —
+`recordAuditEvent({ eventType, action, outcome, actorId, resource, correlationId })`. The actor
+is always the already-authenticated `actorId`; callers cannot supply arbitrary actor claims or an
+invalid outcome (an unsupported `outcome` throws immediately rather than emitting a malformed
+event).
+
+Set `AUDIT_ENABLED=false` to disable audit emission entirely (defaults to enabled outside the
+test environment).
+
+Audited actions and outcomes:
+
+| Action                | Outcomes                                                          |
+| :-------------------- | :---------------------------------------------------------------- |
+| `validate-collection` | `validated` (success), `failure`                                  |
+| `replace-collection`  | `success`, `failure`, `conflict`, `idempotent`, `partial-failure` |
+
+An audit-delivery failure (the `audit()` call itself throwing) is caught, logged at `error`, and
+never rolls back an already-completed business operation. Deferred (not implemented): auditing
+every authentication/authorisation denial — no existing policy requires it, and doing so would
+audit every unauthenticated read request.
 
 ## Reference Data Domain Model
 
@@ -392,7 +497,7 @@ bootstrap) reads the now-populated bucket:
 
 ```bash
 npm run dev
-curl http://localhost:3001/health/readiness
+curl http://localhost:3001/health/ready
 curl http://localhost:3001/api/v1/reference-data/manifest
 curl http://localhost:3001/api/v1/reference-data/vessels
 ```

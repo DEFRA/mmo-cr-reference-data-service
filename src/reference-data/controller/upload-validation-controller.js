@@ -11,6 +11,17 @@ import {
   getDatasetCapabilities
 } from '#/common/domain/datasets.js'
 import { SERVICE_ERROR_CODES } from '#/common/domain/errors.js'
+import { LOG_EVENTS } from '#/common/domain/log-events.js'
+import { createLogger } from '#/common/helpers/logging/logger.js'
+import {
+  recordCounter,
+  recordDuration,
+  METRIC_NAMES
+} from '#/common/helpers/observability/metrics.js'
+import {
+  recordAuditEvent,
+  AUDIT_OUTCOMES
+} from '#/common/helpers/observability/audit.js'
 import {
   extractSingleUploadedFile,
   parseUploadedFileContent,
@@ -24,6 +35,21 @@ import { requireWriteAccess } from './write-access.js'
 
 const HTTP_STATUS_OK = 200
 const DEFAULT_CLOCK = { now: () => new Date().toISOString() }
+const logger = createLogger()
+
+const AUDIT_EVENT_TYPES = Object.freeze({
+  VALIDATION_UPLOAD: 'reference-data.validation-upload',
+  COLLECTION_REPLACEMENT: 'reference-data.collection-replacement'
+})
+
+const AUDIT_ACTIONS = Object.freeze({
+  VALIDATE_COLLECTION: 'validate-collection',
+  REPLACE_COLLECTION: 'replace-collection'
+})
+
+function buildResource(dataset, extra) {
+  return { type: 'reference-data-collection', dataset, ...extra }
+}
 
 function raiseValidationFailure({ dataset, stage, errors }) {
   const error = new Error(
@@ -105,6 +131,308 @@ function isFullReplacement(query) {
   return query.validateOnly !== 'true'
 }
 
+function auditValidationUpload({ outcome, dataset, actorId, correlationId }) {
+  recordAuditEvent({
+    eventType: AUDIT_EVENT_TYPES.VALIDATION_UPLOAD,
+    action: AUDIT_ACTIONS.VALIDATE_COLLECTION,
+    outcome,
+    actorId,
+    resource: buildResource(dataset),
+    correlationId
+  })
+}
+
+function auditReplacement({ outcome, dataset, actorId, correlationId, extra }) {
+  recordAuditEvent({
+    eventType: AUDIT_EVENT_TYPES.COLLECTION_REPLACEMENT,
+    action: AUDIT_ACTIONS.REPLACE_COLLECTION,
+    outcome,
+    actorId,
+    resource: buildResource(dataset, extra),
+    correlationId
+  })
+}
+
+function recordReplacementFailureMetrics(dataset, durationMs) {
+  recordCounter(METRIC_NAMES.COLLECTION_REPLACEMENT_FAILURES_TOTAL, 1, {
+    dataset
+  })
+  recordDuration(METRIC_NAMES.COLLECTION_REPLACEMENT_DURATION_MS, durationMs, {
+    dataset
+  })
+}
+
+// Validates the uploaded collection without persisting anything (Step 21).
+async function handleValidationOnly({
+  dataset,
+  schemaVersion,
+  collection,
+  correlationId,
+  metadata,
+  actorId
+}) {
+  const startedAt = Date.now()
+  logger.info(
+    { event: LOG_EVENTS.VALIDATION_UPLOAD_STARTED, correlationId, dataset },
+    'validation-upload: started'
+  )
+
+  const result = validateCollectionUpload({
+    dataset,
+    schemaVersion,
+    collection,
+    correlationId
+  })
+  const durationMs = Date.now() - startedAt
+
+  if (!result.valid) {
+    logger.warn(
+      {
+        event: LOG_EVENTS.VALIDATION_UPLOAD_FAILED,
+        correlationId,
+        dataset,
+        failureStage: result.stage,
+        durationMs
+      },
+      'validation-upload: failed'
+    )
+    recordCounter(METRIC_NAMES.VALIDATION_UPLOAD_FAILURES_TOTAL, 1, { dataset })
+    recordDuration(METRIC_NAMES.VALIDATION_UPLOAD_DURATION_MS, durationMs, {
+      dataset
+    })
+    auditValidationUpload({
+      outcome: AUDIT_OUTCOMES.FAILURE,
+      dataset,
+      actorId,
+      correlationId
+    })
+    raiseValidationFailure({
+      dataset,
+      stage: result.stage,
+      errors: result.errors
+    })
+  }
+
+  logger.info(
+    {
+      event: LOG_EVENTS.VALIDATION_UPLOAD_COMPLETED,
+      correlationId,
+      dataset,
+      warningCount: result.warnings.length,
+      durationMs
+    },
+    'validation-upload: completed'
+  )
+  recordDuration(METRIC_NAMES.VALIDATION_UPLOAD_DURATION_MS, durationMs, {
+    dataset
+  })
+  auditValidationUpload({
+    outcome: AUDIT_OUTCOMES.VALIDATED,
+    dataset,
+    actorId,
+    correlationId
+  })
+
+  return buildValidationSuccessBody({ dataset, result, metadata })
+}
+
+// Classifies a thrown replaceCollection() error into its safe log/audit outcome.
+function classifyReplacementFailure(cause) {
+  if (cause.partialFailure) {
+    return {
+      outcome: AUDIT_OUTCOMES.PARTIAL_FAILURE,
+      event: LOG_EVENTS.COLLECTION_REPLACEMENT_PARTIAL_FAILURE,
+      level: 'error'
+    }
+  }
+
+  const isConflict =
+    cause.code === SERVICE_ERROR_CODES.COLLECTION_VERSION_EXISTS ||
+    cause.code === SERVICE_ERROR_CODES.COLLECTION_MODIFIED
+  if (isConflict) {
+    return {
+      outcome: AUDIT_OUTCOMES.CONFLICT,
+      event: LOG_EVENTS.COLLECTION_REPLACEMENT_CONFLICTED,
+      level: 'warn'
+    }
+  }
+
+  return {
+    outcome: AUDIT_OUTCOMES.FAILURE,
+    event: LOG_EVENTS.COLLECTION_REPLACEMENT_FAILED,
+    level: 'warn'
+  }
+}
+
+function handleReplacementError({
+  cause,
+  dataset,
+  correlationId,
+  actorId,
+  durationMs
+}) {
+  const { outcome, event, level } = classifyReplacementFailure(cause)
+  logger[level](
+    { event, correlationId, dataset, errorCode: cause.code, durationMs },
+    'collection-replacement: failed'
+  )
+  recordReplacementFailureMetrics(dataset, durationMs)
+  auditReplacement({ outcome, dataset, actorId, correlationId })
+}
+
+function handleReplacementInvalid({
+  replacement,
+  dataset,
+  correlationId,
+  actorId,
+  durationMs
+}) {
+  logger.warn(
+    {
+      event: LOG_EVENTS.COLLECTION_REPLACEMENT_FAILED,
+      correlationId,
+      dataset,
+      failureStage: replacement.stage,
+      durationMs
+    },
+    'collection-replacement: failed'
+  )
+  recordReplacementFailureMetrics(dataset, durationMs)
+  auditReplacement({
+    outcome: AUDIT_OUTCOMES.FAILURE,
+    dataset,
+    actorId,
+    correlationId
+  })
+  raiseValidationFailure({
+    dataset,
+    stage: replacement.stage,
+    errors: replacement.errors
+  })
+}
+
+function logReplacementSuccess({
+  replacement,
+  dataset,
+  correlationId,
+  durationMs
+}) {
+  const completedEvent =
+    replacement.outcome === 'idempotent'
+      ? LOG_EVENTS.COLLECTION_REPLACEMENT_IDEMPOTENT
+      : LOG_EVENTS.COLLECTION_REPLACEMENT_COMPLETED
+  logger.info(
+    {
+      event: completedEvent,
+      correlationId,
+      dataset,
+      version: replacement.collection.version,
+      idempotent: replacement.outcome === 'idempotent',
+      durationMs
+    },
+    'collection-replacement: completed'
+  )
+}
+
+function auditReplacementSuccess({
+  replacement,
+  dataset,
+  actorId,
+  correlationId
+}) {
+  auditReplacement({
+    outcome:
+      replacement.outcome === 'idempotent'
+        ? AUDIT_OUTCOMES.IDEMPOTENT
+        : AUDIT_OUTCOMES.SUCCESS,
+    dataset,
+    actorId,
+    correlationId,
+    extra: {
+      collectionId: replacement.collection.collectionId,
+      version: replacement.collection.version,
+      previousCollectionId: replacement.previousCollection?.collectionId,
+      previousVersion: replacement.previousCollection?.version,
+      manifestVersion: replacement.manifest.version
+    }
+  })
+}
+
+// Coordinates atomic full collection replacement (Step 22): persistence, manifest
+// activation, and in-memory publication are all owned by replaceCollection() itself;
+// this only adds safe logging/metrics/audit around its outcome.
+async function handleFullReplacement({
+  request,
+  dataset,
+  metadata,
+  collection,
+  correlationId,
+  actor,
+  persistence,
+  store,
+  clock
+}) {
+  const startedAt = Date.now()
+  logger.info(
+    {
+      event: LOG_EVENTS.COLLECTION_REPLACEMENT_STARTED,
+      correlationId,
+      dataset
+    },
+    'collection-replacement: started'
+  )
+
+  let replacement
+  try {
+    replacement = await replaceCollection({
+      dataset,
+      schemaVersion: metadata.schemaVersion,
+      collection,
+      collectionVersion: metadata.version,
+      ifMatch: parseIfMatch(request.headers['if-match']),
+      correlationId,
+      persistence,
+      store,
+      clock,
+      actorId: actor.actorId
+    })
+  } catch (cause) {
+    handleReplacementError({
+      cause,
+      dataset,
+      correlationId,
+      actorId: actor.actorId,
+      durationMs: Date.now() - startedAt
+    })
+    throw cause
+  }
+
+  const durationMs = Date.now() - startedAt
+
+  if (replacement.outcome === 'invalid') {
+    handleReplacementInvalid({
+      replacement,
+      dataset,
+      correlationId,
+      actorId: actor.actorId,
+      durationMs
+    })
+  }
+
+  logReplacementSuccess({ replacement, dataset, correlationId, durationMs })
+  recordDuration(METRIC_NAMES.COLLECTION_REPLACEMENT_DURATION_MS, durationMs, {
+    dataset
+  })
+  auditReplacementSuccess({
+    replacement,
+    dataset,
+    actorId: actor.actorId,
+    correlationId
+  })
+
+  return replacement
+}
+
 /**
  * @param {{ authenticationClient: import('#/common/contracts/authentication-client.js').AuthenticationClient, persistence?: import('#/common/contracts/reference-data-repository.js'), store?: import('#/common/contracts/in-memory-data-store.js'), clock?: { now: () => string } }} deps
  */
@@ -132,47 +460,32 @@ export function createUploadValidationController({
     const correlationId = request.app.correlationId
 
     if (!isFullReplacement(request.query)) {
-      const result = validateCollectionUpload({
+      const body = await handleValidationOnly({
         dataset,
         schemaVersion: metadata.schemaVersion,
         collection,
-        correlationId
+        correlationId,
+        metadata,
+        actorId: actor.actorId
       })
 
-      if (!result.valid) {
-        raiseValidationFailure({
-          dataset,
-          stage: result.stage,
-          errors: result.errors
-        })
-      }
-
       return h
-        .response(buildValidationSuccessBody({ dataset, result, metadata }))
+        .response(body)
         .code(HTTP_STATUS_OK)
         .header('Cache-Control', CACHE_CONTROL.NO_STORE)
     }
 
-    const replacement = await replaceCollection({
+    const replacement = await handleFullReplacement({
+      request,
       dataset,
-      schemaVersion: metadata.schemaVersion,
+      metadata,
       collection,
-      collectionVersion: metadata.version,
-      ifMatch: parseIfMatch(request.headers['if-match']),
       correlationId,
+      actor,
       persistence,
       store,
-      clock,
-      actorId: actor.actorId
+      clock
     })
-
-    if (replacement.outcome === 'invalid') {
-      raiseValidationFailure({
-        dataset,
-        stage: replacement.stage,
-        errors: replacement.errors
-      })
-    }
 
     return h
       .response(buildReplacementSuccessBody({ dataset, replacement }))

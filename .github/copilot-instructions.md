@@ -11,7 +11,7 @@ Before presenting, generating, or modifying any code in this repository, you mus
 
 1. **Pre-Execution Rule Checks:**
    - **VERIFY** all proposed code modifications against the locally configured `sonarqube` MCP tool before providing a final response.
-   - Ensure complete adherence to our organization's custom quality gates and active rule profiles hosted at `https://sonarcloud.io[organisation-name]/rules`.
+   - Ensure complete adherence to our organization's custom quality gates and active rule profiles hosted at `https://sonarcloud.io/organizations/defra/rules`.
 
 2. **Handling Violations:**
    - If the SonarQube MCP tool flags any bugs, code smells, or security vulnerabilities, you must patch those violations locally _before_ outputting the final code snippet.

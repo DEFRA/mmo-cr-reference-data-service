@@ -41,6 +41,9 @@ describe('#config', () => {
       'map-statistical-areas'
     ])
     expect(config.get('referenceData.autoStartCacheRefresh')).toBe(false)
+    expect(config.get('health.dependencyProbeTimeoutMs')).toBe(2000)
+    expect(config.get('observability.metricsEnabled')).toBe(false)
+    expect(config.get('observability.auditEnabled')).toBe(false)
     expect(config.get('authentication.serviceUrl')).toBeNull()
     expect(config.get('authentication.timeoutMs')).toBe(2000)
     expect(config.get('authentication.retryCount')).toBe(1)
@@ -137,6 +140,22 @@ describe('#config', () => {
     process.env.REFERENCE_DATA_REFRESH_CONCURRENCY = '0'
 
     await expect(loadConfig()).rejects.toThrow()
+  })
+
+  test('rejects an invalid health dependency probe timeout', async () => {
+    process.env.HEALTH_DEPENDENCY_PROBE_TIMEOUT_MS = '0'
+
+    await expect(loadConfig()).rejects.toThrow()
+  })
+
+  test('parses METRICS_ENABLED and AUDIT_ENABLED overrides', async () => {
+    process.env.METRICS_ENABLED = 'false'
+    process.env.AUDIT_ENABLED = 'false'
+
+    const config = await loadConfig()
+
+    expect(config.get('observability.metricsEnabled')).toBe(false)
+    expect(config.get('observability.auditEnabled')).toBe(false)
   })
 
   test('rejects a negative refresh initial delay', async () => {
