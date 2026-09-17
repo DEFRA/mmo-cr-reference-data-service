@@ -1,6 +1,7 @@
 import { describe, expect, test, vi } from 'vitest'
 
 import { createGeoJsonCollectionRouteController } from './geojson-collection-route-controller.js'
+import { createRequest, AUTHENTICATED } from './controller-test-helpers.js'
 
 function createFakeToolkit() {
   const state = {
@@ -32,28 +33,6 @@ function createFakeToolkit() {
     },
     state
   }
-}
-
-function createRequest({
-  authorization,
-  ifNoneMatch,
-  query = {},
-  params = {}
-} = {}) {
-  return {
-    app: { correlationId: 'corr-1' },
-    headers: {
-      ...(authorization !== undefined ? { authorization } : {}),
-      ...(ifNoneMatch !== undefined ? { 'if-none-match': ifNoneMatch } : {})
-    },
-    query,
-    params
-  }
-}
-
-const AUTHENTICATED = {
-  authenticated: true,
-  actor: { actorId: 'a1', permissions: ['reference-data.read'] }
 }
 
 const CONFIG = { dataset: 'map-land' }
