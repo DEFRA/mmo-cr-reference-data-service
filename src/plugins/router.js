@@ -1,5 +1,6 @@
 import { health } from '#/routes/health.js'
 import { readiness } from '#/routes/readiness.js'
+import { dependencyStatus } from '#/routes/dependency-status.js'
 import { manifest } from '#/routes/manifest.js'
 import { vesselsCollection, vesselsItem } from '#/routes/vessels.js'
 import { gearsCollection, gearsItem } from '#/routes/gears.js'
@@ -20,6 +21,7 @@ export const router = {
       server.route([
         health,
         readiness,
+        dependencyStatus,
         manifest,
         vesselsCollection,
         vesselsItem,

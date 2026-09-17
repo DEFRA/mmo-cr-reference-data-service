@@ -143,9 +143,40 @@ git config --global core.autocrlf false
 
 | Endpoint                               | Description                                      |
 | :------------------------------------- | :----------------------------------------------- |
-| `GET: /health`                         | Health                                           |
+| `GET: /health`                         | Liveness                                         |
 | `GET: /health/ready`                   | Readiness (cache-hydration state)                |
+| `GET: /health/dependencies`            | Safe dependency status summary (see below)       |
 | `GET: /api/v1/reference-data/manifest` | Active dataset versions and metadata (see below) |
+
+### Health, readiness, and dependency status
+
+All three operational endpoints are unauthenticated (consistent with platform
+health-probe conventions) and always return `Cache-Control: no-store`.
+
+- `GET /health` — **liveness** only. Returns `200` with
+  `{ status: 'ok', service, timestamp }` whenever the process can handle
+  requests, regardless of S3/Floci, Authentication Service, or startup
+  hydration state. Never makes a dependency call.
+- `GET /health/ready` — **readiness**. Returns `200` with `status: 'ready'`
+  once startup hydration has loaded every mandatory dataset
+  (`vessels`, `gears`, `ports`, `species`, `map-land`,
+  `map-statistical-areas`), `503` with `status: 'not-ready'` while hydration is
+  incomplete or a mandatory dataset has never loaded, and `status:
+'shutting-down'` once graceful shutdown has started. A later failed refresh
+  does not flip readiness back to `false` while the previously loaded
+  mandatory data remains valid. The response also includes a
+  `datasets.mandatory { expected, loaded, missing }` summary.
+- `GET /health/dependencies` — diagnostic-only summary of `referenceStore`
+  (S3/Floci reachability, probed via the existing Persistence Module's
+  `objectExists` check with a bounded timeout —
+  `health.dependencyProbeTimeoutMs`, default `2000`ms), `authenticationService`
+  (passive/config-derived: `unknown` when `AUTHENTICATION_SERVICE_URL` is
+  configured, `disabled` otherwise — no approved Authentication Service health
+  contract exists, so no real probe is made), and `referenceData` (the same
+  mandatory-dataset signal used by `/health/ready`). Only `referenceData` is
+  `requiredForReadiness`; the endpoint returns `503` only when it is
+  `unavailable`, `200` otherwise. Never exposes bucket names, object keys,
+  Authentication Service URLs, or raw dependency errors.
 
 ### Manifest API
 
@@ -392,7 +423,7 @@ bootstrap) reads the now-populated bucket:
 
 ```bash
 npm run dev
-curl http://localhost:3001/health/readiness
+curl http://localhost:3001/health/ready
 curl http://localhost:3001/api/v1/reference-data/manifest
 curl http://localhost:3001/api/v1/reference-data/vessels
 ```

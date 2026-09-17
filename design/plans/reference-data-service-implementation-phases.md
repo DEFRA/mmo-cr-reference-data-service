@@ -480,14 +480,15 @@ Review implementation evidence against:
 - Step 21: Implement full collection upload validation mode
 - Step 22: Implement atomic full collection replacement
 - Step 23: Add seed reference data and deterministic local bootstrap
+- Step 24: Implement health, readiness, and dependency status
 
 ## Next approved step
 
-- Step 24: Implement health, readiness, and dependency status
+- Step 25: Add structured logging, metrics, and audit events
 
 ## Remaining steps
 
-- Steps 24 through 32, in the exact order and scope defined by the approved implementation plan.
+- Steps 25 through 32, in the exact order and scope defined by the approved implementation plan.
 
 ---
 

@@ -3,8 +3,8 @@
 ## Project Summary
 
 - Project name: Reference Data Service
-- Workspace created: 2026-09-17T10:30:51.500Z
-- Workspace updated: 2026-09-17T11:32:13.655Z
+- Workspace created: 2026-09-17T12:44:54.070Z
+- Workspace updated: 2026-09-17T12:46:31.155Z
 - Extension version: 0.1.0
 - Active prompt profile: Web Application Workspace
 - Selected folder: design
@@ -12,40 +12,43 @@
 
 ## Workspace Statistics
 
-- Prompts captured: 2
-- Prompts saved: 2
-- Responses extracted: 0
-- Artifacts parsed: 0
-- Artifacts validated: 0
-- Text artifacts saved: 0
-- Binary artifacts detected: 4
+- Prompts captured: 1
+- Prompts saved: 1
+- Responses extracted: 1
+- Artifacts parsed: 1
+- Artifacts validated: 1
+- Text artifacts saved: 1
+- Binary artifacts detected: 0
 - Binary artifacts saved: 0
-- Companion metadata files saved: 0
+- Companion metadata files saved: 1
 - Artifact save failures: 0
-- Artifact save skips: 4
+- Artifact save skips: 0
 
 ## Prompts
 
-- [Prompt 001: excellent , give it tome as .md file that i can download​‌](_conversations/prompts/conv-20260917111808-uhbm-20260917-113051-prompt-001-excellent-give-it-tome-as-md-file-th.md)  
-  Conversation: conv-20260917111808-uhbm | Saved: 2026-09-17T10:30:51.492Z
-- [Prompt 002: give me a table of the query parameters​‌](_conversations/prompts/conv-20260917111808-uhbm-20260917-123206-prompt-002-give-me-a-table-of-the-query-paramet.md)  
-  Conversation: conv-20260917111808-uhbm | Saved: 2026-09-17T11:32:06.397Z
+- [Prompt 001: generate Step 25: Add structured logging, metrics, and audit events prompt​‌](_conversations/prompts/conv-20260917125853-njx4-20260917-134451-prompt-001-generate-step-25-add-structured-logg.md)  
+  Conversation: conv-20260917125853-njx4 | Saved: 2026-09-17T12:44:54.062Z
+
+## GitHub Prompts
+
+- [Step 25: Add Structured Logging, Metrics, and Audit Events](github-prompts/step-25-add-structured-logging-metrics-and-audit-events.md)    Type: github-prompt | Format: markdown | Saved: 2026-09-17T12:46:30.793Z | Conversation: conv-20260917125853-njx4
+  Metadata: [Companion Metadata](github-prompts/step-25-add-structured-logging-metrics-and-audit-events.meta.md)
 
 ## Companion Metadata Files
 
-- Companion metadata files linked under artifacts: 0
+- Companion metadata files linked under artifacts: 1
 
 ## Conversations
 
-- Conversation: conv-20260917111808-uhbm    Started: 2026-09-17T10:30:51.200Z | Updated: 2026-09-17T11:32:06.397Z | Prompts: 2 | Responses: 0 | Saved artifacts: 0
+- Conversation: conv-20260917125853-njx4    Started: 2026-09-17T12:44:51.624Z | Updated: 2026-09-17T12:46:30.793Z | Prompts: 1 | Responses: 1 | Saved artifacts: 1
 
 ## Latest Activity
 
-- Last prompt saved: 2026-09-17T11:32:06.397Z
-- Last artifact saved: Not available
+- Last prompt saved: 2026-09-17T12:44:54.062Z
+- Last artifact saved: 2026-09-17T12:46:30.793Z
 - Last binary artifact saved: Not available
-- Last companion metadata saved: Not available
-- Workspace updated: 2026-09-17T11:32:13.655Z
+- Last companion metadata saved: 2026-09-17T12:46:31.059Z
+- Workspace updated: 2026-09-17T12:46:31.155Z
 
 ## Notes
 

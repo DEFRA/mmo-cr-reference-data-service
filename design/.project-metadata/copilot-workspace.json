@@ -1,60 +1,68 @@
 {
   "schemaVersion": "1.0",
   "projectName": "Reference Data Service",
-  "workspaceCreatedAt": "2026-09-17T10:30:51.500Z",
-  "workspaceUpdatedAt": "2026-09-17T11:32:13.655Z",
+  "workspaceCreatedAt": "2026-09-17T12:44:54.070Z",
+  "workspaceUpdatedAt": "2026-09-17T12:46:31.155Z",
   "extensionVersion": "0.1.0",
   "activePromptProfileId": "prompt-profile-web-application",
   "activePromptProfileName": "Web Application Workspace",
   "selectedFolderDisplayName": "design",
   "statistics": {
-    "promptsCaptured": 2,
-    "promptsSaved": 2,
-    "responsesExtracted": 0,
-    "artifactsParsed": 0,
-    "artifactsValidated": 0,
-    "textArtifactsSaved": 0,
-    "binaryArtifactsDetected": 4,
+    "promptsCaptured": 1,
+    "promptsSaved": 1,
+    "responsesExtracted": 1,
+    "artifactsParsed": 1,
+    "artifactsValidated": 1,
+    "textArtifactsSaved": 1,
+    "binaryArtifactsDetected": 0,
     "binaryArtifactsSaved": 0,
-    "companionMetadataFilesSaved": 0,
+    "companionMetadataFilesSaved": 1,
     "artifactSaveFailures": 0,
-    "artifactSaveSkips": 4
+    "artifactSaveSkips": 0
   },
   "latestActivity": {
-    "lastPromptSavedAt": "2026-09-17T11:32:06.397Z",
-    "lastArtifactSavedAt": null,
+    "lastPromptSavedAt": "2026-09-17T12:44:54.062Z",
+    "lastArtifactSavedAt": "2026-09-17T12:46:30.793Z",
     "lastBinaryArtifactSavedAt": null,
-    "lastCompanionMetadataSavedAt": null
+    "lastCompanionMetadataSavedAt": "2026-09-17T12:46:31.059Z"
   },
   "prompts": [
     {
-      "promptId": "prompt-20260917113051-g809t7",
-      "conversationId": "conv-20260917111808-uhbm",
+      "promptId": "prompt-20260917134451-4l9hmt",
+      "conversationId": "conv-20260917125853-njx4",
       "sequenceNumber": 1,
-      "summary": "excellent , give it tome as .md file that i can download​‌",
-      "savedPath": "_conversations/prompts/conv-20260917111808-uhbm-20260917-113051-prompt-001-excellent-give-it-tome-as-md-file-th.md",
-      "savedAt": "2026-09-17T10:30:51.492Z"
-    },
-    {
-      "promptId": "prompt-20260917123206-nsslqj",
-      "conversationId": "conv-20260917111808-uhbm",
-      "sequenceNumber": 2,
-      "summary": "give me a table of the query parameters​‌",
-      "savedPath": "_conversations/prompts/conv-20260917111808-uhbm-20260917-123206-prompt-002-give-me-a-table-of-the-query-paramet.md",
-      "savedAt": "2026-09-17T11:32:06.397Z"
+      "summary": "generate Step 25: Add structured logging, metrics, and audit events prompt​‌",
+      "savedPath": "_conversations/prompts/conv-20260917125853-njx4-20260917-134451-prompt-001-generate-step-25-add-structured-logg.md",
+      "savedAt": "2026-09-17T12:44:54.062Z"
     }
   ],
-  "artifacts": [],
+  "artifacts": [
+    {
+      "id": "artifact-instruction-response-record-20260917134630-np2ikl-1",
+      "sourceArtifactKind": "text-artifact",
+      "artifactInstructionId": "artifact-instruction-response-record-20260917134630-np2ikl-1",
+      "artifactName": "Step 25: Add Structured Logging, Metrics, and Audit Events",
+      "artifactType": "github-prompt",
+      "format": "markdown",
+      "savedPath": "github-prompts/step-25-add-structured-logging-metrics-and-audit-events.md",
+      "companionMetadataPath": "github-prompts/step-25-add-structured-logging-metrics-and-audit-events.meta.md",
+      "sourceResponseId": "response-record-20260917134630-np2ikl",
+      "sourcePromptId": "prompt-20260917134451-4l9hmt",
+      "conversationId": "conv-20260917125853-njx4",
+      "savedAt": "2026-09-17T12:46:30.793Z"
+    }
+  ],
   "bundles": [],
   "conversations": [
     {
-      "conversationId": "conv-20260917111808-uhbm",
-      "startedAt": "2026-09-17T10:30:51.200Z",
-      "lastUpdatedAt": "2026-09-17T11:32:06.397Z",
-      "promptCount": 2,
-      "responseCount": 0,
-      "savedArtifactCount": 0,
-      "lastPromptId": "prompt-20260917123206-nsslqj"
+      "conversationId": "conv-20260917125853-njx4",
+      "startedAt": "2026-09-17T12:44:51.624Z",
+      "lastUpdatedAt": "2026-09-17T12:46:30.793Z",
+      "promptCount": 1,
+      "responseCount": 1,
+      "savedArtifactCount": 1,
+      "lastPromptId": "prompt-20260917134451-4l9hmt",
+      "lastResponseId": "response-record-20260917134630-np2ikl"
     }
   ]
 }

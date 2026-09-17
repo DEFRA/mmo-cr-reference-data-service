@@ -8,17 +8,22 @@ import { readiness } from './readiness.js'
 import { cacheRefresh } from '#/reference-data/cache-refresh/index.js'
 
 function createFakeToolkit() {
-  const calls = { payload: undefined, statusCode: undefined }
+  const calls = { payload: undefined, statusCode: undefined, headers: {} }
+  const response = {
+    code(statusCode) {
+      calls.statusCode = statusCode
+      return response
+    },
+    header(name, value) {
+      calls.headers[name] = value
+      return response
+    }
+  }
   return {
     h: {
       response: (payload) => {
         calls.payload = payload
-        return {
-          code: (statusCode) => {
-            calls.statusCode = statusCode
-            return calls
-          }
-        }
+        return response
       }
     },
     calls
@@ -39,10 +44,15 @@ describe('#readinessRoute', () => {
     const { h, calls } = createFakeToolkit()
     readiness.handler({}, h)
 
-    expect(calls.statusCode).toBeUndefined()
+    expect(calls.statusCode).toBe(200)
     expect(calls.payload).toEqual({
+      status: 'ready',
       ready: true,
       hydrated: true,
+      timestamp: expect.any(String),
+      datasets: {
+        mandatory: { expected: 6, loaded: 6, missing: [] }
+      },
       missingMandatoryDatasets: [],
       lastHydratedAt: '2026-09-16T08:00:00.000Z',
       lastRefreshAt: null,
@@ -64,8 +74,49 @@ describe('#readinessRoute', () => {
     readiness.handler({}, h)
 
     expect(calls.statusCode).toBe(503)
+    expect(calls.payload.status).toBe('not-ready')
     expect(calls.payload.ready).toBe(false)
     expect(calls.payload.missingMandatoryDatasets).toEqual(['species'])
+    expect(calls.payload.datasets.mandatory).toEqual({
+      expected: 6,
+      loaded: 5,
+      missing: ['species']
+    })
+  })
+
+  test('reports a shutting-down status without forwarding the raw flag', () => {
+    cacheRefresh.getReadinessState.mockReturnValue({
+      ready: false,
+      hydrated: true,
+      shuttingDown: true,
+      missingMandatoryDatasets: [],
+      lastHydratedAt: '2026-09-16T08:00:00.000Z',
+      lastRefreshAt: null,
+      lastRefreshStatus: null
+    })
+
+    const { h, calls } = createFakeToolkit()
+    readiness.handler({}, h)
+
+    expect(calls.statusCode).toBe(503)
+    expect(calls.payload.status).toBe('shutting-down')
+    expect(calls.payload).not.toHaveProperty('shuttingDown')
+  })
+
+  test('returns Cache-Control: no-store', () => {
+    cacheRefresh.getReadinessState.mockReturnValue({
+      ready: true,
+      hydrated: true,
+      missingMandatoryDatasets: [],
+      lastHydratedAt: null,
+      lastRefreshAt: null,
+      lastRefreshStatus: null
+    })
+
+    const { h, calls } = createFakeToolkit()
+    readiness.handler({}, h)
+
+    expect(calls.headers['Cache-Control']).toBe('no-store')
   })
 
   test('never exposes internal cache-refresh state beyond the safe summary', () => {

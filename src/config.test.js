@@ -41,6 +41,7 @@ describe('#config', () => {
       'map-statistical-areas'
     ])
     expect(config.get('referenceData.autoStartCacheRefresh')).toBe(false)
+    expect(config.get('health.dependencyProbeTimeoutMs')).toBe(2000)
     expect(config.get('authentication.serviceUrl')).toBeNull()
     expect(config.get('authentication.timeoutMs')).toBe(2000)
     expect(config.get('authentication.retryCount')).toBe(1)
@@ -135,6 +136,12 @@ describe('#config', () => {
 
   test('rejects an invalid refresh concurrency', async () => {
     process.env.REFERENCE_DATA_REFRESH_CONCURRENCY = '0'
+
+    await expect(loadConfig()).rejects.toThrow()
+  })
+
+  test('rejects an invalid health dependency probe timeout', async () => {
+    process.env.HEALTH_DEPENDENCY_PROBE_TIMEOUT_MS = '0'
 
     await expect(loadConfig()).rejects.toThrow()
   })

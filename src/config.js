@@ -185,6 +185,14 @@ export const config = convict({
       env: 'REFERENCE_DATA_AUTO_START_CACHE_REFRESH'
     }
   },
+  health: {
+    dependencyProbeTimeoutMs: {
+      doc: 'Timeout in milliseconds for bounded health-check dependency probes (e.g. persistence reachability)',
+      format: convictValidatePositiveInteger.name,
+      default: 2000,
+      env: 'HEALTH_DEPENDENCY_PROBE_TIMEOUT_MS'
+    }
+  },
   authentication: {
     serviceUrl: {
       doc: 'Base URL of the Authentication Service. Only consumed by the Validation Module.',
