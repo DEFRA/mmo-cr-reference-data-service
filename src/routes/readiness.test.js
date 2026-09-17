@@ -6,29 +6,7 @@ vi.mock('#/reference-data/cache-refresh/index.js', () => ({
 
 import { readiness } from './readiness.js'
 import { cacheRefresh } from '#/reference-data/cache-refresh/index.js'
-
-function createFakeToolkit() {
-  const calls = { payload: undefined, statusCode: undefined, headers: {} }
-  const response = {
-    code(statusCode) {
-      calls.statusCode = statusCode
-      return response
-    },
-    header(name, value) {
-      calls.headers[name] = value
-      return response
-    }
-  }
-  return {
-    h: {
-      response: (payload) => {
-        calls.payload = payload
-        return response
-      }
-    },
-    calls
-  }
-}
+import { createFakeToolkit } from './route-test-helpers.js'
 
 describe('#readinessRoute', () => {
   test('returns 200 with a safe summary when ready', () => {

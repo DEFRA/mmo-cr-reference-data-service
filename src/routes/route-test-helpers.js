@@ -61,3 +61,30 @@ export async function injectAuthenticatedGet(server, url, extraHeaders = {}) {
     headers: { authorization: 'Bearer read-token', ...extraHeaders }
   })
 }
+
+// Shared fake Hapi response-toolkit for route handlers tested by direct
+// invocation (health/readiness/dependency-status) rather than via
+// `server.inject`. Records the payload/status/headers set through the
+// chainable `h.response(payload).code(x).header(name, value)` API.
+export function createFakeToolkit() {
+  const calls = { payload: undefined, statusCode: undefined, headers: {} }
+  const response = {
+    code(statusCode) {
+      calls.statusCode = statusCode
+      return response
+    },
+    header(name, value) {
+      calls.headers[name] = value
+      return response
+    }
+  }
+  return {
+    h: {
+      response: (payload) => {
+        calls.payload = payload
+        return response
+      }
+    },
+    calls
+  }
+}

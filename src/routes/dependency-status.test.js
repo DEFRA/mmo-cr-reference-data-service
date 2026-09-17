@@ -6,29 +6,7 @@ vi.mock('#/reference-data/health/index.js', () => ({
 
 import { dependencyStatus } from './dependency-status.js'
 import { dependencyStatusService } from '#/reference-data/health/index.js'
-
-function createFakeToolkit() {
-  const calls = { payload: undefined, statusCode: undefined, headers: {} }
-  const response = {
-    code(statusCode) {
-      calls.statusCode = statusCode
-      return response
-    },
-    header(name, value) {
-      calls.headers[name] = value
-      return response
-    }
-  }
-  return {
-    h: {
-      response: (payload) => {
-        calls.payload = payload
-        return response
-      }
-    },
-    calls
-  }
-}
+import { createFakeToolkit } from './route-test-helpers.js'
 
 describe('#dependencyStatusRoute', () => {
   test('is registered as GET /health/dependencies', () => {

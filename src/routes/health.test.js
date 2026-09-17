@@ -1,29 +1,7 @@
 import { describe, expect, test } from 'vitest'
 
 import { health } from './health.js'
-
-function createFakeToolkit() {
-  const calls = { payload: undefined, statusCode: undefined, headers: {} }
-  const response = {
-    code(statusCode) {
-      calls.statusCode = statusCode
-      return response
-    },
-    header(name, value) {
-      calls.headers[name] = value
-      return response
-    }
-  }
-  return {
-    h: {
-      response: (payload) => {
-        calls.payload = payload
-        return response
-      }
-    },
-    calls
-  }
-}
+import { createFakeToolkit } from './route-test-helpers.js'
 
 describe('#healthRoute', () => {
   test('is registered as GET /health', () => {
