@@ -48,7 +48,9 @@ export function buildCollectionRouteTestServer({
 export function registerServerTeardown(getServer) {
   afterAll(async () => {
     const server = getServer()
-    if (server) { await server.stop() }
+    if (server) {
+      await server.stop()
+    }
   })
 }
 

@@ -88,7 +88,7 @@ function loadSnapshot(store, dataset) {
 export function createCollectionQueryService({ store }) {
   function queryCollection(config, rawQuery, projectionContext = {}) {
     const { collection, metadata } = loadSnapshot(store, config.dataset)
-    const parsedRequest = parseCollectionQuery(rawQuery, config)
+    const parsedRequest = parseCollectionQuery(config, rawQuery)
     const rawRecords = getRawRecords(collection, config)
     const records = getPreparedRecords(rawRecords, collection, config)
     const rawByGuid = buildRawRecordLookup(rawRecords, config)
@@ -122,7 +122,7 @@ export function createCollectionQueryService({ store }) {
 
   function getItemById(config, id, rawQuery, projectionContext = {}) {
     const { collection, metadata } = loadSnapshot(store, config.dataset)
-    const parsedRequest = parseCollectionQuery({ ...rawQuery, ids: id }, config)
+    const parsedRequest = parseCollectionQuery(config, { ...rawQuery, ids: id })
     const rawRecords = getRawRecords(collection, config)
     const match = rawRecords.find((record) => config.getGuid(record) === id)
 
