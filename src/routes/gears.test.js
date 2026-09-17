@@ -1,12 +1,14 @@
 import { afterAll, describe, expect, test } from 'vitest'
 
-import { createServer } from '#/server.js'
 import { createInMemoryDataStore } from '#/reference-data/in-memory-store/in-memory-data-store.js'
 import { createCollectionQueryService } from '#/reference-data/query/collection-query-service.js'
 import { gearsQueryConfiguration } from '#/reference-data/query/gears-query-configuration.js'
 import { createCollectionRouteController } from '#/reference-data/controller/collection-route-controller.js'
 import { addMobileMeasurements, addMobileItemContext } from '#/routes/gears.js'
-import { createStubAuthenticationClient } from '#/routes/route-test-helpers.js'
+import {
+  createStubAuthenticationClient,
+  buildTestServerWithRoutes
+} from '#/routes/route-test-helpers.js'
 
 const COLLECTION_PATH = '/__test/gears'
 const ITEM_PATH = '/__test/gears/{id}'
@@ -66,13 +68,10 @@ async function buildTestServer(gears = [buildGear()]) {
     postProcessItemBody: addMobileItemContext
   })
 
-  const server = await createServer()
-  server.route([
+  return buildTestServerWithRoutes([
     { method: 'GET', path: COLLECTION_PATH, handler: collectionHandler },
     { method: 'GET', path: ITEM_PATH, handler: itemHandler }
   ])
-  await server.initialize()
-  return server
 }
 
 describe('#gearsRoute', () => {

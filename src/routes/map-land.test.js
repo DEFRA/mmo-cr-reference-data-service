@@ -1,13 +1,13 @@
 import { afterAll, describe, expect, test } from 'vitest'
 
-import { createServer } from '#/server.js'
 import { createInMemoryDataStore } from '#/reference-data/in-memory-store/in-memory-data-store.js'
 import { createCollectionQueryService } from '#/reference-data/query/collection-query-service.js'
 import { mapLandQueryConfiguration } from '#/reference-data/query/map-land-query-configuration.js'
 import { createGeoJsonCollectionRouteController } from '#/reference-data/controller/geojson-collection-route-controller.js'
 import {
   SQUARE_RING,
-  createStubAuthenticationClient
+  createStubAuthenticationClient,
+  buildTestServerWithRoutes
 } from '#/routes/geojson-route-test-helpers.js'
 
 const MAP_LAND_PATH = '/__test/map/land'
@@ -38,12 +38,9 @@ async function buildTestServer(features = [buildFeature()]) {
     authenticationClient: createStubAuthenticationClient()
   })
 
-  const server = await createServer()
-  server.route([
+  return buildTestServerWithRoutes([
     { method: 'GET', path: MAP_LAND_PATH, handler: collectionHandler }
   ])
-  await server.initialize()
-  return server
 }
 
 describe('#mapLandRoute', () => {

@@ -1,11 +1,13 @@
 import { afterAll, describe, expect, test } from 'vitest'
 
-import { createServer } from '#/server.js'
 import { createInMemoryDataStore } from '#/reference-data/in-memory-store/in-memory-data-store.js'
 import { createCollectionQueryService } from '#/reference-data/query/collection-query-service.js'
 import { vesselsQueryConfiguration } from '#/reference-data/query/vessels-query-configuration.js'
 import { createCollectionRouteController } from '#/reference-data/controller/collection-route-controller.js'
-import { createStubAuthenticationClient } from '#/routes/route-test-helpers.js'
+import {
+  createStubAuthenticationClient,
+  buildTestServerWithRoutes
+} from '#/routes/route-test-helpers.js'
 
 const COLLECTION_PATH = '/__test/vessels'
 const ITEM_PATH = '/__test/vessels/{id}'
@@ -47,13 +49,10 @@ async function buildTestServer() {
     authenticationClient: createStubAuthenticationClient()
   })
 
-  const server = await createServer()
-  server.route([
+  return buildTestServerWithRoutes([
     { method: 'GET', path: COLLECTION_PATH, handler: collectionHandler },
     { method: 'GET', path: ITEM_PATH, handler: itemHandler }
   ])
-  await server.initialize()
-  return server
 }
 
 describe('#vesselsRoute', () => {

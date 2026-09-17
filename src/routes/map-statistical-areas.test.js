@@ -1,13 +1,13 @@
 import { afterAll, describe, expect, test } from 'vitest'
 
-import { createServer } from '#/server.js'
 import { createInMemoryDataStore } from '#/reference-data/in-memory-store/in-memory-data-store.js'
 import { createCollectionQueryService } from '#/reference-data/query/collection-query-service.js'
 import { mapStatisticalAreasQueryConfiguration } from '#/reference-data/query/map-statistical-areas-query-configuration.js'
 import { createGeoJsonCollectionRouteController } from '#/reference-data/controller/geojson-collection-route-controller.js'
 import {
   SQUARE_RING,
-  createStubAuthenticationClient
+  createStubAuthenticationClient,
+  buildTestServerWithRoutes
 } from '#/routes/geojson-route-test-helpers.js'
 
 const COLLECTION_PATH = '/__test/map/statistical-areas'
@@ -46,13 +46,10 @@ async function buildTestServer(features = [buildFeature()]) {
       authenticationClient: createStubAuthenticationClient()
     })
 
-  const server = await createServer()
-  server.route([
+  return buildTestServerWithRoutes([
     { method: 'GET', path: COLLECTION_PATH, handler: collectionHandler },
     { method: 'GET', path: ITEM_PATH, handler: itemHandler }
   ])
-  await server.initialize()
-  return server
 }
 
 describe('#mapStatisticalAreasRoute', () => {
