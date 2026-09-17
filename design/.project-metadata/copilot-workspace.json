@@ -2,26 +2,26 @@
   "schemaVersion": "1.0",
   "projectName": "Reference Data Service",
   "workspaceCreatedAt": "2026-09-17T14:03:33.697Z",
-  "workspaceUpdatedAt": "2026-09-17T14:05:14.292Z",
+  "workspaceUpdatedAt": "2026-09-17T22:45:28.873Z",
   "extensionVersion": "0.1.0",
   "activePromptProfileId": "prompt-profile-web-application",
   "activePromptProfileName": "Web Application Workspace",
   "selectedFolderDisplayName": "design",
   "statistics": {
-    "promptsCaptured": 1,
-    "promptsSaved": 1,
+    "promptsCaptured": 2,
+    "promptsSaved": 2,
     "responsesExtracted": 1,
     "artifactsParsed": 1,
     "artifactsValidated": 1,
     "textArtifactsSaved": 1,
-    "binaryArtifactsDetected": 0,
+    "binaryArtifactsDetected": 1,
     "binaryArtifactsSaved": 0,
     "companionMetadataFilesSaved": 1,
     "artifactSaveFailures": 0,
-    "artifactSaveSkips": 0
+    "artifactSaveSkips": 1
   },
   "latestActivity": {
-    "lastPromptSavedAt": "2026-09-17T14:03:33.459Z",
+    "lastPromptSavedAt": "2026-09-17T22:45:14.284Z",
     "lastArtifactSavedAt": "2026-09-17T14:05:14.207Z",
     "lastBinaryArtifactSavedAt": null,
     "lastCompanionMetadataSavedAt": "2026-09-17T14:05:14.258Z"
@@ -34,6 +34,14 @@
       "summary": "generate Step 26: Complete automated unit testing prompt​‌",
       "savedPath": "_conversations/prompts/conv-20260917144322-raui-20260917-150332-prompt-001-generate-step-26-complete-automated.md",
       "savedAt": "2026-09-17T14:03:33.459Z"
+    },
+    {
+      "promptId": "prompt-20260917234511-257ihc",
+      "conversationId": "conv-20260917233822-v2l7",
+      "sequenceNumber": 1,
+      "summary": "i have adde this as copilot-instructions.md , woudl this ensure the code is sonar comply​‌ ## Verification Rules & Workf",
+      "savedPath": "_conversations/prompts/conv-20260917233822-v2l7-20260917-234511-prompt-001-i-have-adde-this-as-copilot-instruct.md",
+      "savedAt": "2026-09-17T22:45:14.284Z"
     }
   ],
   "artifacts": [
@@ -63,6 +71,15 @@
       "savedArtifactCount": 1,
       "lastPromptId": "prompt-20260917150332-pen26u",
       "lastResponseId": "response-record-20260917150512-8xumyz"
+    },
+    {
+      "conversationId": "conv-20260917233822-v2l7",
+      "startedAt": "2026-09-17T22:45:11.972Z",
+      "lastUpdatedAt": "2026-09-17T22:45:14.284Z",
+      "promptCount": 1,
+      "responseCount": 0,
+      "savedArtifactCount": 0,
+      "lastPromptId": "prompt-20260917234511-257ihc"
     }
   ]
 }
