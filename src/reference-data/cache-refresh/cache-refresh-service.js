@@ -358,6 +358,70 @@ function createHydrateOperation(
   }
 }
 
+// Logs and meters a rejected refresh cycle, then returns a failed result so the
+// promise chain can continue through the shared outcome handling below.
+function logRefreshFailure(logger, operationId, startedAt, clock, cause) {
+  logger.warn(
+    {
+      event: LOG_EVENTS.REFRESH_FAILED,
+      operationId,
+      errorCode: cause.code ?? SERVICE_ERROR_CODES.REFERENCE_DATA_UNAVAILABLE
+    },
+    'cache-refresh: refresh cycle failed'
+  )
+  recordCounter(METRIC_NAMES.REFRESH_FAILURES_TOTAL)
+  return createFailedManifestResult({
+    startedAt,
+    completedAt: clock.now(),
+    code: cause.code ?? SERVICE_ERROR_CODES.REFERENCE_DATA_UNAVAILABLE,
+    message: cause.message
+  })
+}
+
+// Logs and meters the outcome of one refresh() invocation, updates the readiness
+// tracker, then returns the result unchanged so it can be chained directly.
+function recordRefreshOutcome(
+  logger,
+  readiness,
+  operationId,
+  startedAt,
+  result
+) {
+  const completedEvent =
+    result.failedDatasets.length > 0
+      ? LOG_EVENTS.REFRESH_COMPLETED_WITH_ERRORS
+      : LOG_EVENTS.REFRESH_COMPLETED
+  if (result.status !== 'failed') {
+    logDatasetFailures(logger, operationId, result.failedDatasets)
+    logger.info(
+      {
+        event: completedEvent,
+        operationId,
+        result: result.status,
+        changedDatasetCount: result.refreshedDatasets.length,
+        failedDatasetCount: result.failedDatasets.length,
+        durationMs: durationMs(startedAt, result.completedAt)
+      },
+      'cache-refresh: refresh completed'
+    )
+    if (result.failedDatasets.length > 0) {
+      recordCounter(METRIC_NAMES.REFRESH_FAILURES_TOTAL)
+    }
+    if (result.refreshedDatasets.length > 0) {
+      recordCounter(
+        METRIC_NAMES.REFRESH_CHANGED_DATASETS_TOTAL,
+        result.refreshedDatasets.length
+      )
+    }
+  }
+  recordDuration(
+    METRIC_NAMES.REFRESH_DURATION_MS,
+    durationMs(startedAt, result.completedAt)
+  )
+  readiness.markRefreshed({ timestamp: startedAt, status: result.status })
+  return result
+}
+
 function createRefreshOperation(deps, readiness, getReadinessState) {
   const { clock, logger } = deps
   let refreshPromise = null
@@ -379,59 +443,12 @@ function createRefreshOperation(deps, readiness, getReadinessState) {
     )
 
     refreshPromise = runRefresh(deps)
-      .catch((cause) => {
-        logger.warn(
-          {
-            event: LOG_EVENTS.REFRESH_FAILED,
-            operationId,
-            errorCode:
-              cause.code ?? SERVICE_ERROR_CODES.REFERENCE_DATA_UNAVAILABLE
-          },
-          'cache-refresh: refresh cycle failed'
-        )
-        recordCounter(METRIC_NAMES.REFRESH_FAILURES_TOTAL)
-        return createFailedManifestResult({
-          startedAt,
-          completedAt: clock.now(),
-          code: cause.code ?? SERVICE_ERROR_CODES.REFERENCE_DATA_UNAVAILABLE,
-          message: cause.message
-        })
-      })
-      .then((result) => {
-        const completedEvent =
-          result.failedDatasets.length > 0
-            ? LOG_EVENTS.REFRESH_COMPLETED_WITH_ERRORS
-            : LOG_EVENTS.REFRESH_COMPLETED
-        if (result.status !== 'failed') {
-          logDatasetFailures(logger, operationId, result.failedDatasets)
-          logger.info(
-            {
-              event: completedEvent,
-              operationId,
-              result: result.status,
-              changedDatasetCount: result.refreshedDatasets.length,
-              failedDatasetCount: result.failedDatasets.length,
-              durationMs: durationMs(startedAt, result.completedAt)
-            },
-            'cache-refresh: refresh completed'
-          )
-          if (result.failedDatasets.length > 0) {
-            recordCounter(METRIC_NAMES.REFRESH_FAILURES_TOTAL)
-          }
-          if (result.refreshedDatasets.length > 0) {
-            recordCounter(
-              METRIC_NAMES.REFRESH_CHANGED_DATASETS_TOTAL,
-              result.refreshedDatasets.length
-            )
-          }
-        }
-        recordDuration(
-          METRIC_NAMES.REFRESH_DURATION_MS,
-          durationMs(startedAt, result.completedAt)
-        )
-        readiness.markRefreshed({ timestamp: startedAt, status: result.status })
-        return result
-      })
+      .catch((cause) =>
+        logRefreshFailure(logger, operationId, startedAt, clock, cause)
+      )
+      .then((result) =>
+        recordRefreshOutcome(logger, readiness, operationId, startedAt, result)
+      )
       .finally(() => {
         recordGauge(METRIC_NAMES.READINESS, getReadinessState().ready ? 1 : 0)
         refreshPromise = null
