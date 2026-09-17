@@ -5,25 +5,11 @@ import { createInMemoryDataStore } from '#/reference-data/in-memory-store/in-mem
 import { createCollectionQueryService } from '#/reference-data/query/collection-query-service.js'
 import { vesselsQueryConfiguration } from '#/reference-data/query/vessels-query-configuration.js'
 import { createCollectionRouteController } from '#/reference-data/controller/collection-route-controller.js'
+import { createStubAuthenticationClient } from '#/routes/route-test-helpers.js'
 
 const COLLECTION_PATH = '/__test/vessels'
 const ITEM_PATH = '/__test/vessels/{id}'
 const VESSEL_ID = '11111111-1111-4111-8111-111111111111'
-
-function createStubAuthenticationClient() {
-  return {
-    authenticate: async ({ token }) =>
-      token === 'read-token'
-        ? {
-            authenticated: true,
-            actor: { actorId: 'a1', permissions: ['reference-data.read'] }
-          }
-        : {
-            authenticated: false,
-            failure: { code: 'unauthorized', message: 'x' }
-          }
-  }
-}
 
 async function buildTestServer() {
   const store = createInMemoryDataStore()

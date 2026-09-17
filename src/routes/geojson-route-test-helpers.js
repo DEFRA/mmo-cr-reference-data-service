@@ -1,5 +1,7 @@
 // Shared fixtures/stubs for the map-land and map-statistical-areas route tests.
 
+export { createStubAuthenticationClient } from '#/routes/route-test-helpers.js'
+
 export const SQUARE_RING = [
   [0, 0],
   [0, 10],
@@ -7,18 +9,3 @@ export const SQUARE_RING = [
   [10, 0],
   [0, 0]
 ]
-
-export function createStubAuthenticationClient() {
-  return {
-    authenticate: async ({ token }) =>
-      token === 'read-token'
-        ? {
-            authenticated: true,
-            actor: { actorId: 'a1', permissions: ['reference-data.read'] }
-          }
-        : {
-            authenticated: false,
-            failure: { code: 'unauthorized', message: 'x' }
-          }
-  }
-}

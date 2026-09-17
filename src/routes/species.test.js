@@ -6,25 +6,11 @@ import { createCollectionQueryService } from '#/reference-data/query/collection-
 import { speciesQueryConfiguration } from '#/reference-data/query/species-query-configuration.js'
 import { createCollectionRouteController } from '#/reference-data/controller/collection-route-controller.js'
 import { getProjectionContext } from '#/routes/species.js'
+import { createStubAuthenticationClient } from '#/routes/route-test-helpers.js'
 
 const COLLECTION_PATH = '/__test/species'
 const ITEM_PATH = '/__test/species/{id}'
 const SPECIES_ID = '11111111-1111-4111-8111-111111111111'
-
-function createStubAuthenticationClient() {
-  return {
-    authenticate: async ({ token }) =>
-      token === 'read-token'
-        ? {
-            authenticated: true,
-            actor: { actorId: 'a1', permissions: ['reference-data.read'] }
-          }
-        : {
-            authenticated: false,
-            failure: { code: 'unauthorized', message: 'x' }
-          }
-  }
-}
 
 function buildSpecies(overrides = {}) {
   return {
