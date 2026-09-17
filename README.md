@@ -140,9 +140,28 @@ git config --global core.autocrlf false
 
 ## API endpoints
 
-| Endpoint       | Description |
-| :------------- | :---------- |
-| `GET: /health` | Health      |
+| Endpoint                               | Description                                      |
+| :------------------------------------- | :----------------------------------------------- |
+| `GET: /health`                         | Health                                           |
+| `GET: /health/ready`                   | Readiness (cache-hydration state)                |
+| `GET: /api/v1/reference-data/manifest` | Active dataset versions and metadata (see below) |
+
+### Manifest API
+
+`GET /api/v1/reference-data/manifest` returns the active version, GUID, ETag, format, and public
+URL of every persisted dataset (`vessels`, `gears`, `ports`, `species`, `map-land`,
+`map-statistical-areas`). It never includes `map-ports` (always derived from `ports`, never an
+independent manifest entry). Requires the `reference-data.read` permission via the existing
+provisional Authentication Service integration (`Authorization: Bearer <token>`).
+
+- `?include=vessels,ports` restricts the response to the listed datasets (comma-separated,
+  case-sensitive canonical identifiers only; an unsupported or empty value returns `400`).
+- The response carries an `ETag` derived only from the active `manifestId`+`version` (stable
+  while unchanged, and shared by every filtered view — see the saved Step 14 plan for the
+  filtered-manifest ETag policy). Send `If-None-Match` to receive `304 Not Modified` with no body.
+- Returns `503` (`reference_data_unavailable`) if startup hydration has not yet produced a valid
+  active manifest — never an empty successful manifest.
+- Reads only from the in-memory active manifest (Step 11); it never calls S3/Floci per request.
 
 ## Reference Data Domain Model
 

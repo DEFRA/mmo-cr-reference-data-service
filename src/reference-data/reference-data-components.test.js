@@ -13,7 +13,6 @@ describe('#referenceDataComponents', () => {
   test.each([
     ['controller', controller, 'controller'],
     ['validation', validation, 'validation'],
-    ['query', query, 'query'],
     ['command', command, 'command'],
     ['normalisation', normalisation, 'normalisation']
   ])(
@@ -22,6 +21,13 @@ describe('#referenceDataComponents', () => {
       expect(component).toEqual({ name: expectedName })
     }
   )
+
+  // query is implemented (Step 14/15); its behaviour is covered by query/*.test.js.
+  test('query component implements the Query Module contract', () => {
+    expect(Object.keys(query).sort()).toEqual(
+      ['getManifest', 'queryCollection', 'getItemById', 'getMapPorts'].sort()
+    )
+  })
 
   // cacheRefresh is implemented (Step 11); its behaviour is covered by cache-refresh/cache-refresh-service.test.js.
   test('cacheRefresh component implements the Cache Refresh Module contract', () => {

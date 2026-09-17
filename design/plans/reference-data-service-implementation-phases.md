@@ -470,14 +470,15 @@ Review implementation evidence against:
 - Step 11: Implement the Cache Refresh Module and startup hydration
 - Step 12: Implement Authentication Service integration
 - Step 13: Implement common API behaviour and error handling
+- Step 14: Implement the manifest API
 
 ## Next approved step
 
-- Step 14: Implement the manifest API
+- Step 15: Implement the common collection query engine
 
 ## Remaining steps
 
-- Steps 14 through 32, in the exact order and scope defined by the approved implementation plan.
+- Steps 15 through 32, in the exact order and scope defined by the approved implementation plan.
 
 ---
 
