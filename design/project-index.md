@@ -49,13 +49,13 @@
 
 ## GitHub Prompts
 
-- [Step 21: Implement Full Collection Upload Validation Mode](github-prompts/step-21-implement-full-collection-upload-validation-mode.md)    Type: github-prompt | Format: markdown | Saved: 2026-09-16T18:58:10.154Z | Conversation: conv-20260916195647-dkg3
+- [Step 21: Implement Full Collection Upload Validation Mode](github-prompts/step-21-implement-full-collection-upload-validation-mode.md) Type: github-prompt | Format: markdown | Saved: 2026-09-16T18:58:10.154Z | Conversation: conv-20260916195647-dkg3
   Metadata: [Companion Metadata](github-prompts/step-21-implement-full-collection-upload-validation-mode.meta.md)
-- [Step 22: Implement Atomic Full Collection Replacement](github-prompts/step-22-implement-atomic-full-collection-replacement.md)    Type: github-prompt | Format: markdown | Saved: 2026-09-16T19:03:03.287Z | Conversation: conv-20260916195647-dkg3
+- [Step 22: Implement Atomic Full Collection Replacement](github-prompts/step-22-implement-atomic-full-collection-replacement.md) Type: github-prompt | Format: markdown | Saved: 2026-09-16T19:03:03.287Z | Conversation: conv-20260916195647-dkg3
   Metadata: [Companion Metadata](github-prompts/step-22-implement-atomic-full-collection-replacement.meta.md)
-- [Step 23: Add Seed Reference Data and Deterministic Local Bootstrap](github-prompts/step-23-add-seed-reference-data-and-deterministic-local-bootstrap.md)    Type: github-prompt | Format: markdown | Saved: 2026-09-16T19:26:20.219Z | Conversation: conv-20260916195647-dkg3
+- [Step 23: Add Seed Reference Data and Deterministic Local Bootstrap](github-prompts/step-23-add-seed-reference-data-and-deterministic-local-bootstrap.md) Type: github-prompt | Format: markdown | Saved: 2026-09-16T19:26:20.219Z | Conversation: conv-20260916195647-dkg3
   Metadata: [Companion Metadata](github-prompts/step-23-add-seed-reference-data-and-deterministic-local-bootstrap.meta.md)
-- [Step 24: Implement Health, Readiness, and Dependency Status](github-prompts/step-24-implement-health-readiness-and-dependency-status.md)    Type: github-prompt | Format: markdown | Saved: 2026-09-16T19:30:09.349Z | Conversation: conv-20260916195647-dkg3
+- [Step 24: Implement Health, Readiness, and Dependency Status](github-prompts/step-24-implement-health-readiness-and-dependency-status.md) Type: github-prompt | Format: markdown | Saved: 2026-09-16T19:30:09.349Z | Conversation: conv-20260916195647-dkg3
   Metadata: [Companion Metadata](github-prompts/step-24-implement-health-readiness-and-dependency-status.meta.md)
 
 ## Companion Metadata Files
@@ -64,8 +64,8 @@
 
 ## Conversations
 
-- Conversation: conv-20260916195647-dkg3    Started: 2026-09-16T18:57:50.757Z | Updated: 2026-09-16T20:06:21.788Z | Prompts: 7 | Responses: 4 | Saved artifacts: 4
-- Conversation: conv-20260917034124-uoov    Started: 2026-09-17T02:42:43.533Z | Updated: 2026-09-17T02:49:19.655Z | Prompts: 3 | Responses: 0 | Saved artifacts: 0
+- Conversation: conv-20260916195647-dkg3 Started: 2026-09-16T18:57:50.757Z | Updated: 2026-09-16T20:06:21.788Z | Prompts: 7 | Responses: 4 | Saved artifacts: 4
+- Conversation: conv-20260917034124-uoov Started: 2026-09-17T02:42:43.533Z | Updated: 2026-09-17T02:49:19.655Z | Prompts: 3 | Responses: 0 | Saved artifacts: 0
 
 ## Latest Activity
 
