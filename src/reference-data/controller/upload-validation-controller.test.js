@@ -3,6 +3,7 @@ import { describe, expect, test } from 'vitest'
 import { createUploadValidationController } from './upload-validation-controller.js'
 import {
   createBaseFakeToolkit,
+  createFakePersistence,
   createRequest
 } from './controller-test-helpers.js'
 import { createInMemoryDataStore } from '#/reference-data/in-memory-store/index.js'
@@ -28,59 +29,6 @@ function createStubAuthenticationClient() {
         failure: { code: 'unauthorized', message: 'x' }
       }
     }
-  }
-}
-
-function createFakePersistence() {
-  const objects = new Map()
-  let manifestState = null
-  let manifestCounter = 0
-
-  return {
-    readManifest: async () => {
-      if (!manifestState) {
-        const error = new Error('no active manifest')
-        error.code = 'dataset_not_found'
-        throw error
-      }
-      return {
-        manifest: manifestState.manifest,
-        metadata: { etag: manifestState.etag }
-      }
-    },
-    writeCollection: async ({ dataset, collectionVersion, content }) => {
-      const key = `${dataset}/${collectionVersion}`
-      if (objects.has(key)) {
-        const error = new Error('collection version already exists')
-        error.code = 'collection_version_exists'
-        throw error
-      }
-      objects.set(key, content)
-      return {
-        dataset,
-        collectionVersion,
-        etag: `sha256-${collectionVersion}`,
-        sizeBytes: JSON.stringify(content).length,
-        lastModifiedAt: '2026-09-17T00:00:00Z'
-      }
-    },
-    writeManifest: async ({ manifest, expectedEtag }) => {
-      if (
-        manifestState &&
-        expectedEtag !== undefined &&
-        expectedEtag !== manifestState.etag
-      ) {
-        const error = new Error('manifest modified concurrently')
-        error.code = 'collection_modified'
-        throw error
-      }
-      manifestCounter += 1
-      const etag = `manifest-etag-${manifestCounter}`
-      manifestState = { manifest, etag }
-      return { etag }
-    },
-    objectExists: async ({ manifest }) =>
-      manifest ? manifestState !== null : false
   }
 }
 
