@@ -13,6 +13,12 @@ import {
   DATASET_FORMAT
 } from '#/common/domain/datasets.js'
 import { SERVICE_ERROR_CODES } from '#/common/domain/errors.js'
+import { LOG_EVENTS } from '#/common/domain/log-events.js'
+import {
+  recordCounter,
+  recordDuration,
+  METRIC_NAMES
+} from '#/common/helpers/observability/metrics.js'
 import { createS3Client } from './s3-client.js'
 import {
   buildCollectionObjectKey,
@@ -318,6 +324,68 @@ async function checkObjectExists(s3Client, bucket, target) {
   }
 }
 
+const NOOP_LOGGER = { debug: () => {}, warn: () => {} }
+
+// Wraps one repository operation with safe, operation-level observability. Never
+// logs object keys, credentials, or object content — only the operation name,
+// dataset (where applicable), duration, and the already-classified service-error
+// code/retryable flag attached by mapS3Error/raisePersistenceError.
+function withPersistenceInstrumentation(operation, extractDataset, fn, logger) {
+  return async (...args) => {
+    const dataset = extractDataset(...args)
+    const startedAt = Date.now()
+    try {
+      const result = await fn(...args)
+      const durationMs = Date.now() - startedAt
+      logger.debug(
+        {
+          event: LOG_EVENTS.PERSISTENCE_OPERATION_COMPLETED,
+          operation,
+          dataset,
+          durationMs
+        },
+        'persistence: operation completed'
+      )
+      recordDuration(
+        METRIC_NAMES.PERSISTENCE_OPERATION_DURATION_MS,
+        durationMs,
+        {
+          operation,
+          dataset
+        }
+      )
+      return result
+    } catch (cause) {
+      const durationMs = Date.now() - startedAt
+      logger.warn(
+        {
+          event: LOG_EVENTS.PERSISTENCE_OPERATION_FAILED,
+          operation,
+          dataset,
+          errorCode: cause.code,
+          retryable: cause.retryable,
+          durationMs
+        },
+        'persistence: operation failed'
+      )
+      recordCounter(METRIC_NAMES.PERSISTENCE_FAILURES_TOTAL, 1, {
+        operation,
+        dataset,
+        error_code: cause.code
+      })
+      recordDuration(
+        METRIC_NAMES.PERSISTENCE_OPERATION_DURATION_MS,
+        durationMs,
+        {
+          operation,
+          dataset
+        }
+      )
+      throw cause
+    }
+  }
+}
+
 /**
  * @param {Object} [options]
  * @param {string} [options.region]
@@ -325,13 +393,15 @@ async function checkObjectExists(s3Client, bucket, target) {
  * @param {boolean} [options.forcePathStyle]
  * @param {string} options.bucket
  * @param {Object} [options.client] injected S3 client (test double or adapter)
+ * @param {Object} [options.logger] safe operation-level logger (Step 25)
  */
 export function createReferenceDataRepository({
   region,
   endpointUrl,
   forcePathStyle,
   bucket,
-  client
+  client,
+  logger = NOOP_LOGGER
 } = {}) {
   const s3Client = createS3Client({
     region,
@@ -341,15 +411,44 @@ export function createReferenceDataRepository({
   })
 
   return createReferenceDataRepositoryContract({
-    readCollection: ({ dataset, collectionVersion }) =>
-      fetchCollection(s3Client, bucket, dataset, collectionVersion),
-    writeCollection: ({ dataset, collectionVersion, content }) =>
-      putCollection(s3Client, bucket, dataset, collectionVersion, content),
-    readManifest: () => fetchManifest(s3Client, bucket),
-    writeManifest: ({ manifest, expectedEtag } = {}) =>
-      putManifest(s3Client, bucket, manifest, expectedEtag),
-    getObjectMetadata: (target) =>
-      fetchObjectMetadata(s3Client, bucket, target),
-    objectExists: (target) => checkObjectExists(s3Client, bucket, target)
+    readCollection: withPersistenceInstrumentation(
+      'readCollection',
+      ({ dataset }) => dataset,
+      ({ dataset, collectionVersion }) =>
+        fetchCollection(s3Client, bucket, dataset, collectionVersion),
+      logger
+    ),
+    writeCollection: withPersistenceInstrumentation(
+      'writeCollection',
+      ({ dataset }) => dataset,
+      ({ dataset, collectionVersion, content }) =>
+        putCollection(s3Client, bucket, dataset, collectionVersion, content),
+      logger
+    ),
+    readManifest: withPersistenceInstrumentation(
+      'readManifest',
+      () => null,
+      () => fetchManifest(s3Client, bucket),
+      logger
+    ),
+    writeManifest: withPersistenceInstrumentation(
+      'writeManifest',
+      () => null,
+      ({ manifest, expectedEtag } = {}) =>
+        putManifest(s3Client, bucket, manifest, expectedEtag),
+      logger
+    ),
+    getObjectMetadata: withPersistenceInstrumentation(
+      'getObjectMetadata',
+      (target) => target?.dataset ?? null,
+      (target) => fetchObjectMetadata(s3Client, bucket, target),
+      logger
+    ),
+    objectExists: withPersistenceInstrumentation(
+      'objectExists',
+      (target) => target?.dataset ?? null,
+      (target) => checkObjectExists(s3Client, bucket, target),
+      logger
+    )
   })
 }

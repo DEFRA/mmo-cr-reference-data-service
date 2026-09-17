@@ -481,14 +481,15 @@ Review implementation evidence against:
 - Step 22: Implement atomic full collection replacement
 - Step 23: Add seed reference data and deterministic local bootstrap
 - Step 24: Implement health, readiness, and dependency status
+- Step 25: Add structured logging, metrics, and audit events
 
 ## Next approved step
 
-- Step 25: Add structured logging, metrics, and audit events
+- Step 26: Complete automated unit testing
 
 ## Remaining steps
 
-- Steps 25 through 32, in the exact order and scope defined by the approved implementation plan.
+- Steps 26 through 32, in the exact order and scope defined by the approved implementation plan.
 
 ---
 

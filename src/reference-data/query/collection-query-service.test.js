@@ -1,5 +1,10 @@
 import { describe, expect, test, vi } from 'vitest'
 
+vi.mock('#/common/helpers/observability/metrics.js', async (importOriginal) => {
+  const actual = await importOriginal()
+  return { ...actual, recordCounter: vi.fn(), recordDuration: vi.fn() }
+})
+
 import { createQueryConfiguration } from './query-configuration.js'
 import { createCollectionQueryService } from './collection-query-service.js'
 
@@ -119,5 +124,79 @@ describe('#createCollectionQueryService getItemById', () => {
       {}
     )
     expect(result.item).not.toHaveProperty('_searchText')
+  })
+})
+
+describe('#createCollectionQueryService observability', () => {
+  function createSpyLogger() {
+    return { debug: vi.fn() }
+  }
+
+  test('logs a safe query-completion summary and records bounded metrics', async () => {
+    const { recordCounter, recordDuration } =
+      await import('#/common/helpers/observability/metrics.js')
+    const logger = createSpyLogger()
+    const service = createCollectionQueryService({
+      store: createStore(),
+      logger
+    })
+
+    service.queryCollection(config, { view: 'mobile' })
+
+    expect(logger.debug).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'reference_data.query_completed',
+        dataset: 'vessels',
+        view: 'mobile',
+        filtered: false,
+        resultCount: 2,
+        totalCount: 2
+      }),
+      'query: completed'
+    )
+    expect(recordCounter).toHaveBeenCalledWith(
+      'reference_data_query_requests_total',
+      1,
+      { dataset: 'vessels', view: 'mobile' }
+    )
+    expect(recordDuration).toHaveBeenCalledWith(
+      'reference_data_query_duration_ms',
+      expect.any(Number),
+      { dataset: 'vessels', view: 'mobile' }
+    )
+  })
+
+  test('never logs the free-text search query or record content', () => {
+    const logger = createSpyLogger()
+    const service = createCollectionQueryService({
+      store: createStore(),
+      logger
+    })
+
+    service.queryCollection(config, { query: 'Alpha' })
+
+    const serialised = JSON.stringify(logger.debug.mock.calls)
+    expect(serialised).not.toContain('Alpha')
+    expect(logger.debug.mock.calls[0][0]).toMatchObject({ filtered: true })
+  })
+
+  test('getItemById also logs a safe completion summary', () => {
+    const logger = createSpyLogger()
+    const service = createCollectionQueryService({
+      store: createStore(),
+      logger
+    })
+
+    service.getItemById(config, '11111111-1111-4111-8111-111111111111', {})
+
+    expect(logger.debug).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'reference_data.query_completed',
+        dataset: 'vessels',
+        resultCount: 1,
+        totalCount: 1
+      }),
+      'query: completed'
+    )
   })
 })

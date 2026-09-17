@@ -1,4 +1,5 @@
 import { config } from '#/config.js'
+import { createLogger } from '#/common/helpers/logging/logger.js'
 import { createReferenceDataRepository } from './reference-data-repository.js'
 
 export { createReferenceDataRepository }
@@ -9,5 +10,6 @@ export const persistence = createReferenceDataRepository({
   region: config.get('aws.region'),
   endpointUrl: config.get('aws.endpointUrl'),
   forcePathStyle: config.get('aws.forcePathStyle'),
-  bucket: config.get('referenceData.bucket')
+  bucket: config.get('referenceData.bucket'),
+  logger: createLogger()
 })

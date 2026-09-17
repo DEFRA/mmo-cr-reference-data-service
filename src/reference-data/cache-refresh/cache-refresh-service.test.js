@@ -1,5 +1,15 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
+vi.mock('#/common/helpers/observability/metrics.js', async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    recordCounter: vi.fn(),
+    recordDuration: vi.fn(),
+    recordGauge: vi.fn()
+  }
+})
+
 import { createCacheRefreshService } from './cache-refresh-service.js'
 import { createInMemoryDataStore } from '#/reference-data/in-memory-store/in-memory-data-store.js'
 import { getDatasetCapabilities } from '#/common/domain/datasets.js'
@@ -450,5 +460,133 @@ describe('#cacheRefreshService shutdown', () => {
 
     expect(service.getReadinessState().ready).toBe(false)
     expect(service.getReadinessState().shuttingDown).toBe(true)
+  })
+})
+
+describe('#cacheRefreshService observability', () => {
+  function createSpyLogger() {
+    return { info: vi.fn(), warn: vi.fn(), error: vi.fn() }
+  }
+
+  function eventNames(spy) {
+    return spy.mock.calls.map(([fields]) => fields.event)
+  }
+
+  test('hydrate() logs started/completed with a shared operationId and records duration', async () => {
+    const { recordDuration, recordGauge } =
+      await import('#/common/helpers/observability/metrics.js')
+    const logger = createSpyLogger()
+    const manifest = buildManifest(MANDATORY_DATASETS)
+    const service = createService({
+      manifest,
+      contentByDataset: CONTENT_BY_DATASET,
+      logger
+    })
+
+    await service.hydrate()
+
+    expect(eventNames(logger.info)).toEqual([
+      'reference_data.hydration_started',
+      'reference_data.hydration_completed'
+    ])
+    const [started] = logger.info.mock.calls[0]
+    const [completed] = logger.info.mock.calls[1]
+    expect(started.operationId).toEqual(expect.any(String))
+    expect(completed.operationId).toBe(started.operationId)
+    expect(completed.durationMs).toBeGreaterThanOrEqual(0)
+    expect(recordDuration).toHaveBeenCalledWith(
+      'reference_data_hydration_duration_ms',
+      expect.any(Number)
+    )
+    expect(recordGauge).toHaveBeenCalledWith('reference_data_readiness', 1)
+  })
+
+  test('a failed dataset during hydration logs a dataset-level warning and a failure metric', async () => {
+    const { recordCounter } =
+      await import('#/common/helpers/observability/metrics.js')
+    const logger = createSpyLogger()
+    const manifest = buildManifest(MANDATORY_DATASETS)
+    const service = createService({
+      manifest,
+      contentByDataset: {
+        ...CONTENT_BY_DATASET,
+        species: { dataset: 'species' }
+      },
+      logger
+    })
+
+    await service.hydrate()
+
+    expect(eventNames(logger.warn)).toEqual([
+      'reference_data.dataset_hydration_failed'
+    ])
+    expect(logger.warn.mock.calls[0][0]).toMatchObject({ dataset: 'species' })
+    expect(recordCounter).toHaveBeenCalledWith(
+      'reference_data_hydration_failures_total'
+    )
+  })
+
+  test('a manifest read failure logs hydration_failed and never hydration_completed', async () => {
+    const logger = createSpyLogger()
+    const service = createCacheRefreshService({
+      persistence: {
+        readManifest: async () => {
+          throw new Error('S3 unavailable')
+        }
+      },
+      store: createInMemoryDataStore(),
+      mandatoryDatasets: MANDATORY_DATASETS,
+      hydrationTimeoutMs: 5000,
+      refreshConcurrency: 3,
+      logger
+    })
+
+    await service.hydrate()
+
+    expect(eventNames(logger.error)).toEqual([
+      'reference_data.hydration_failed'
+    ])
+    expect(eventNames(logger.info)).toEqual([
+      'reference_data.hydration_started'
+    ])
+    expect(logger.error.mock.calls[0][0]).not.toHaveProperty('err')
+  })
+
+  test('refresh() logs started/completed and a second concurrent call logs skipped', async () => {
+    const logger = createSpyLogger()
+    const manifest = buildManifest(MANDATORY_DATASETS)
+    const service = createService({
+      manifest,
+      contentByDataset: CONTENT_BY_DATASET,
+      logger
+    })
+    await service.hydrate()
+    logger.info.mockClear()
+
+    const first = service.refresh()
+    const second = service.refresh()
+    await Promise.all([first, second])
+
+    expect(eventNames(logger.info)).toEqual([
+      'reference_data.refresh_started',
+      'reference_data.refresh_skipped',
+      'reference_data.refresh_completed'
+    ])
+  })
+
+  test('markShuttingDown updates the readiness gauge to 0', async () => {
+    const { recordGauge } =
+      await import('#/common/helpers/observability/metrics.js')
+    const manifest = buildManifest(MANDATORY_DATASETS)
+    const service = createService({
+      manifest,
+      contentByDataset: CONTENT_BY_DATASET
+    })
+    await service.hydrate()
+    recordGauge.mockClear()
+
+    service.markShuttingDown()
+
+    expect(recordGauge).toHaveBeenCalledWith('reference_data_readiness', 0)
   })
 })

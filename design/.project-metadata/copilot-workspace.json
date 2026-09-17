@@ -1,8 +1,8 @@
 {
   "schemaVersion": "1.0",
   "projectName": "Reference Data Service",
-  "workspaceCreatedAt": "2026-09-17T12:44:54.070Z",
-  "workspaceUpdatedAt": "2026-09-17T12:46:31.155Z",
+  "workspaceCreatedAt": "2026-09-17T14:03:33.697Z",
+  "workspaceUpdatedAt": "2026-09-17T14:05:14.292Z",
   "extensionVersion": "0.1.0",
   "activePromptProfileId": "prompt-profile-web-application",
   "activePromptProfileName": "Web Application Workspace",
@@ -21,48 +21,48 @@
     "artifactSaveSkips": 0
   },
   "latestActivity": {
-    "lastPromptSavedAt": "2026-09-17T12:44:54.062Z",
-    "lastArtifactSavedAt": "2026-09-17T12:46:30.793Z",
+    "lastPromptSavedAt": "2026-09-17T14:03:33.459Z",
+    "lastArtifactSavedAt": "2026-09-17T14:05:14.207Z",
     "lastBinaryArtifactSavedAt": null,
-    "lastCompanionMetadataSavedAt": "2026-09-17T12:46:31.059Z"
+    "lastCompanionMetadataSavedAt": "2026-09-17T14:05:14.258Z"
   },
   "prompts": [
     {
-      "promptId": "prompt-20260917134451-4l9hmt",
-      "conversationId": "conv-20260917125853-njx4",
+      "promptId": "prompt-20260917150332-pen26u",
+      "conversationId": "conv-20260917144322-raui",
       "sequenceNumber": 1,
-      "summary": "generate Step 25: Add structured logging, metrics, and audit events prompt​‌",
-      "savedPath": "_conversations/prompts/conv-20260917125853-njx4-20260917-134451-prompt-001-generate-step-25-add-structured-logg.md",
-      "savedAt": "2026-09-17T12:44:54.062Z"
+      "summary": "generate Step 26: Complete automated unit testing prompt​‌",
+      "savedPath": "_conversations/prompts/conv-20260917144322-raui-20260917-150332-prompt-001-generate-step-26-complete-automated.md",
+      "savedAt": "2026-09-17T14:03:33.459Z"
     }
   ],
   "artifacts": [
     {
-      "id": "artifact-instruction-response-record-20260917134630-np2ikl-1",
+      "id": "artifact-instruction-response-record-20260917150512-8xumyz-1",
       "sourceArtifactKind": "text-artifact",
-      "artifactInstructionId": "artifact-instruction-response-record-20260917134630-np2ikl-1",
-      "artifactName": "Step 25: Add Structured Logging, Metrics, and Audit Events",
+      "artifactInstructionId": "artifact-instruction-response-record-20260917150512-8xumyz-1",
+      "artifactName": "Step 26: Complete Automated Unit Testing",
       "artifactType": "github-prompt",
       "format": "markdown",
-      "savedPath": "github-prompts/step-25-add-structured-logging-metrics-and-audit-events.md",
-      "companionMetadataPath": "github-prompts/step-25-add-structured-logging-metrics-and-audit-events.meta.md",
-      "sourceResponseId": "response-record-20260917134630-np2ikl",
-      "sourcePromptId": "prompt-20260917134451-4l9hmt",
-      "conversationId": "conv-20260917125853-njx4",
-      "savedAt": "2026-09-17T12:46:30.793Z"
+      "savedPath": "github-prompts/step-26-complete-automated-unit-testing.md",
+      "companionMetadataPath": "github-prompts/step-26-complete-automated-unit-testing.meta.md",
+      "sourceResponseId": "response-record-20260917150512-8xumyz",
+      "sourcePromptId": "prompt-20260917150332-pen26u",
+      "conversationId": "conv-20260917144322-raui",
+      "savedAt": "2026-09-17T14:05:14.207Z"
     }
   ],
   "bundles": [],
   "conversations": [
     {
-      "conversationId": "conv-20260917125853-njx4",
-      "startedAt": "2026-09-17T12:44:51.624Z",
-      "lastUpdatedAt": "2026-09-17T12:46:30.793Z",
+      "conversationId": "conv-20260917144322-raui",
+      "startedAt": "2026-09-17T14:03:32.846Z",
+      "lastUpdatedAt": "2026-09-17T14:05:14.207Z",
       "promptCount": 1,
       "responseCount": 1,
       "savedArtifactCount": 1,
-      "lastPromptId": "prompt-20260917134451-4l9hmt",
-      "lastResponseId": "response-record-20260917134630-np2ikl"
+      "lastPromptId": "prompt-20260917150332-pen26u",
+      "lastResponseId": "response-record-20260917150512-8xumyz"
     }
   ]
 }

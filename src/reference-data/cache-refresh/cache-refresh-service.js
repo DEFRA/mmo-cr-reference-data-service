@@ -1,4 +1,13 @@
+import { randomUUID } from 'node:crypto'
+
 import { SERVICE_ERROR_CODES } from '#/common/domain/errors.js'
+import { LOG_EVENTS } from '#/common/domain/log-events.js'
+import {
+  recordCounter,
+  recordDuration,
+  recordGauge,
+  METRIC_NAMES
+} from '#/common/helpers/observability/metrics.js'
 import { validateManifest } from './manifest-validation.js'
 import { hasManifestEntryChanged } from './manifest-comparison.js'
 import {
@@ -15,6 +24,29 @@ import { createReadinessTracker } from './readiness-tracker.js'
 
 const DEFAULT_CLOCK = { now: () => new Date().toISOString() }
 const NOOP_LOGGER = { warn: () => {}, error: () => {}, info: () => {} }
+
+function durationMs(startedAt, completedAt) {
+  return new Date(completedAt).getTime() - new Date(startedAt).getTime()
+}
+
+// Logs one safe line per failed dataset (dataset, stage, code — never the
+// collection content or a raw error object) rather than a single aggregate line,
+// so each dataset failure remains individually queryable/alertable.
+function logDatasetFailures(logger, operationId, failedDatasets) {
+  for (const failure of failedDatasets) {
+    logger.warn(
+      {
+        event: LOG_EVENTS.DATASET_HYDRATION_FAILED,
+        operationId,
+        dataset: failure.dataset,
+        failureStage: failure.stage,
+        errorCode: failure.code,
+        retryable: failure.retryable
+      },
+      'cache-refresh: dataset failed to load; previous data retained where available'
+    )
+  }
+}
 
 // Runs `items` through `mapFn` with at most `concurrency` in flight at once,
 // preserving each result at its original index regardless of completion order.
@@ -235,7 +267,12 @@ async function runRefresh(deps) {
   })
 }
 
-function createHydrateOperation(deps, readiness, hydrationTimeoutMs) {
+function createHydrateOperation(
+  deps,
+  readiness,
+  hydrationTimeoutMs,
+  getReadinessState
+) {
   const { clock, logger } = deps
   let hydrationPromise = null
 
@@ -243,6 +280,13 @@ function createHydrateOperation(deps, readiness, hydrationTimeoutMs) {
     if (hydrationPromise) {
       return hydrationPromise
     }
+
+    const operationId = randomUUID()
+    const startedAt = clock.now()
+    logger.info(
+      { event: LOG_EVENTS.HYDRATION_STARTED, operationId },
+      'cache-refresh: startup hydration started'
+    )
 
     const timeoutError = Object.assign(
       new Error('Startup hydration timed out'),
@@ -254,17 +298,53 @@ function createHydrateOperation(deps, readiness, hydrationTimeoutMs) {
       hydrationTimeoutMs,
       timeoutError
     )
-      .catch((cause) => {
-        logger.error({ err: cause }, 'cache-refresh: startup hydration failed')
-        return createFailedManifestResult({
+      .catch((cause) =>
+        createFailedManifestResult({
           startedAt: clock.now(),
           completedAt: clock.now(),
           code: cause.code ?? SERVICE_ERROR_CODES.REFERENCE_DATA_UNAVAILABLE,
           message: cause.message
         })
+      )
+      .then((result) => {
+        if (result.status === 'failed') {
+          const [failure] = result.failedDatasets
+          logger.error(
+            {
+              event: LOG_EVENTS.HYDRATION_FAILED,
+              operationId,
+              errorCode:
+                failure?.code ?? SERVICE_ERROR_CODES.REFERENCE_DATA_UNAVAILABLE
+            },
+            'cache-refresh: startup hydration failed'
+          )
+          recordCounter(METRIC_NAMES.HYDRATION_FAILURES_TOTAL)
+        } else {
+          logDatasetFailures(logger, operationId, result.failedDatasets)
+          logger.info(
+            {
+              event: LOG_EVENTS.HYDRATION_COMPLETED,
+              operationId,
+              result: result.status,
+              refreshedDatasetCount: result.refreshedDatasets.length,
+              failedDatasetCount: result.failedDatasets.length,
+              durationMs: durationMs(startedAt, result.completedAt)
+            },
+            'cache-refresh: startup hydration completed'
+          )
+          if (result.failedDatasets.length > 0) {
+            recordCounter(METRIC_NAMES.HYDRATION_FAILURES_TOTAL)
+          }
+        }
+        recordDuration(
+          METRIC_NAMES.HYDRATION_DURATION_MS,
+          durationMs(startedAt, result.completedAt)
+        )
+        return result
       })
       .finally(() => {
         readiness.markHydrated(clock.now())
+        recordGauge(METRIC_NAMES.READINESS, getReadinessState().ready ? 1 : 0)
         hydrationPromise = null
       })
 
@@ -272,19 +352,38 @@ function createHydrateOperation(deps, readiness, hydrationTimeoutMs) {
   }
 }
 
-function createRefreshOperation(deps, readiness) {
+function createRefreshOperation(deps, readiness, getReadinessState) {
   const { clock, logger } = deps
   let refreshPromise = null
 
   return function refresh() {
     if (refreshPromise) {
+      logger.info(
+        { event: LOG_EVENTS.REFRESH_SKIPPED },
+        'cache-refresh: refresh skipped because one is already running'
+      )
       return refreshPromise
     }
 
+    const operationId = randomUUID()
     const startedAt = clock.now()
+    logger.info(
+      { event: LOG_EVENTS.REFRESH_STARTED, operationId },
+      'cache-refresh: refresh started'
+    )
+
     refreshPromise = runRefresh(deps)
       .catch((cause) => {
-        logger.warn({ err: cause }, 'cache-refresh: refresh cycle failed')
+        logger.warn(
+          {
+            event: LOG_EVENTS.REFRESH_FAILED,
+            operationId,
+            errorCode:
+              cause.code ?? SERVICE_ERROR_CODES.REFERENCE_DATA_UNAVAILABLE
+          },
+          'cache-refresh: refresh cycle failed'
+        )
+        recordCounter(METRIC_NAMES.REFRESH_FAILURES_TOTAL)
         return createFailedManifestResult({
           startedAt,
           completedAt: clock.now(),
@@ -293,10 +392,42 @@ function createRefreshOperation(deps, readiness) {
         })
       })
       .then((result) => {
+        const completedEvent =
+          result.failedDatasets.length > 0
+            ? LOG_EVENTS.REFRESH_COMPLETED_WITH_ERRORS
+            : LOG_EVENTS.REFRESH_COMPLETED
+        if (result.status !== 'failed') {
+          logDatasetFailures(logger, operationId, result.failedDatasets)
+          logger.info(
+            {
+              event: completedEvent,
+              operationId,
+              result: result.status,
+              changedDatasetCount: result.refreshedDatasets.length,
+              failedDatasetCount: result.failedDatasets.length,
+              durationMs: durationMs(startedAt, result.completedAt)
+            },
+            'cache-refresh: refresh completed'
+          )
+          if (result.failedDatasets.length > 0) {
+            recordCounter(METRIC_NAMES.REFRESH_FAILURES_TOTAL)
+          }
+          if (result.refreshedDatasets.length > 0) {
+            recordCounter(
+              METRIC_NAMES.REFRESH_CHANGED_DATASETS_TOTAL,
+              result.refreshedDatasets.length
+            )
+          }
+        }
+        recordDuration(
+          METRIC_NAMES.REFRESH_DURATION_MS,
+          durationMs(startedAt, result.completedAt)
+        )
         readiness.markRefreshed({ timestamp: startedAt, status: result.status })
         return result
       })
       .finally(() => {
+        recordGauge(METRIC_NAMES.READINESS, getReadinessState().ready ? 1 : 0)
         refreshPromise = null
       })
 
@@ -339,15 +470,24 @@ export function createCacheRefreshService({
 }) {
   const deps = { persistence, store, refreshConcurrency, clock, logger }
   const readiness = createReadinessTracker()
+  const getReadinessState = createGetReadinessState(
+    store,
+    mandatoryDatasets,
+    readiness
+  )
 
   return {
-    hydrate: createHydrateOperation(deps, readiness, hydrationTimeoutMs),
-    refresh: createRefreshOperation(deps, readiness),
-    getReadinessState: createGetReadinessState(
-      store,
-      mandatoryDatasets,
-      readiness
+    hydrate: createHydrateOperation(
+      deps,
+      readiness,
+      hydrationTimeoutMs,
+      getReadinessState
     ),
-    markShuttingDown: () => readiness.markShuttingDown()
+    refresh: createRefreshOperation(deps, readiness, getReadinessState),
+    getReadinessState,
+    markShuttingDown: () => {
+      readiness.markShuttingDown()
+      recordGauge(METRIC_NAMES.READINESS, getReadinessState().ready ? 1 : 0)
+    }
   }
 }

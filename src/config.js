@@ -193,6 +193,20 @@ export const config = convict({
       env: 'HEALTH_DEPENDENCY_PROBE_TIMEOUT_MS'
     }
   },
+  observability: {
+    metricsEnabled: {
+      doc: 'Whether application metrics are emitted via @defra/cdp-metrics',
+      format: Boolean,
+      default: !isTest,
+      env: 'METRICS_ENABLED'
+    },
+    auditEnabled: {
+      doc: 'Whether administrative audit events are emitted via @defra/cdp-auditing',
+      format: Boolean,
+      default: !isTest,
+      env: 'AUDIT_ENABLED'
+    }
+  },
   authentication: {
     serviceUrl: {
       doc: 'Base URL of the Authentication Service. Only consumed by the Validation Module.',

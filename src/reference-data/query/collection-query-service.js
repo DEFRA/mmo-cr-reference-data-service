@@ -4,9 +4,40 @@
 
 import { SERVICE_ERROR_CODES } from '#/common/domain/errors.js'
 import { REPRESENTATIONS } from '#/common/domain/representations.js'
+import { LOG_EVENTS } from '#/common/domain/log-events.js'
+import {
+  recordCounter,
+  recordDuration,
+  METRIC_NAMES
+} from '#/common/helpers/observability/metrics.js'
 import { parseCollectionQuery } from './query-request-parser.js'
 import { runCollectionQuery } from './collection-query-engine.js'
 import { calculateDeterministicEtag } from './result-etag.js'
+
+const NOOP_LOGGER = { debug: () => {} }
+
+// Safe query-completion summary: dataset, view, whether the request was filtered,
+// and counts only — never the free-text search string, exact coordinates, or
+// returned record content.
+function logQueryCompleted(
+  logger,
+  { dataset, view, filtered, resultCount, totalCount, durationMs }
+) {
+  logger.debug(
+    {
+      event: LOG_EVENTS.QUERY_COMPLETED,
+      dataset,
+      view,
+      filtered,
+      resultCount,
+      totalCount,
+      durationMs
+    },
+    'query: completed'
+  )
+  recordCounter(METRIC_NAMES.QUERY_REQUESTS_TOTAL, 1, { dataset, view })
+  recordDuration(METRIC_NAMES.QUERY_DURATION_MS, durationMs, { dataset, view })
+}
 
 function raise(code, message) {
   const error = new Error(message)
@@ -85,8 +116,9 @@ function loadSnapshot(store, dataset) {
  * Creates an isolated Collection Query Module instance for full-collection/search/
  * item-by-GUID use cases shared by every dataset endpoint (Steps 16-20).
  */
-export function createCollectionQueryService({ store }) {
+export function createCollectionQueryService({ store, logger = NOOP_LOGGER }) {
   function queryCollection(config, rawQuery, projectionContext = {}) {
+    const startedAt = Date.now()
     const { collection, metadata } = loadSnapshot(store, config.dataset)
     const parsedRequest = parseCollectionQuery(config, rawQuery)
     const rawRecords = getRawRecords(collection, config)
@@ -99,6 +131,15 @@ export function createCollectionQueryService({ store }) {
       parsedRequest,
       projectionContext
     )
+
+    logQueryCompleted(logger, {
+      dataset: config.dataset,
+      view: parsedRequest.view,
+      filtered: !result.isFullCollectionRequest,
+      resultCount: result.items.length,
+      totalCount: result.totalCount,
+      durationMs: Date.now() - startedAt
+    })
 
     return {
       etag: calculateResultEtag(metadata, parsedRequest),
@@ -121,6 +162,7 @@ export function createCollectionQueryService({ store }) {
   }
 
   function getItemById(config, id, rawQuery, projectionContext = {}) {
+    const startedAt = Date.now()
     const { collection, metadata } = loadSnapshot(store, config.dataset)
     const parsedRequest = parseCollectionQuery(config, { ...rawQuery, ids: id })
     const rawRecords = getRawRecords(collection, config)
@@ -139,6 +181,15 @@ export function createCollectionQueryService({ store }) {
       parsedRequest,
       projectionContext
     )
+
+    logQueryCompleted(logger, {
+      dataset: config.dataset,
+      view: parsedRequest.view,
+      filtered: false,
+      resultCount: 1,
+      totalCount: 1,
+      durationMs: Date.now() - startedAt
+    })
 
     return {
       etag: calculateResultEtag(metadata, { ...parsedRequest, ids: [id] }),
