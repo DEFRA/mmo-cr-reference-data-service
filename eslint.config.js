@@ -12,7 +12,8 @@ export default [
     // the fixture files themselves, and any test importing a fixture JSON file directly.
     files: [
       'src/common/schemas/fixtures/**/*.js',
-      'src/reference-data/**/*.test.js'
+      'src/reference-data/**/*.test.js',
+      'src/routes/**/*.test.js'
     ],
     languageOptions: {
       ecmaVersion: 'latest'

@@ -11,6 +11,7 @@ import {
   mapStatisticalAreasCollection,
   mapStatisticalAreasItem
 } from '#/routes/map-statistical-areas.js'
+import { uploadValidation } from '#/routes/upload-validation.js'
 
 export const router = {
   plugin: {
@@ -31,7 +32,8 @@ export const router = {
         speciesItem,
         mapLand,
         mapStatisticalAreasCollection,
-        mapStatisticalAreasItem
+        mapStatisticalAreasItem,
+        uploadValidation
       ])
     }
   }

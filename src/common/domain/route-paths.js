@@ -8,6 +8,12 @@ export const API_BASE_PATH = '/api/v1/reference-data'
 
 export const MANIFEST_ROUTE_PATH = `${API_BASE_PATH}/manifest`
 
+// Full collection upload route (Step 21 validation-only mode, Step 22 replacement).
+// Deliberately distinct from DATASET_ROUTE_PATHS below: uploads always use the literal
+// dataset identifier as the path segment (e.g. "map-land"), not the nested read paths
+// used for map datasets (e.g. "/map/land").
+export const UPLOAD_ROUTE_PATH = `${API_BASE_PATH}/{dataset}`
+
 export const DATASET_ROUTE_PATHS = Object.freeze({
   [DATASETS.VESSELS]: `${API_BASE_PATH}/vessels`,
   [DATASETS.GEARS]: `${API_BASE_PATH}/gears`,

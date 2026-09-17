@@ -23,7 +23,10 @@ const JOI_TYPE_TO_ISSUE_CODE = Object.freeze({
   'object.base': VALIDATION_ISSUE_CODE.INVALID_ROOT_TYPE
 })
 
-function mapStructuralIssues(joiError) {
+// Exported for reuse by the Command Module's validation-only upload pipeline (Step 21),
+// which needs the same Joi-detail-to-issue-code mapping but assembles its own
+// structural -> normalise -> business stage order.
+export function mapStructuralIssues(joiError) {
   return mapValidationErrorDetails(joiError).map((detail) => ({
     code:
       JOI_TYPE_TO_ISSUE_CODE[detail.type] ??
