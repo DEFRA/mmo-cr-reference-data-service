@@ -267,6 +267,45 @@ async function runRefresh(deps) {
   })
 }
 
+// Logs and meters the outcome of one hydrate() invocation, then returns the result
+// unchanged so it can be chained directly onto the hydration promise.
+function recordHydrationOutcome(logger, operationId, startedAt, result) {
+  if (result.status === 'failed') {
+    const [failure] = result.failedDatasets
+    logger.error(
+      {
+        event: LOG_EVENTS.HYDRATION_FAILED,
+        operationId,
+        errorCode:
+          failure?.code ?? SERVICE_ERROR_CODES.REFERENCE_DATA_UNAVAILABLE
+      },
+      'cache-refresh: startup hydration failed'
+    )
+    recordCounter(METRIC_NAMES.HYDRATION_FAILURES_TOTAL)
+  } else {
+    logDatasetFailures(logger, operationId, result.failedDatasets)
+    logger.info(
+      {
+        event: LOG_EVENTS.HYDRATION_COMPLETED,
+        operationId,
+        result: result.status,
+        refreshedDatasetCount: result.refreshedDatasets.length,
+        failedDatasetCount: result.failedDatasets.length,
+        durationMs: durationMs(startedAt, result.completedAt)
+      },
+      'cache-refresh: startup hydration completed'
+    )
+    if (result.failedDatasets.length > 0) {
+      recordCounter(METRIC_NAMES.HYDRATION_FAILURES_TOTAL)
+    }
+  }
+  recordDuration(
+    METRIC_NAMES.HYDRATION_DURATION_MS,
+    durationMs(startedAt, result.completedAt)
+  )
+  return result
+}
+
 function createHydrateOperation(
   deps,
   readiness,
@@ -306,42 +345,9 @@ function createHydrateOperation(
           message: cause.message
         })
       )
-      .then((result) => {
-        if (result.status === 'failed') {
-          const [failure] = result.failedDatasets
-          logger.error(
-            {
-              event: LOG_EVENTS.HYDRATION_FAILED,
-              operationId,
-              errorCode:
-                failure?.code ?? SERVICE_ERROR_CODES.REFERENCE_DATA_UNAVAILABLE
-            },
-            'cache-refresh: startup hydration failed'
-          )
-          recordCounter(METRIC_NAMES.HYDRATION_FAILURES_TOTAL)
-        } else {
-          logDatasetFailures(logger, operationId, result.failedDatasets)
-          logger.info(
-            {
-              event: LOG_EVENTS.HYDRATION_COMPLETED,
-              operationId,
-              result: result.status,
-              refreshedDatasetCount: result.refreshedDatasets.length,
-              failedDatasetCount: result.failedDatasets.length,
-              durationMs: durationMs(startedAt, result.completedAt)
-            },
-            'cache-refresh: startup hydration completed'
-          )
-          if (result.failedDatasets.length > 0) {
-            recordCounter(METRIC_NAMES.HYDRATION_FAILURES_TOTAL)
-          }
-        }
-        recordDuration(
-          METRIC_NAMES.HYDRATION_DURATION_MS,
-          durationMs(startedAt, result.completedAt)
-        )
-        return result
-      })
+      .then((result) =>
+        recordHydrationOutcome(logger, operationId, startedAt, result)
+      )
       .finally(() => {
         readiness.markHydrated(clock.now())
         recordGauge(METRIC_NAMES.READINESS, getReadinessState().ready ? 1 : 0)

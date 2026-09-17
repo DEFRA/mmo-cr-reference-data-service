@@ -132,12 +132,16 @@ export function createDependencyStatusService({
   clock = DEFAULT_CLOCK
 }) {
   async function getStatus() {
-    const [referenceStore, authenticationService, referenceData] =
-      await Promise.all([
-        probePersistence(persistence, probeTimeoutMs),
-        probeAuthenticationService(authenticationServiceUrl),
-        probeReferenceData(cacheRefresh, mandatoryDatasetCount)
-      ])
+    // Only the persistence probe is genuinely asynchronous; the other two read
+    // already-available in-process state, so no Promise.all() aggregation is needed.
+    const referenceStore = await probePersistence(persistence, probeTimeoutMs)
+    const authenticationService = probeAuthenticationService(
+      authenticationServiceUrl
+    )
+    const referenceData = probeReferenceData(
+      cacheRefresh,
+      mandatoryDatasetCount
+    )
 
     const timestamp = clock.now()
     const dependencies = {

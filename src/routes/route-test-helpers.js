@@ -67,7 +67,7 @@ export async function injectAuthenticatedGet(server, url, extraHeaders = {}) {
 // `server.inject`. Records the payload/status/headers set through the
 // chainable `h.response(payload).code(x).header(name, value)` API.
 export function createFakeToolkit() {
-  const calls = { payload: undefined, statusCode: undefined, headers: {} }
+  const calls = { payload: null, statusCode: null, headers: {} }
   const response = {
     code(statusCode) {
       calls.statusCode = statusCode

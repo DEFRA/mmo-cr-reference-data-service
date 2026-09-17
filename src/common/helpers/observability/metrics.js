@@ -93,7 +93,7 @@ function isEnabled() {
   return config.get('observability.metricsEnabled')
 }
 
-export function recordCounter(name, value = 1, dimensions) {
+export function recordCounter(name, value = 1, dimensions = {}) {
   if (!isEnabled()) {
     return
   }

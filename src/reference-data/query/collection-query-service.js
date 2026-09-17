@@ -112,93 +112,111 @@ function loadSnapshot(store, dataset) {
   return { collection, metadata }
 }
 
+function queryCollection(
+  store,
+  logger,
+  config,
+  rawQuery,
+  projectionContext = {}
+) {
+  const startedAt = Date.now()
+  const { collection, metadata } = loadSnapshot(store, config.dataset)
+  const parsedRequest = parseCollectionQuery(config, rawQuery)
+  const rawRecords = getRawRecords(collection, config)
+  const records = getPreparedRecords(rawRecords, collection, config)
+  const rawByGuid = buildRawRecordLookup(rawRecords, config)
+  const result = runCollectionQuery({ config, records, parsedRequest })
+  const context = buildProjectionContext(
+    collection,
+    config,
+    parsedRequest,
+    projectionContext
+  )
+
+  logQueryCompleted(logger, {
+    dataset: config.dataset,
+    view: parsedRequest.view,
+    filtered: !result.isFullCollectionRequest,
+    resultCount: result.items.length,
+    totalCount: result.totalCount,
+    durationMs: Date.now() - startedAt
+  })
+
+  return {
+    etag: calculateResultEtag(metadata, parsedRequest),
+    metadata,
+    view: parsedRequest.view,
+    context,
+    totalCount: result.totalCount,
+    offset: result.offset,
+    limit: result.limit,
+    isFullCollectionRequest: result.isFullCollectionRequest,
+    items: result.items.map((record) =>
+      projectRecord(
+        rawByGuid.get(config.getGuid(record)),
+        config,
+        parsedRequest.view,
+        context
+      )
+    )
+  }
+}
+
+function getItemById(
+  store,
+  logger,
+  config,
+  id,
+  rawQuery,
+  projectionContext = {}
+) {
+  const startedAt = Date.now()
+  const { collection, metadata } = loadSnapshot(store, config.dataset)
+  const parsedRequest = parseCollectionQuery(config, { ...rawQuery, ids: id })
+  const rawRecords = getRawRecords(collection, config)
+  const match = rawRecords.find((record) => config.getGuid(record) === id)
+
+  if (!match) {
+    raise(
+      SERVICE_ERROR_CODES.REFERENCE_ITEM_NOT_FOUND,
+      `No ${config.dataset} item found for id "${id}".`
+    )
+  }
+
+  const context = buildProjectionContext(
+    collection,
+    config,
+    parsedRequest,
+    projectionContext
+  )
+
+  logQueryCompleted(logger, {
+    dataset: config.dataset,
+    view: parsedRequest.view,
+    filtered: false,
+    resultCount: 1,
+    totalCount: 1,
+    durationMs: Date.now() - startedAt
+  })
+
+  return {
+    etag: calculateResultEtag(metadata, { ...parsedRequest, ids: [id] }),
+    metadata,
+    view: parsedRequest.view,
+    context,
+    item: projectRecord(match, config, parsedRequest.view, context)
+  }
+}
+
 /**
  * Creates an isolated Collection Query Module instance for full-collection/search/
  * item-by-GUID use cases shared by every dataset endpoint (Steps 16-20).
  */
 export function createCollectionQueryService({ store, logger = NOOP_LOGGER }) {
-  function queryCollection(config, rawQuery, projectionContext = {}) {
-    const startedAt = Date.now()
-    const { collection, metadata } = loadSnapshot(store, config.dataset)
-    const parsedRequest = parseCollectionQuery(config, rawQuery)
-    const rawRecords = getRawRecords(collection, config)
-    const records = getPreparedRecords(rawRecords, collection, config)
-    const rawByGuid = buildRawRecordLookup(rawRecords, config)
-    const result = runCollectionQuery({ config, records, parsedRequest })
-    const context = buildProjectionContext(
-      collection,
-      config,
-      parsedRequest,
-      projectionContext
-    )
-
-    logQueryCompleted(logger, {
-      dataset: config.dataset,
-      view: parsedRequest.view,
-      filtered: !result.isFullCollectionRequest,
-      resultCount: result.items.length,
-      totalCount: result.totalCount,
-      durationMs: Date.now() - startedAt
-    })
-
-    return {
-      etag: calculateResultEtag(metadata, parsedRequest),
-      metadata,
-      view: parsedRequest.view,
-      context,
-      totalCount: result.totalCount,
-      offset: result.offset,
-      limit: result.limit,
-      isFullCollectionRequest: result.isFullCollectionRequest,
-      items: result.items.map((record) =>
-        projectRecord(
-          rawByGuid.get(config.getGuid(record)),
-          config,
-          parsedRequest.view,
-          context
-        )
-      )
-    }
+  return {
+    queryCollection: (config, rawQuery, projectionContext) =>
+      queryCollection(store, logger, config, rawQuery, projectionContext),
+    getItemById: (config, id, rawQuery, projectionContext) =>
+      getItemById(store, logger, config, id, rawQuery, projectionContext)
   }
-
-  function getItemById(config, id, rawQuery, projectionContext = {}) {
-    const startedAt = Date.now()
-    const { collection, metadata } = loadSnapshot(store, config.dataset)
-    const parsedRequest = parseCollectionQuery(config, { ...rawQuery, ids: id })
-    const rawRecords = getRawRecords(collection, config)
-    const match = rawRecords.find((record) => config.getGuid(record) === id)
-
-    if (!match) {
-      raise(
-        SERVICE_ERROR_CODES.REFERENCE_ITEM_NOT_FOUND,
-        `No ${config.dataset} item found for id "${id}".`
-      )
-    }
-
-    const context = buildProjectionContext(
-      collection,
-      config,
-      parsedRequest,
-      projectionContext
-    )
-
-    logQueryCompleted(logger, {
-      dataset: config.dataset,
-      view: parsedRequest.view,
-      filtered: false,
-      resultCount: 1,
-      totalCount: 1,
-      durationMs: Date.now() - startedAt
-    })
-
-    return {
-      etag: calculateResultEtag(metadata, { ...parsedRequest, ids: [id] }),
-      metadata,
-      view: parsedRequest.view,
-      context,
-      item: projectRecord(match, config, parsedRequest.view, context)
-    }
-  }
-
-  return { queryCollection, getItemById }
 }
