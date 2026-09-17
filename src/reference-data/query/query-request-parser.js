@@ -176,7 +176,7 @@ function parsePagination(rawQuery, config) {
  * internal collection-query request shape. Throws `invalid_request` for any
  * unsupported or malformed input. Never mutates `rawQuery`.
  */
-export function parseCollectionQuery(rawQuery = {}, config) {
+export function parseCollectionQuery(config, rawQuery = {}) {
   const recognisedKeys = new Set([
     'view',
     'query',
