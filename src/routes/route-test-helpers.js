@@ -1,6 +1,7 @@
 // Shared authentication stub and Hapi test-server bootstrap reused by every
 // route integration test.
 
+import { afterAll } from 'vitest'
 import { createServer } from '#/server.js'
 
 export function createStubAuthenticationClient() {
@@ -40,4 +41,21 @@ export function buildCollectionRouteTestServer({
     routes.push({ method: 'GET', path: itemPath, handler: itemHandler })
   }
   return buildTestServerWithRoutes(routes)
+}
+
+// Registers the standard teardown for a describe-scoped mutable `server`
+// reference (`getServer` must read the same variable a test assigns to).
+export function registerServerTeardown(getServer) {
+  afterAll(async () => {
+    const server = getServer()
+    if (server) await server.stop()
+  })
+}
+
+export async function injectAuthenticatedGet(server, url, extraHeaders = {}) {
+  return server.inject({
+    method: 'GET',
+    url,
+    headers: { authorization: 'Bearer read-token', ...extraHeaders }
+  })
 }

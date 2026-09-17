@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vitest'
 
 import { createInMemoryDataStore } from '#/reference-data/in-memory-store/in-memory-data-store.js'
 import { createCollectionQueryService } from '#/reference-data/query/collection-query-service.js'
@@ -7,7 +7,9 @@ import { createGeoJsonCollectionRouteController } from '#/reference-data/control
 import {
   SQUARE_RING,
   createStubAuthenticationClient,
-  buildCollectionRouteTestServer
+  buildCollectionRouteTestServer,
+  registerServerTeardown,
+  injectAuthenticatedGet
 } from '#/routes/geojson-route-test-helpers.js'
 
 const MAP_LAND_PATH = '/__test/map/land'
@@ -47,17 +49,11 @@ async function buildTestServer(features = [buildFeature()]) {
 describe('#mapLandRoute', () => {
   let server
 
-  afterAll(async () => {
-    if (server) await server.stop()
-  })
+  registerServerTeardown(() => server)
 
   test('returns a GeoJSON FeatureCollection with the correct content type', async () => {
     server = await buildTestServer()
-    const response = await server.inject({
-      method: 'GET',
-      url: MAP_LAND_PATH,
-      headers: { authorization: 'Bearer read-token' }
-    })
+    const response = await injectAuthenticatedGet(server, MAP_LAND_PATH)
     expect(response.statusCode).toBe(200)
     expect(response.headers['content-type']).toContain('application/geo+json')
     const body = JSON.parse(response.payload)

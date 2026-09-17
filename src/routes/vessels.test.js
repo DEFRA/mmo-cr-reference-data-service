@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vitest'
 
 import { createInMemoryDataStore } from '#/reference-data/in-memory-store/in-memory-data-store.js'
 import { createCollectionQueryService } from '#/reference-data/query/collection-query-service.js'
@@ -6,7 +6,9 @@ import { vesselsQueryConfiguration } from '#/reference-data/query/vessels-query-
 import { createCollectionRouteController } from '#/reference-data/controller/collection-route-controller.js'
 import {
   createStubAuthenticationClient,
-  buildCollectionRouteTestServer
+  buildCollectionRouteTestServer,
+  registerServerTeardown,
+  injectAuthenticatedGet
 } from '#/routes/route-test-helpers.js'
 
 const COLLECTION_PATH = '/__test/vessels'
@@ -60,17 +62,11 @@ async function buildTestServer() {
 describe('#vesselsRoute', () => {
   let server
 
-  afterAll(async () => {
-    if (server) await server.stop()
-  })
+  registerServerTeardown(() => server)
 
   test('returns the canonical vessel collection', async () => {
     server = await buildTestServer()
-    const response = await server.inject({
-      method: 'GET',
-      url: COLLECTION_PATH,
-      headers: { authorization: 'Bearer read-token' }
-    })
+    const response = await injectAuthenticatedGet(server, COLLECTION_PATH)
     expect(response.statusCode).toBe(200)
     const body = JSON.parse(response.payload)
     expect(body.items).toHaveLength(1)

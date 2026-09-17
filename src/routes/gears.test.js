@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vitest'
 
 import { createInMemoryDataStore } from '#/reference-data/in-memory-store/in-memory-data-store.js'
 import { createCollectionQueryService } from '#/reference-data/query/collection-query-service.js'
@@ -7,7 +7,9 @@ import { createCollectionRouteController } from '#/reference-data/controller/col
 import { addMobileMeasurements, addMobileItemContext } from '#/routes/gears.js'
 import {
   createStubAuthenticationClient,
-  buildCollectionRouteTestServer
+  buildCollectionRouteTestServer,
+  registerServerTeardown,
+  injectAuthenticatedGet
 } from '#/routes/route-test-helpers.js'
 
 const COLLECTION_PATH = '/__test/gears'
@@ -79,17 +81,11 @@ async function buildTestServer(gears = [buildGear()]) {
 describe('#gearsRoute', () => {
   let server
 
-  afterAll(async () => {
-    if (server) await server.stop()
-  })
+  registerServerTeardown(() => server)
 
   test('returns the canonical gear collection, preserving fixed', async () => {
     server = await buildTestServer()
-    const response = await server.inject({
-      method: 'GET',
-      url: COLLECTION_PATH,
-      headers: { authorization: 'Bearer read-token' }
-    })
+    const response = await injectAuthenticatedGet(server, COLLECTION_PATH)
     expect(response.statusCode).toBe(200)
     const body = JSON.parse(response.payload)
     expect(body.items).toHaveLength(1)

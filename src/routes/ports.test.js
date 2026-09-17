@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vitest'
 
 import { createInMemoryDataStore } from '#/reference-data/in-memory-store/in-memory-data-store.js'
 import { createCollectionQueryService } from '#/reference-data/query/collection-query-service.js'
@@ -6,7 +6,9 @@ import { portsQueryConfiguration } from '#/reference-data/query/ports-query-conf
 import { createCollectionRouteController } from '#/reference-data/controller/collection-route-controller.js'
 import {
   createStubAuthenticationClient,
-  buildCollectionRouteTestServer
+  buildCollectionRouteTestServer,
+  registerServerTeardown,
+  injectAuthenticatedGet
 } from '#/routes/route-test-helpers.js'
 
 const COLLECTION_PATH = '/__test/ports'
@@ -50,17 +52,11 @@ async function buildTestServer(ports = [buildPort()]) {
 describe('#portsRoute', () => {
   let server
 
-  afterAll(async () => {
-    if (server) await server.stop()
-  })
+  registerServerTeardown(() => server)
 
   test('returns the canonical port collection', async () => {
     server = await buildTestServer()
-    const response = await server.inject({
-      method: 'GET',
-      url: COLLECTION_PATH,
-      headers: { authorization: 'Bearer read-token' }
-    })
+    const response = await injectAuthenticatedGet(server, COLLECTION_PATH)
     expect(response.statusCode).toBe(200)
     expect(JSON.parse(response.payload).items).toHaveLength(1)
   })
