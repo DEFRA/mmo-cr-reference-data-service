@@ -7,7 +7,7 @@ import { createCollectionRouteController } from '#/reference-data/controller/col
 import { addMobileMeasurements, addMobileItemContext } from '#/routes/gears.js'
 import {
   createStubAuthenticationClient,
-  buildTestServerWithRoutes
+  buildCollectionRouteTestServer
 } from '#/routes/route-test-helpers.js'
 
 const COLLECTION_PATH = '/__test/gears'
@@ -68,10 +68,12 @@ async function buildTestServer(gears = [buildGear()]) {
     postProcessItemBody: addMobileItemContext
   })
 
-  return buildTestServerWithRoutes([
-    { method: 'GET', path: COLLECTION_PATH, handler: collectionHandler },
-    { method: 'GET', path: ITEM_PATH, handler: itemHandler }
-  ])
+  return buildCollectionRouteTestServer({
+    collectionPath: COLLECTION_PATH,
+    itemPath: ITEM_PATH,
+    collectionHandler,
+    itemHandler
+  })
 }
 
 describe('#gearsRoute', () => {

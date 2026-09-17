@@ -7,7 +7,7 @@ import { createCollectionRouteController } from '#/reference-data/controller/col
 import { getProjectionContext } from '#/routes/species.js'
 import {
   createStubAuthenticationClient,
-  buildTestServerWithRoutes
+  buildCollectionRouteTestServer
 } from '#/routes/route-test-helpers.js'
 
 const COLLECTION_PATH = '/__test/species'
@@ -44,10 +44,12 @@ async function buildTestServer(species = [buildSpecies()]) {
     getProjectionContext
   })
 
-  return buildTestServerWithRoutes([
-    { method: 'GET', path: COLLECTION_PATH, handler: collectionHandler },
-    { method: 'GET', path: ITEM_PATH, handler: itemHandler }
-  ])
+  return buildCollectionRouteTestServer({
+    collectionPath: COLLECTION_PATH,
+    itemPath: ITEM_PATH,
+    collectionHandler,
+    itemHandler
+  })
 }
 
 describe('#speciesRoute', () => {

@@ -6,7 +6,7 @@ import { vesselsQueryConfiguration } from '#/reference-data/query/vessels-query-
 import { createCollectionRouteController } from '#/reference-data/controller/collection-route-controller.js'
 import {
   createStubAuthenticationClient,
-  buildTestServerWithRoutes
+  buildCollectionRouteTestServer
 } from '#/routes/route-test-helpers.js'
 
 const COLLECTION_PATH = '/__test/vessels'
@@ -49,10 +49,12 @@ async function buildTestServer() {
     authenticationClient: createStubAuthenticationClient()
   })
 
-  return buildTestServerWithRoutes([
-    { method: 'GET', path: COLLECTION_PATH, handler: collectionHandler },
-    { method: 'GET', path: ITEM_PATH, handler: itemHandler }
-  ])
+  return buildCollectionRouteTestServer({
+    collectionPath: COLLECTION_PATH,
+    itemPath: ITEM_PATH,
+    collectionHandler,
+    itemHandler
+  })
 }
 
 describe('#vesselsRoute', () => {

@@ -6,7 +6,7 @@ import { portsQueryConfiguration } from '#/reference-data/query/ports-query-conf
 import { createCollectionRouteController } from '#/reference-data/controller/collection-route-controller.js'
 import {
   createStubAuthenticationClient,
-  buildTestServerWithRoutes
+  buildCollectionRouteTestServer
 } from '#/routes/route-test-helpers.js'
 
 const COLLECTION_PATH = '/__test/ports'
@@ -39,10 +39,12 @@ async function buildTestServer(ports = [buildPort()]) {
     authenticationClient: createStubAuthenticationClient()
   })
 
-  return buildTestServerWithRoutes([
-    { method: 'GET', path: COLLECTION_PATH, handler: collectionHandler },
-    { method: 'GET', path: ITEM_PATH, handler: itemHandler }
-  ])
+  return buildCollectionRouteTestServer({
+    collectionPath: COLLECTION_PATH,
+    itemPath: ITEM_PATH,
+    collectionHandler,
+    itemHandler
+  })
 }
 
 describe('#portsRoute', () => {

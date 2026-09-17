@@ -7,7 +7,7 @@ import { createGeoJsonCollectionRouteController } from '#/reference-data/control
 import {
   SQUARE_RING,
   createStubAuthenticationClient,
-  buildTestServerWithRoutes
+  buildCollectionRouteTestServer
 } from '#/routes/geojson-route-test-helpers.js'
 
 const MAP_LAND_PATH = '/__test/map/land'
@@ -38,9 +38,10 @@ async function buildTestServer(features = [buildFeature()]) {
     authenticationClient: createStubAuthenticationClient()
   })
 
-  return buildTestServerWithRoutes([
-    { method: 'GET', path: MAP_LAND_PATH, handler: collectionHandler }
-  ])
+  return buildCollectionRouteTestServer({
+    collectionPath: MAP_LAND_PATH,
+    collectionHandler
+  })
 }
 
 describe('#mapLandRoute', () => {

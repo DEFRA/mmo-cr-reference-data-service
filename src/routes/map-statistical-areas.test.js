@@ -7,7 +7,7 @@ import { createGeoJsonCollectionRouteController } from '#/reference-data/control
 import {
   SQUARE_RING,
   createStubAuthenticationClient,
-  buildTestServerWithRoutes
+  buildCollectionRouteTestServer
 } from '#/routes/geojson-route-test-helpers.js'
 
 const COLLECTION_PATH = '/__test/map/statistical-areas'
@@ -46,10 +46,12 @@ async function buildTestServer(features = [buildFeature()]) {
       authenticationClient: createStubAuthenticationClient()
     })
 
-  return buildTestServerWithRoutes([
-    { method: 'GET', path: COLLECTION_PATH, handler: collectionHandler },
-    { method: 'GET', path: ITEM_PATH, handler: itemHandler }
-  ])
+  return buildCollectionRouteTestServer({
+    collectionPath: COLLECTION_PATH,
+    itemPath: ITEM_PATH,
+    collectionHandler,
+    itemHandler
+  })
 }
 
 describe('#mapStatisticalAreasRoute', () => {

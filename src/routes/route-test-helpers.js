@@ -24,3 +24,20 @@ export async function buildTestServerWithRoutes(routes) {
   await server.initialize()
   return server
 }
+
+// Builds a test server for a collection handler and, when supplied, its
+// matching GET-by-id item handler (e.g. map-land has no item route).
+export function buildCollectionRouteTestServer({
+  collectionPath,
+  itemPath,
+  collectionHandler,
+  itemHandler
+}) {
+  const routes = [
+    { method: 'GET', path: collectionPath, handler: collectionHandler }
+  ]
+  if (itemPath && itemHandler) {
+    routes.push({ method: 'GET', path: itemPath, handler: itemHandler })
+  }
+  return buildTestServerWithRoutes(routes)
+}

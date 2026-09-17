@@ -2,7 +2,8 @@
 
 export {
   createStubAuthenticationClient,
-  buildTestServerWithRoutes
+  buildTestServerWithRoutes,
+  buildCollectionRouteTestServer
 } from '#/routes/route-test-helpers.js'
 
 export const SQUARE_RING = [
