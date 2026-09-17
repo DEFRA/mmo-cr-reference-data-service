@@ -55,6 +55,85 @@ function findGuardIssue(dataset, schemaVersion) {
   return null
 }
 
+function addErrors(collector, issues, dataset, correlationId) {
+  for (const issue of issues) {
+    collector.addError({ ...issue, dataset, correlationId })
+  }
+}
+
+function addWarnings(collector, issues, dataset, correlationId) {
+  for (const issue of issues) {
+    collector.addWarning({ ...issue, dataset, correlationId })
+  }
+}
+
+// Every pre-normalisation failure path shares the same shape: the same stage, and
+// `changed` is meaningless before normalisation ever runs.
+function structuralFailureResult(collector, receivedCount) {
+  return {
+    ...collector.toResult({ receivedCount }),
+    stage: PROCESSING_STAGE.STRUCTURAL_VALIDATION,
+    changed: false
+  }
+}
+
+function runStructuralStage({
+  dataset,
+  schemaVersion,
+  collection,
+  collector,
+  correlationId
+}) {
+  const guardIssue = findGuardIssue(dataset, schemaVersion)
+  if (guardIssue) {
+    addErrors(collector, [guardIssue], dataset, correlationId)
+    return { ok: false }
+  }
+
+  const schema = getCollectionSchema(dataset, schemaVersion)
+  const { error: structuralError } = validateAgainstSchema(schema, collection)
+  if (structuralError) {
+    addErrors(
+      collector,
+      mapStructuralIssues(structuralError),
+      dataset,
+      correlationId
+    )
+    return { ok: false }
+  }
+
+  return { ok: isUsableStructure(collection) }
+}
+
+function runNormaliseAndBusinessStage({
+  dataset,
+  collection,
+  collector,
+  correlationId
+}) {
+  const {
+    value: normalised,
+    changed,
+    warnings: normalisationWarnings
+  } = normaliseCollection({ dataset, collection })
+
+  addWarnings(collector, normalisationWarnings, dataset, correlationId)
+  addErrors(
+    collector,
+    validateCommonEnvelope({ dataset, collection: normalised }),
+    dataset,
+    correlationId
+  )
+
+  const businessResult = resolveDatasetBusinessValidator(dataset)(normalised, {
+    correlationId
+  })
+  addErrors(collector, businessResult?.errors ?? [], dataset, correlationId)
+  addWarnings(collector, businessResult?.warnings ?? [], dataset, correlationId)
+
+  return { normalised, changed }
+}
+
 /**
  * @param {{ dataset: string, schemaVersion: string, collection: *, correlationId?: string }} params
  * @param {boolean} [includeNormalisedCollection] when true and the collection is valid,
@@ -73,63 +152,23 @@ export function validateCollectionUpload({
   const collector = createIssueCollector()
   const receivedCount = countRecords(collection)
 
-  const guardIssue = findGuardIssue(dataset, schemaVersion)
-  if (guardIssue) {
-    collector.addError({ ...guardIssue, dataset, correlationId })
-    return {
-      ...collector.toResult({ receivedCount }),
-      stage: PROCESSING_STAGE.STRUCTURAL_VALIDATION,
-      changed: false
-    }
-  }
-
-  const schema = getCollectionSchema(dataset, schemaVersion)
-  const { error: structuralError } = validateAgainstSchema(schema, collection)
-  if (structuralError) {
-    for (const issue of mapStructuralIssues(structuralError)) {
-      collector.addError({ ...issue, dataset, correlationId })
-    }
-    return {
-      ...collector.toResult({ receivedCount }),
-      stage: PROCESSING_STAGE.STRUCTURAL_VALIDATION,
-      changed: false
-    }
-  }
-
-  if (!isUsableStructure(collection)) {
-    return {
-      ...collector.toResult({ receivedCount }),
-      stage: PROCESSING_STAGE.STRUCTURAL_VALIDATION,
-      changed: false
-    }
-  }
-
-  const {
-    value: normalised,
-    changed,
-    warnings: normalisationWarnings
-  } = normaliseCollection({ dataset, collection })
-
-  for (const warning of normalisationWarnings) {
-    collector.addWarning({ ...warning, dataset, correlationId })
-  }
-
-  for (const issue of validateCommonEnvelope({
+  const structuralStage = runStructuralStage({
     dataset,
-    collection: normalised
-  })) {
-    collector.addError({ ...issue, dataset, correlationId })
-  }
-
-  const businessResult = resolveDatasetBusinessValidator(dataset)(normalised, {
+    schemaVersion,
+    collection,
+    collector,
     correlationId
   })
-  for (const issue of businessResult?.errors ?? []) {
-    collector.addError({ ...issue, dataset, correlationId })
+  if (!structuralStage.ok) {
+    return structuralFailureResult(collector, receivedCount)
   }
-  for (const warning of businessResult?.warnings ?? []) {
-    collector.addWarning({ ...warning, dataset, correlationId })
-  }
+
+  const { normalised, changed } = runNormaliseAndBusinessStage({
+    dataset,
+    collection,
+    collector,
+    correlationId
+  })
 
   const result = collector.toResult({
     receivedCount,

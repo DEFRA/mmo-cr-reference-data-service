@@ -163,6 +163,128 @@ async function publishLocally({
   }
 }
 
+async function resolveActiveState({ persistence, dataset, ifMatch }) {
+  const { manifest: activeManifest, etag: manifestEtag } =
+    await loadActiveManifest(persistence)
+  const activeEntry = findActiveEntry(activeManifest, dataset)
+  enforceIfMatch({ ifMatch, activeEntry, dataset })
+  return { activeManifest, manifestEtag, activeEntry }
+}
+
+// Returns a result to short-circuit with (idempotent replay), or null to proceed with
+// a new activation. Throws for a colliding version with different content.
+function checkIdempotencyOrConflict({
+  activeEntry,
+  activeManifest,
+  collectionVersion,
+  checksum,
+  dataset,
+  warnings
+}) {
+  if (activeEntry?.version !== collectionVersion) {
+    return null
+  }
+  if (activeEntry.checksum === checksum) {
+    return {
+      outcome: 'idempotent',
+      dataset,
+      collection: activeEntry,
+      manifest: {
+        manifestId: activeManifest.manifestId,
+        version: activeManifest.version
+      },
+      warnings
+    }
+  }
+  raise(
+    SERVICE_ERROR_CODES.COLLECTION_VERSION_EXISTS,
+    `Collection version "${collectionVersion}" already exists for "${dataset}" with different content.`,
+    { dataset }
+  )
+}
+
+// No manifest existed when this workflow started, so the final write below would
+// otherwise be unconditional (no ETag to match) — re-check immediately beforehand so
+// a concurrent "first ever manifest" creation is still detected as a conflict rather
+// than silently overwritten.
+async function guardAgainstConcurrentManifestCreation({
+  persistence,
+  manifestEtag,
+  dataset
+}) {
+  if (
+    manifestEtag === null &&
+    (await persistence.objectExists({ manifest: true }))
+  ) {
+    raise(
+      SERVICE_ERROR_CODES.COLLECTION_VERSION_EXISTS,
+      'The active manifest was created concurrently by another request.',
+      { dataset }
+    )
+  }
+}
+
+async function activateNewVersion({
+  dataset,
+  schemaVersion,
+  collectionVersion,
+  normalised,
+  checksum,
+  activeManifest,
+  manifestEtag,
+  manifestId,
+  clock,
+  persistence,
+  store
+}) {
+  const writeResult = await persistence.writeCollection({
+    dataset,
+    collectionVersion,
+    content: normalised
+  })
+
+  const newEntry = buildManifestEntry({
+    dataset,
+    schemaVersion,
+    collectionVersion,
+    normalised,
+    writeResult,
+    checksum
+  })
+
+  const nextManifest = buildNextManifest({
+    activeManifest,
+    dataset,
+    newEntry,
+    clock,
+    manifestId
+  })
+
+  const manifestValidation = validateManifest(nextManifest)
+  if (!manifestValidation.valid) {
+    raise(
+      SERVICE_ERROR_CODES.INTERNAL_ERROR,
+      'The constructed manifest failed validation.',
+      { dataset, details: manifestValidation.issues }
+    )
+  }
+
+  await guardAgainstConcurrentManifestCreation({
+    persistence,
+    manifestEtag,
+    dataset
+  })
+
+  await persistence.writeManifest({
+    manifest: nextManifest,
+    expectedEtag: manifestEtag ?? undefined
+  })
+
+  await publishLocally({ store, dataset, normalised, newEntry, nextManifest })
+
+  return { newEntry, nextManifest }
+}
+
 /**
  * @param {Object} params
  * @param {string} params.dataset
@@ -209,87 +331,35 @@ export async function replaceCollection({
   }
 
   const normalised = validation.collection
-  const { manifest: activeManifest, etag: manifestEtag } =
-    await loadActiveManifest(persistence)
-  const activeEntry = findActiveEntry(activeManifest, dataset)
-
-  enforceIfMatch({ ifMatch, activeEntry, dataset })
-
+  const { activeManifest, manifestEtag, activeEntry } =
+    await resolveActiveState({ persistence, dataset, ifMatch })
   const checksum = calculateChecksum(JSON.stringify(normalised))
 
-  if (activeEntry && activeEntry.version === collectionVersion) {
-    if (activeEntry.checksum === checksum) {
-      return {
-        outcome: 'idempotent',
-        dataset,
-        collection: activeEntry,
-        manifest: {
-          manifestId: activeManifest.manifestId,
-          version: activeManifest.version
-        },
-        warnings: validation.warnings
-      }
-    }
-    raise(
-      SERVICE_ERROR_CODES.COLLECTION_VERSION_EXISTS,
-      `Collection version "${collectionVersion}" already exists for "${dataset}" with different content.`,
-      { dataset }
-    )
+  const idempotentResult = checkIdempotencyOrConflict({
+    activeEntry,
+    activeManifest,
+    collectionVersion,
+    checksum,
+    dataset,
+    warnings: validation.warnings
+  })
+  if (idempotentResult) {
+    return idempotentResult
   }
 
-  const writeResult = await persistence.writeCollection({
-    dataset,
-    collectionVersion,
-    content: normalised
-  })
-
-  const newEntry = buildManifestEntry({
+  const { newEntry, nextManifest } = await activateNewVersion({
     dataset,
     schemaVersion,
     collectionVersion,
     normalised,
-    writeResult,
-    checksum
-  })
-
-  const nextManifest = buildNextManifest({
+    checksum,
     activeManifest,
-    dataset,
-    newEntry,
+    manifestEtag,
+    manifestId,
     clock,
-    manifestId
+    persistence,
+    store
   })
-
-  const manifestValidation = validateManifest(nextManifest)
-  if (!manifestValidation.valid) {
-    raise(
-      SERVICE_ERROR_CODES.INTERNAL_ERROR,
-      'The constructed manifest failed validation.',
-      { dataset, details: manifestValidation.issues }
-    )
-  }
-
-  // No manifest existed when this workflow started, so the final write below would
-  // otherwise be unconditional (no ETag to match) — re-check immediately beforehand so
-  // a concurrent "first ever manifest" creation is still detected as a conflict rather
-  // than silently overwritten.
-  if (
-    manifestEtag === null &&
-    (await persistence.objectExists({ manifest: true }))
-  ) {
-    raise(
-      SERVICE_ERROR_CODES.COLLECTION_VERSION_EXISTS,
-      'The active manifest was created concurrently by another request.',
-      { dataset }
-    )
-  }
-
-  await persistence.writeManifest({
-    manifest: nextManifest,
-    expectedEtag: manifestEtag ?? undefined
-  })
-
-  await publishLocally({ store, dataset, normalised, newEntry, nextManifest })
 
   return {
     outcome: 'activated',

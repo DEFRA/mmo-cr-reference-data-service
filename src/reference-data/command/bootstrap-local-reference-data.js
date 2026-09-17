@@ -58,6 +58,72 @@ function summaryKeyFor(category) {
   return `${category}Datasets`
 }
 
+// Processes exactly one dataset end to end, returning either a success outcome or a
+// failure descriptor — never throws, so the caller's loop needs no more than one break.
+async function processSeedDataset({
+  dataset,
+  loadSeedCollection,
+  persistence,
+  store,
+  clock,
+  logger
+}) {
+  const startedAt = Date.now()
+  let collection
+  try {
+    collection = loadSeedCollection(dataset)
+  } catch (cause) {
+    logger.error(
+      { dataset, err: cause.message },
+      'reference-data bootstrap: seed file could not be loaded'
+    )
+    return {
+      ok: false,
+      failure: { dataset, stage: 'seed-load', code: 'invalid_request' }
+    }
+  }
+
+  const result = await replaceCollection({
+    dataset,
+    schemaVersion: SEED_SCHEMA_VERSION,
+    collection,
+    collectionVersion: collection.version,
+    persistence,
+    store,
+    clock,
+    manifestId: SEED_MANIFEST_ID
+  })
+
+  if (result.outcome === 'invalid') {
+    logger.error(
+      { dataset, stage: result.stage, errorCount: result.errors.length },
+      'reference-data bootstrap: seed collection failed validation'
+    )
+    return {
+      ok: false,
+      failure: {
+        dataset,
+        stage: result.stage,
+        code: 'schema_or_business_validation_failed'
+      }
+    }
+  }
+
+  const category = classifyOutcome(result)
+  logger.info(
+    {
+      dataset,
+      outcome: category,
+      collectionVersion: result.collection.version,
+      warningCount: result.warnings.length,
+      durationMs: Date.now() - startedAt
+    },
+    'reference-data bootstrap: dataset processed'
+  )
+
+  return { ok: true, category, manifestVersion: result.manifest.version }
+}
+
 /**
  * @param {Object} [deps]
  * @param {import('convict').Config} [deps.config]
@@ -89,63 +155,23 @@ export async function bootstrapLocalReferenceData({
   }
 
   for (const dataset of SEED_DATASET_ORDER) {
-    const startedAt = Date.now()
-    let collection
-    try {
-      collection = loadSeedCollection(dataset)
-    } catch (cause) {
-      summary.status = 'failed'
-      summary.failedDatasets.push({
-        dataset,
-        stage: 'seed-load',
-        code: 'invalid_request'
-      })
-      logger.error(
-        { dataset, err: cause.message },
-        'reference-data bootstrap: seed file could not be loaded'
-      )
-      break
-    }
-
-    const result = await replaceCollection({
+    const outcome = await processSeedDataset({
       dataset,
-      schemaVersion: SEED_SCHEMA_VERSION,
-      collection,
-      collectionVersion: collection.version,
+      loadSeedCollection,
       persistence,
       store,
       clock,
-      manifestId: SEED_MANIFEST_ID
+      logger
     })
 
-    if (result.outcome === 'invalid') {
+    if (!outcome.ok) {
       summary.status = 'failed'
-      summary.failedDatasets.push({
-        dataset,
-        stage: result.stage,
-        code: 'schema_or_business_validation_failed'
-      })
-      logger.error(
-        { dataset, stage: result.stage, errorCount: result.errors.length },
-        'reference-data bootstrap: seed collection failed validation'
-      )
+      summary.failedDatasets.push(outcome.failure)
       break
     }
 
-    const category = classifyOutcome(result)
-    summary[summaryKeyFor(category)].push(dataset)
-    summary.manifestVersion = result.manifest.version
-
-    logger.info(
-      {
-        dataset,
-        outcome: category,
-        collectionVersion: result.collection.version,
-        warningCount: result.warnings.length,
-        durationMs: Date.now() - startedAt
-      },
-      'reference-data bootstrap: dataset processed'
-    )
+    summary[summaryKeyFor(outcome.category)].push(dataset)
+    summary.manifestVersion = outcome.manifestVersion
   }
 
   return summary
