@@ -196,7 +196,7 @@ function checkIdempotencyOrConflict({
       warnings
     }
   }
-  raise(
+  return raise(
     SERVICE_ERROR_CODES.COLLECTION_VERSION_EXISTS,
     `Collection version "${collectionVersion}" already exists for "${dataset}" with different content.`,
     { dataset }
