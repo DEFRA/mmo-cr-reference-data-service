@@ -1,7 +1,11 @@
 import { describe, expect, test, vi } from 'vitest'
 
 import { createGeoJsonCollectionRouteController } from './geojson-collection-route-controller.js'
-import { createRequest, AUTHENTICATED } from './controller-test-helpers.js'
+import {
+  createRequest,
+  AUTHENTICATED,
+  createBaseFakeToolkit
+} from './controller-test-helpers.js'
 
 function createFakeToolkit() {
   const state = {
@@ -10,29 +14,12 @@ function createFakeToolkit() {
     headers: {},
     contentType: undefined
   }
-  const chain = {
-    code: (statusCode) => {
-      state.statusCode = statusCode
-      return chain
-    },
-    type: (contentType) => {
-      state.contentType = contentType
-      return chain
-    },
-    header: (name, value) => {
-      state.headers[name] = value
-      return chain
-    }
+  const { chain, h } = createBaseFakeToolkit(state)
+  chain.type = (contentType) => {
+    state.contentType = contentType
+    return chain
   }
-  return {
-    h: {
-      response: (payload) => {
-        state.payload = payload
-        return chain
-      }
-    },
-    state
-  }
+  return { h, state }
 }
 
 const CONFIG = { dataset: 'map-land' }

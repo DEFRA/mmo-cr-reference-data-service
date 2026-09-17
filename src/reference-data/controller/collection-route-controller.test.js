@@ -1,29 +1,16 @@
 import { describe, expect, test, vi } from 'vitest'
 
 import { createCollectionRouteController } from './collection-route-controller.js'
-import { createRequest, AUTHENTICATED } from './controller-test-helpers.js'
+import {
+  createRequest,
+  AUTHENTICATED,
+  createBaseFakeToolkit
+} from './controller-test-helpers.js'
 
 function createFakeToolkit() {
   const state = { payload: undefined, statusCode: undefined, headers: {} }
-  const chain = {
-    code: (statusCode) => {
-      state.statusCode = statusCode
-      return chain
-    },
-    header: (name, value) => {
-      state.headers[name] = value
-      return chain
-    }
-  }
-  return {
-    h: {
-      response: (payload) => {
-        state.payload = payload
-        return chain
-      }
-    },
-    state
-  }
+  const { h } = createBaseFakeToolkit(state)
+  return { h, state }
 }
 
 const CONFIG = { dataset: 'vessels' }
