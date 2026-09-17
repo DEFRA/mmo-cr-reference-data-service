@@ -401,6 +401,20 @@ describe('#writeCollection', () => {
     expect(metadata.etag).not.toBe(metadata.checksum)
   })
 
+  test('lastModifiedAt falls back to a captured upload timestamp (PutObject never returns LastModified)', async () => {
+    const client = createFakeS3Client()
+    const repository = createReferenceDataRepository({ bucket: BUCKET, client })
+
+    const metadata = await repository.writeCollection({
+      dataset: DATASETS.GEARS,
+      collectionVersion: 'v1',
+      content: { items: [] }
+    })
+
+    expect(metadata.lastModifiedAt).toEqual(expect.any(String))
+    expect(() => new Date(metadata.lastModifiedAt).toISOString()).not.toThrow()
+  })
+
   test('existing versions produce the expected conflict', async () => {
     const client = createFakeS3Client({
       'reference-data/gears/v1.json': seededObject({ body: '{"items":[]}' })
@@ -585,6 +599,17 @@ describe('#writeManifest', () => {
       .find((command) => command instanceof PutObjectCommand)
     expect(putCall.input.Key).toBe('reference-data/manifest.json')
     expect(putCall.input.ContentType).toBe('application/json')
+  })
+
+  test('lastModifiedAt falls back to a captured upload timestamp (PutObject never returns LastModified)', async () => {
+    const client = createFakeS3Client()
+    const repository = createReferenceDataRepository({ bucket: BUCKET, client })
+
+    const metadata = await repository.writeManifest({
+      manifest: { manifestId: 'm-1', datasets: [] }
+    })
+
+    expect(metadata.lastModifiedAt).toEqual(expect.any(String))
   })
 
   test('expected ETag concurrency information is passed correctly', async () => {

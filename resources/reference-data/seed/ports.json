@@ -1,0 +1,34 @@
+{
+  "dataset": "ports",
+  "collectionId": "00000000-0000-4000-8000-000000000030",
+  "schemaVersion": "1.0",
+  "version": "local-seed-1",
+  "generatedAt": "2026-01-01T00:00:00Z",
+  "itemCount": 3,
+  "items": [
+    {
+      "id": "00000000-0000-4000-8000-000000000031",
+      "code": "GBPLY",
+      "name": "Plymouth",
+      "countryCode": "GBR",
+      "coordinate": { "latitude": 50.3661, "longitude": -4.1427 },
+      "active": true
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000032",
+      "code": "GB007",
+      "name": "Newlyn",
+      "countryCode": "GBR",
+      "coordinate": { "latitude": 50.1022, "longitude": -5.5486 },
+      "active": true
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000033",
+      "code": "GBNQY",
+      "name": "Padstow",
+      "countryCode": "GBR",
+      "coordinate": null,
+      "active": true
+    }
+  ]
+}

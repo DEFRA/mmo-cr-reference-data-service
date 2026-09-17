@@ -1,0 +1,50 @@
+{
+  "dataset": "map-land",
+  "collectionId": "00000000-0000-4000-8000-000000000050",
+  "schemaVersion": "1.0",
+  "version": "local-seed-1",
+  "generatedAt": "2026-01-01T00:00:00Z",
+  "itemCount": 2,
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "00000000-0000-4000-8000-000000000051",
+      "properties": {
+        "id": "00000000-0000-4000-8000-000000000051",
+        "name": "Rame Head"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-4.2, 50.3],
+            [-4.2, 50.4],
+            [-4.1, 50.4],
+            [-4.2, 50.3]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "00000000-0000-4000-8000-000000000052",
+      "properties": {
+        "id": "00000000-0000-4000-8000-000000000052",
+        "name": "Looe Island"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-4.45, 50.33],
+            [-4.45, 50.35],
+            [-4.43, 50.35],
+            [-4.43, 50.33],
+            [-4.45, 50.33]
+          ]
+        ]
+      }
+    }
+  ]
+}

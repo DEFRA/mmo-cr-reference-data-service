@@ -58,7 +58,8 @@ function toObjectMetadata({
   objectKey,
   contentType,
   response,
-  checksum
+  checksum,
+  fallbackLastModifiedAt
 }) {
   return {
     dataset,
@@ -70,9 +71,12 @@ function toObjectMetadata({
     checksum: checksum ?? response.ChecksumSHA256 ?? null,
     checksumAlgorithm: CHECKSUM_ALGORITHM,
     sizeBytes: response.ContentLength ?? null,
+    // PutObject responses never include LastModified (only Get/HeadObject do) — fall
+    // back to a captured upload timestamp so writeCollection/writeManifest callers
+    // always get a usable value.
     lastModifiedAt: response.LastModified
       ? new Date(response.LastModified).toISOString()
-      : null
+      : (fallbackLastModifiedAt ?? null)
   }
 }
 
@@ -162,6 +166,7 @@ async function putCollection(
   }
 
   try {
+    const uploadedAt = new Date().toISOString()
     const response = await s3Client.send(
       new PutObjectCommand({
         Bucket: bucket,
@@ -182,7 +187,8 @@ async function putCollection(
         ContentType: contentType,
         ContentLength: Buffer.byteLength(body)
       },
-      checksum: response.ChecksumSHA256 ?? calculateChecksum(body)
+      checksum: response.ChecksumSHA256 ?? calculateChecksum(body),
+      fallbackLastModifiedAt: uploadedAt
     })
   } catch (cause) {
     if (isPreconditionFailedError(cause)) {
@@ -252,6 +258,7 @@ async function putManifest(s3Client, bucket, manifest, expectedEtag) {
   await assertManifestNotModified(s3Client, bucket, objectKey, expectedEtag)
 
   try {
+    const uploadedAt = new Date().toISOString()
     const response = await s3Client.send(
       new PutObjectCommand({
         Bucket: bucket,
@@ -270,7 +277,8 @@ async function putManifest(s3Client, bucket, manifest, expectedEtag) {
         ContentType: 'application/json',
         ContentLength: Buffer.byteLength(body)
       },
-      checksum: response.ChecksumSHA256 ?? calculateChecksum(body)
+      checksum: response.ChecksumSHA256 ?? calculateChecksum(body),
+      fallbackLastModifiedAt: uploadedAt
     })
   } catch (cause) {
     if (isPreconditionFailedError(cause)) {

@@ -1,0 +1,67 @@
+{
+  "dataset": "vessels",
+  "collectionId": "00000000-0000-4000-8000-000000000010",
+  "schemaVersion": "1.0",
+  "version": "local-seed-1",
+  "generatedAt": "2026-01-01T00:00:00Z",
+  "itemCount": 3,
+  "items": [
+    {
+      "id": "00000000-0000-4000-8000-000000000011",
+      "name": "ACHILLES",
+      "namePln": "ACHILLES PH1234",
+      "identifiers": {
+        "cfr": "GBR000A1234",
+        "uvi": null,
+        "mmsi": "232001234",
+        "ircs": "MABC7",
+        "externalMark": "PH1234",
+        "registrationNumber": "PH1234"
+      },
+      "typeCode": "FISHING",
+      "registrationCountryCode": "GBR",
+      "lengthOverallMetres": 8.74,
+      "status": "active",
+      "activeFrom": "2015-03-17",
+      "activeTo": null
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000012",
+      "name": "SEA SPRAY",
+      "namePln": "SEA SPRAY BM45",
+      "identifiers": {
+        "cfr": "GBR000B5678",
+        "uvi": null,
+        "mmsi": "232005678",
+        "ircs": null,
+        "externalMark": "BM45",
+        "registrationNumber": "BM45"
+      },
+      "typeCode": "FISHING",
+      "registrationCountryCode": "GBR",
+      "lengthOverallMetres": 11.2,
+      "status": "active",
+      "activeFrom": "2018-06-01",
+      "activeTo": null
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000013",
+      "name": "NORTHERN STAR",
+      "namePln": "NORTHERN STAR LT99",
+      "identifiers": {
+        "cfr": "GBR000C9012",
+        "uvi": null,
+        "mmsi": "232009012",
+        "ircs": null,
+        "externalMark": "LT99",
+        "registrationNumber": "LT99"
+      },
+      "typeCode": "FISHING",
+      "registrationCountryCode": "GBR",
+      "lengthOverallMetres": 14.5,
+      "status": "inactive",
+      "activeFrom": "2010-01-01",
+      "activeTo": "2024-12-31"
+    }
+  ]
+}

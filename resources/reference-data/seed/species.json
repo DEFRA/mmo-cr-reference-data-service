@@ -1,0 +1,59 @@
+{
+  "dataset": "species",
+  "collectionId": "00000000-0000-4000-8000-000000000040",
+  "schemaVersion": "1.0",
+  "version": "local-seed-1",
+  "generatedAt": "2026-01-01T00:00:00Z",
+  "itemCount": 3,
+  "items": [
+    {
+      "id": "00000000-0000-4000-8000-000000000041",
+      "faoCode": "COD",
+      "scientificName": "Gadus morhua",
+      "commonNames": [
+        {
+          "id": "00000000-0000-4000-8000-000000000044",
+          "countryCode": "GBR",
+          "name": "Cod"
+        }
+      ],
+      "localNames": [
+        {
+          "id": "00000000-0000-4000-8000-000000000045",
+          "languageCode": "en-GB",
+          "name": "Cod",
+          "official": true
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000046",
+          "languageCode": "cy",
+          "name": "Penfras",
+          "official": false
+        }
+      ],
+      "active": true
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000042",
+      "faoCode": "HAD",
+      "scientificName": "Melanogrammus aeglefinus",
+      "commonNames": [
+        {
+          "id": "00000000-0000-4000-8000-000000000047",
+          "countryCode": "GBR",
+          "name": "Haddock"
+        }
+      ],
+      "localNames": [],
+      "active": true
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000043",
+      "faoCode": "MAC",
+      "scientificName": "Scomber scombrus",
+      "commonNames": [],
+      "localNames": [],
+      "active": true
+    }
+  ]
+}

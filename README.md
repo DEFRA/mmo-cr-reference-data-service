@@ -92,9 +92,10 @@ To test the application run:
 npm run test
 ```
 
-Floci integration tests for the Persistence Module live alongside their unit tests
-(`*.floci.test.js`) and are skipped automatically by `npm test` when Floci is not reachable, so
-the default test run never requires Docker. To run them explicitly against a real local S3:
+Floci integration tests for the Persistence Module and the local bootstrap workflow live
+alongside their unit tests (`*.floci.test.js`) and are skipped automatically by `npm test`
+when Floci is not reachable, so the default test run never requires Docker. To run them
+explicitly against a real local S3:
 
 ```bash
 npm run test:floci
@@ -325,7 +326,9 @@ reference-data/map-land/{version}.json
 reference-data/map-statistical-areas/{version}.json
 ```
 
-Seed reference-data objects and the initial manifest are added later (Step 23); until then the bucket exists but is empty.
+Seed reference-data objects and the initial manifest are populated by an explicit local
+bootstrap command (see [Deterministic local seed data and bootstrap](#deterministic-local-seed-data-and-bootstrap)
+below), not automatically — the bucket exists but is empty until you run it.
 
 Useful commands:
 
@@ -337,7 +340,7 @@ Useful commands:
 | `npm run floci:logs`     | Follow Floci's logs                                          |
 | `npm run floci:buckets`  | List local buckets                                           |
 | `npm run floci:objects`  | List objects in the reference-data bucket                    |
-| `npm run floci:manifest` | Print the active manifest object (404 until seeded)          |
+| `npm run floci:manifest` | Print the active manifest object (404 until bootstrapped)    |
 
 Equivalent raw AWS CLI (from the host, with the CLI installed and pointed at the local endpoint):
 
@@ -345,6 +348,73 @@ Equivalent raw AWS CLI (from the host, with the CLI installed and pointed at the
 aws --endpoint-url http://localhost:4566 --region eu-west-2 s3api list-buckets
 aws --endpoint-url http://localhost:4566 --region eu-west-2 s3api list-objects-v2 --bucket mmo-cr-reference-data-service
 ```
+
+### Deterministic local seed data and bootstrap
+
+The repository ships small, synthetic, deterministic seed collections for all six
+maintained datasets (`vessels`, `gears`, `ports`, `species`, `map-land`,
+`map-statistical-areas`) at
+[resources/reference-data/seed](./resources/reference-data/seed). `map-ports` is not
+seeded independently — it is always derived from the active `ports` collection.
+
+Every seed GUID, collection version (`local-seed-1`), schema version (`1.0`), and
+timestamp (`2026-01-01T00:00:00Z`) is fixed and committed — nothing is generated at
+bootstrap time, so re-running bootstrap always produces the same logical active state.
+
+#### Running the bootstrap command
+
+```bash
+npm run floci:up
+npm run reference-data:bootstrap
+```
+
+This explicit, local-development-only command:
+
+1. Refuses to run unless `cdpEnvironment` is `local`, `NODE_ENV` is not `production`,
+   and a local `AWS_ENDPOINT_URL` is configured (never inferred from the bucket name
+   alone, never exposed over HTTP).
+2. Loads, structurally validates, canonically normalises, and business-validates each
+   committed seed file — exactly the same pipeline used for a real API upload.
+3. Persists each collection as an immutable object and only then activates the shared
+   manifest (through the existing Persistence Module — never a second S3 integration
+   point), one dataset at a time, in a fixed order.
+4. Prints a safe summary (`createdDatasets`/`unchangedDatasets`/`replacedDatasets`/
+   `failedDatasets`) — never complete seed content or credentials.
+
+Re-running the command is safe and idempotent: unchanged seed content is detected and
+skipped (no new object or manifest revision is written); a genuinely divergent object
+at the same seed version fails safely (`409 collection_version_exists`) rather than
+being silently overwritten. Unrelated, pre-existing manifest entries (e.g. a real
+collection you uploaded manually) are always preserved.
+
+After bootstrapping, start the service as normal — ordinary startup hydration (not
+bootstrap) reads the now-populated bucket:
+
+```bash
+npm run dev
+curl http://localhost:3001/health/readiness
+curl http://localhost:3001/api/v1/reference-data/manifest
+curl http://localhost:3001/api/v1/reference-data/vessels
+```
+
+#### Troubleshooting
+
+- **Missing bucket**: bootstrap does not create the bucket itself — it relies on the
+  existing Floci startup hook (`10-setup-resources.sh`). Run `npm run floci:up` first.
+- **Missing manifest / `404` from `npm run floci:manifest`**: bootstrap has not been
+  run yet, or it failed before completing. Re-run `npm run reference-data:bootstrap`
+  and check its printed summary for `failedDatasets`.
+- **Invalid seed data**: bootstrap fails fast on the first dataset that does not pass
+  structural, normalisation, or business validation and never activates a partial
+  manifest — fix the seed file and re-run.
+- **`collection_version_exists` on a clean-looking bucket**: an earlier, partially
+  successful bootstrap or manual test run may have left an immutable object at the
+  seed version without it being the active manifest entry. Run `npm run floci:reset`
+  for a guaranteed-clean bucket, then bootstrap again.
+
+Focused Floci integration tests for the bootstrap workflow live in
+`src/reference-data/command/bootstrap-local-reference-data.floci.test.js` and run via
+`npm run test:floci` alongside the existing Persistence Module Floci tests.
 
 ### Dependabot
 

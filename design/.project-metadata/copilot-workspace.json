@@ -1,199 +1,60 @@
 {
   "schemaVersion": "1.0",
   "projectName": "Reference Data Service",
-  "workspaceCreatedAt": "2026-09-16T18:57:54.804Z",
-  "workspaceUpdatedAt": "2026-09-17T03:07:12.727Z",
+  "workspaceCreatedAt": "2026-09-17T10:30:51.500Z",
+  "workspaceUpdatedAt": "2026-09-17T11:32:13.655Z",
   "extensionVersion": "0.1.0",
   "activePromptProfileId": "prompt-profile-web-application",
   "activePromptProfileName": "Web Application Workspace",
   "selectedFolderDisplayName": "design",
   "statistics": {
-    "promptsCaptured": 11,
-    "promptsSaved": 11,
-    "responsesExtracted": 4,
-    "artifactsParsed": 4,
-    "artifactsValidated": 4,
-    "textArtifactsSaved": 4,
-    "binaryArtifactsDetected": 6,
+    "promptsCaptured": 2,
+    "promptsSaved": 2,
+    "responsesExtracted": 0,
+    "artifactsParsed": 0,
+    "artifactsValidated": 0,
+    "textArtifactsSaved": 0,
+    "binaryArtifactsDetected": 4,
     "binaryArtifactsSaved": 0,
-    "companionMetadataFilesSaved": 4,
+    "companionMetadataFilesSaved": 0,
     "artifactSaveFailures": 0,
-    "artifactSaveSkips": 6
+    "artifactSaveSkips": 4
   },
   "latestActivity": {
-    "lastPromptSavedAt": "2026-09-17T03:07:00.725Z",
-    "lastArtifactSavedAt": "2026-09-16T19:30:09.349Z",
+    "lastPromptSavedAt": "2026-09-17T11:32:06.397Z",
+    "lastArtifactSavedAt": null,
     "lastBinaryArtifactSavedAt": null,
-    "lastCompanionMetadataSavedAt": "2026-09-16T19:30:09.432Z"
+    "lastCompanionMetadataSavedAt": null
   },
   "prompts": [
     {
-      "promptId": "prompt-20260916195750-13w048",
-      "conversationId": "conv-20260916195647-dkg3",
+      "promptId": "prompt-20260917113051-g809t7",
+      "conversationId": "conv-20260917111808-uhbm",
       "sequenceNumber": 1,
-      "summary": "generate Step 21: Implement full collection upload validation mode prompt​‌",
-      "savedPath": "_conversations/prompts/conv-20260916195647-dkg3-20260916-195750-prompt-001-generate-step-21-implement-full-coll.md",
-      "savedAt": "2026-09-16T18:57:54.254Z"
+      "summary": "excellent , give it tome as .md file that i can download​‌",
+      "savedPath": "_conversations/prompts/conv-20260917111808-uhbm-20260917-113051-prompt-001-excellent-give-it-tome-as-md-file-th.md",
+      "savedAt": "2026-09-17T10:30:51.492Z"
     },
     {
-      "promptId": "prompt-20260916195802-4nsytl",
-      "conversationId": "conv-20260916195647-dkg3",
+      "promptId": "prompt-20260917123206-nsslqj",
+      "conversationId": "conv-20260917111808-uhbm",
       "sequenceNumber": 2,
-      "summary": "generate Step 21: Implement full collection upload validation mode prompt​‌",
-      "savedPath": "_conversations/prompts/conv-20260916195647-dkg3-20260916-195802-prompt-002-generate-step-21-implement-full-coll.md",
-      "savedAt": "2026-09-16T18:58:02.685Z"
-    },
-    {
-      "promptId": "prompt-20260916200057-b4o9ho",
-      "conversationId": "conv-20260916195647-dkg3",
-      "sequenceNumber": 3,
-      "summary": "generate Step 22: Implement atomic full collection replacement prompt​‌",
-      "savedPath": "_conversations/prompts/conv-20260916195647-dkg3-20260916-200057-prompt-003-generate-step-22-implement-atomic-fu.md",
-      "savedAt": "2026-09-16T19:00:58.309Z"
-    },
-    {
-      "promptId": "prompt-20260916202418-kpez51",
-      "conversationId": "conv-20260916195647-dkg3",
-      "sequenceNumber": 4,
-      "summary": "generate Step 23: Add seed reference data and deterministic local bootstrap prompt​‌",
-      "savedPath": "_conversations/prompts/conv-20260916195647-dkg3-20260916-202418-prompt-004-generate-step-23-add-seed-reference.md",
-      "savedAt": "2026-09-16T19:24:18.648Z"
-    },
-    {
-      "promptId": "prompt-20260916202825-n6x537",
-      "conversationId": "conv-20260916195647-dkg3",
-      "sequenceNumber": 5,
-      "summary": "generate Step 24: Implement health, readiness, and dependency status prompt​‌",
-      "savedPath": "_conversations/prompts/conv-20260916195647-dkg3-20260916-202825-prompt-005-generate-step-24-implement-health-re.md",
-      "savedAt": "2026-09-16T19:28:26.609Z"
-    },
-    {
-      "promptId": "prompt-20260916203027-z4ihhl",
-      "conversationId": "conv-20260916195647-dkg3",
-      "sequenceNumber": 6,
-      "summary": "## Step 20 — Context gathered, but real ambiguities found before implementingFollowing the same discipline from Step 19:",
-      "savedPath": "_conversations/prompts/conv-20260916195647-dkg3-20260916-203027-prompt-006-step-20-context-gathered-but-real-am.md",
-      "savedAt": "2026-09-16T19:30:28.317Z"
-    },
-    {
-      "promptId": "prompt-20260916210621-qbbzcn",
-      "conversationId": "conv-20260916195647-dkg3",
-      "sequenceNumber": 7,
-      "summary": "github hang ​‌these geometry tests before proceeding, to validate the algorithm correctness.Loading​‌",
-      "savedPath": "_conversations/prompts/conv-20260916195647-dkg3-20260916-210621-prompt-007-github-hang-these-geometry-tests-bef.md",
-      "savedAt": "2026-09-16T20:06:21.788Z"
-    },
-    {
-      "promptId": "prompt-20260917034243-vxscja",
-      "conversationId": "conv-20260917034124-uoov",
-      "sequenceNumber": 1,
-      "summary": "i need for sonar to ignore the test files , this is my current sonar-project.properties file ​‌sonar.projectKey=DEFRA_mm",
-      "savedPath": "_conversations/prompts/conv-20260917034124-uoov-20260917-034243-prompt-001-i-need-for-sonar-to-ignore-the-test.md",
-      "savedAt": "2026-09-17T02:42:46.130Z"
-    },
-    {
-      "promptId": "prompt-20260917034820-tollev",
-      "conversationId": "conv-20260917034124-uoov",
-      "sequenceNumber": 2,
-      "summary": "actually i want all .test.js file to be ignore by sonar and no been analised​‌",
-      "savedPath": "_conversations/prompts/conv-20260917034124-uoov-20260917-034820-prompt-002-actually-i-want-all-test-js-file-to.md",
-      "savedAt": "2026-09-17T02:48:22.011Z"
-    },
-    {
-      "promptId": "prompt-20260917034918-yo7lvt",
-      "conversationId": "conv-20260917034124-uoov",
-      "sequenceNumber": 3,
-      "summary": "give the full file how how should look like​‌",
-      "savedPath": "_conversations/prompts/conv-20260917034124-uoov-20260917-034918-prompt-003-give-the-full-file-how-how-should-lo.md",
-      "savedAt": "2026-09-17T02:49:19.655Z"
-    },
-    {
-      "promptId": "prompt-20260917040700-ensr3q",
-      "conversationId": "conv-20260917034124-uoov",
-      "sequenceNumber": 4,
-      "summary": "file like src/reference-data/controller/geojson-collection-route-controller.test.js still been analyse ( this one break ",
-      "savedPath": "_conversations/prompts/conv-20260917034124-uoov-20260917-040700-prompt-004-file-like-src-reference-data-control.md",
-      "savedAt": "2026-09-17T03:07:00.725Z"
+      "summary": "give me a table of the query parameters​‌",
+      "savedPath": "_conversations/prompts/conv-20260917111808-uhbm-20260917-123206-prompt-002-give-me-a-table-of-the-query-paramet.md",
+      "savedAt": "2026-09-17T11:32:06.397Z"
     }
   ],
-  "artifacts": [
-    {
-      "id": "artifact-instruction-response-record-20260916195810-h03dd1-1",
-      "sourceArtifactKind": "text-artifact",
-      "artifactInstructionId": "artifact-instruction-response-record-20260916195810-h03dd1-1",
-      "artifactName": "Step 21: Implement Full Collection Upload Validation Mode",
-      "artifactType": "github-prompt",
-      "format": "markdown",
-      "savedPath": "github-prompts/step-21-implement-full-collection-upload-validation-mode.md",
-      "companionMetadataPath": "github-prompts/step-21-implement-full-collection-upload-validation-mode.meta.md",
-      "sourceResponseId": "response-record-20260916195810-h03dd1",
-      "sourcePromptId": "prompt-20260916195802-4nsytl",
-      "conversationId": "conv-20260916195647-dkg3",
-      "savedAt": "2026-09-16T18:58:10.154Z"
-    },
-    {
-      "id": "artifact-instruction-response-record-20260916200253-dbo2nz-1",
-      "sourceArtifactKind": "text-artifact",
-      "artifactInstructionId": "artifact-instruction-response-record-20260916200253-dbo2nz-1",
-      "artifactName": "Step 22: Implement Atomic Full Collection Replacement",
-      "artifactType": "github-prompt",
-      "format": "markdown",
-      "savedPath": "github-prompts/step-22-implement-atomic-full-collection-replacement.md",
-      "companionMetadataPath": "github-prompts/step-22-implement-atomic-full-collection-replacement.meta.md",
-      "sourceResponseId": "response-record-20260916200253-dbo2nz",
-      "sourcePromptId": "prompt-20260916200057-b4o9ho",
-      "conversationId": "conv-20260916195647-dkg3",
-      "savedAt": "2026-09-16T19:03:03.287Z"
-    },
-    {
-      "id": "artifact-instruction-response-record-20260916202620-x56tqx-1",
-      "sourceArtifactKind": "text-artifact",
-      "artifactInstructionId": "artifact-instruction-response-record-20260916202620-x56tqx-1",
-      "artifactName": "Step 23: Add Seed Reference Data and Deterministic Local Bootstrap",
-      "artifactType": "github-prompt",
-      "format": "markdown",
-      "savedPath": "github-prompts/step-23-add-seed-reference-data-and-deterministic-local-bootstrap.md",
-      "companionMetadataPath": "github-prompts/step-23-add-seed-reference-data-and-deterministic-local-bootstrap.meta.md",
-      "sourceResponseId": "response-record-20260916202620-x56tqx",
-      "sourcePromptId": "prompt-20260916202418-kpez51",
-      "conversationId": "conv-20260916195647-dkg3",
-      "savedAt": "2026-09-16T19:26:20.219Z"
-    },
-    {
-      "id": "artifact-instruction-response-record-20260916203009-e0r9kr-1",
-      "sourceArtifactKind": "text-artifact",
-      "artifactInstructionId": "artifact-instruction-response-record-20260916203009-e0r9kr-1",
-      "artifactName": "Step 24: Implement Health, Readiness, and Dependency Status",
-      "artifactType": "github-prompt",
-      "format": "markdown",
-      "savedPath": "github-prompts/step-24-implement-health-readiness-and-dependency-status.md",
-      "companionMetadataPath": "github-prompts/step-24-implement-health-readiness-and-dependency-status.meta.md",
-      "sourceResponseId": "response-record-20260916203009-e0r9kr",
-      "sourcePromptId": "prompt-20260916202825-n6x537",
-      "conversationId": "conv-20260916195647-dkg3",
-      "savedAt": "2026-09-16T19:30:09.349Z"
-    }
-  ],
+  "artifacts": [],
   "bundles": [],
   "conversations": [
     {
-      "conversationId": "conv-20260916195647-dkg3",
-      "startedAt": "2026-09-16T18:57:50.757Z",
-      "lastUpdatedAt": "2026-09-16T20:06:21.788Z",
-      "promptCount": 7,
-      "responseCount": 4,
-      "savedArtifactCount": 4,
-      "lastPromptId": "prompt-20260916210621-qbbzcn",
-      "lastResponseId": "response-record-20260916203009-e0r9kr"
-    },
-    {
-      "conversationId": "conv-20260917034124-uoov",
-      "startedAt": "2026-09-17T02:42:43.533Z",
-      "lastUpdatedAt": "2026-09-17T03:07:00.725Z",
-      "promptCount": 4,
+      "conversationId": "conv-20260917111808-uhbm",
+      "startedAt": "2026-09-17T10:30:51.200Z",
+      "lastUpdatedAt": "2026-09-17T11:32:06.397Z",
+      "promptCount": 2,
       "responseCount": 0,
       "savedArtifactCount": 0,
-      "lastPromptId": "prompt-20260917040700-ensr3q"
+      "lastPromptId": "prompt-20260917123206-nsslqj"
     }
   ]
 }
