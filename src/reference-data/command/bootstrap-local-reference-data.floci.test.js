@@ -5,7 +5,6 @@
 
 import { beforeAll, describe, expect, test } from 'vitest'
 
-import { createReferenceDataRepository } from '#/reference-data/persistence/reference-data-repository.js'
 import { createInMemoryDataStore } from '#/reference-data/in-memory-store/index.js'
 import {
   bootstrapLocalReferenceData,
@@ -15,41 +14,20 @@ import {
 import { SEED_DATASET_ORDER } from './seed-loader.js'
 import { DATASETS } from '#/common/domain/datasets.js'
 import { validateManifest } from '#/reference-data/cache-refresh/manifest-validation.js'
+import {
+  FLOCI_HEALTH_URL,
+  LOCAL_CONFIG,
+  SILENT_LOGGER,
+  createFlociRepository,
+  isFlociAvailable
+} from '#/reference-data/floci-test-helpers.js'
 
-const FLOCI_HEALTH_URL = 'http://localhost:4566/_floci/health'
-const BUCKET = 'mmo-cr-reference-data-service'
-
-const LOCAL_CONFIG = {
-  get: (key) =>
-    ({
-      cdpEnvironment: 'local',
-      'aws.endpointUrl': 'http://localhost:4566',
-      'referenceData.bucket': BUCKET
-    })[key]
-}
-
-const SILENT_LOGGER = { info: () => {}, error: () => {}, warn: () => {} }
-
-let floccyAvailable = false
-
-try {
-  const response = await fetch(FLOCI_HEALTH_URL, {
-    signal: AbortSignal.timeout(1000)
-  })
-  floccyAvailable = response.ok
-} catch {
-  floccyAvailable = false
-}
+const floccyAvailable = await isFlociAvailable()
 
 describe.skipIf(!floccyAvailable)(
   '#bootstrapLocalReferenceData (Floci integration)',
   () => {
-    const persistence = createReferenceDataRepository({
-      region: 'eu-west-2',
-      endpointUrl: 'http://localhost:4566',
-      forcePathStyle: true,
-      bucket: BUCKET
-    })
+    const persistence = createFlociRepository()
 
     beforeAll(async () => {
       const health = await fetch(FLOCI_HEALTH_URL)

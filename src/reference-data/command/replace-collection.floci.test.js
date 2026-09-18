@@ -14,16 +14,9 @@
 import { randomUUID } from 'node:crypto'
 import { beforeAll, describe, expect, test } from 'vitest'
 
-import { createReferenceDataRepository } from '#/reference-data/persistence/reference-data-repository.js'
 import { createInMemoryDataStore } from '#/reference-data/in-memory-store/index.js'
 import { createCacheRefreshService } from '#/reference-data/cache-refresh/cache-refresh-service.js'
-import { validateManifest } from '#/reference-data/cache-refresh/manifest-validation.js'
 import { replaceCollection } from '#/reference-data/command/replace-collection.js'
-import {
-  bootstrapLocalReferenceData,
-  SEED_MANIFEST_ID,
-  SEED_TIMESTAMP
-} from '#/reference-data/command/bootstrap-local-reference-data.js'
 import {
   loadSeedCollection,
   SEED_DATASET_ORDER
@@ -33,9 +26,14 @@ import { createMapPortsQueryService } from '#/reference-data/query/map-ports-que
 import { portsQueryConfiguration } from '#/reference-data/query/ports-query-configuration.js'
 import { calculateDeterministicEtag } from '#/reference-data/query/result-etag.js'
 import { DATASETS } from '#/common/domain/datasets.js'
+import {
+  FLOCI_HEALTH_URL,
+  SILENT_LOGGER,
+  createFlociRepository,
+  ensureSeededManifest,
+  isFlociAvailable
+} from '#/reference-data/floci-test-helpers.js'
 
-const FLOCI_HEALTH_URL = 'http://localhost:4566/_floci/health'
-const BUCKET = 'mmo-cr-reference-data-service'
 const TEST_RUN_PREFIX = `test-${randomUUID()}`
 const HYDRATION_OPTIONS = {
   mandatoryDatasets: SEED_DATASET_ORDER,
@@ -43,27 +41,7 @@ const HYDRATION_OPTIONS = {
   refreshConcurrency: 3
 }
 
-const LOCAL_CONFIG = {
-  get: (key) =>
-    ({
-      cdpEnvironment: 'local',
-      'aws.endpointUrl': 'http://localhost:4566',
-      'referenceData.bucket': BUCKET
-    })[key]
-}
-
-const SILENT_LOGGER = { info: () => {}, error: () => {}, warn: () => {} }
-
-let floccyAvailable = false
-
-try {
-  const response = await fetch(FLOCI_HEALTH_URL, {
-    signal: AbortSignal.timeout(1000)
-  })
-  floccyAvailable = response.ok
-} catch {
-  floccyAvailable = false
-}
+const floccyAvailable = await isFlociAvailable()
 
 // Builds a full valid ports collection (whole-collection replacement, never an
 // item-level patch) from the committed seed content plus the supplied overrides.
@@ -95,12 +73,7 @@ async function hydrateFreshStore(persistence) {
 describe.skipIf(!floccyAvailable)(
   '#replaceCollection atomic activation (Floci integration)',
   () => {
-    const persistence = createReferenceDataRepository({
-      region: 'eu-west-2',
-      endpointUrl: 'http://localhost:4566',
-      forcePathStyle: true,
-      bucket: BUCKET
-    })
+    const persistence = createFlociRepository()
 
     // Captured before any mutation in this suite, so the final restore test can
     // reactivate the EXACT prior manifest entry (no new object write, since the
@@ -111,42 +84,7 @@ describe.skipIf(!floccyAvailable)(
       const health = await fetch(FLOCI_HEALTH_URL)
       expect(health.ok).toBe(true)
 
-      // Only (re-)bootstraps when no valid manifest yet covers every mandatory
-      // dataset — an already-complete manifest from an earlier Floci suite in
-      // this same run may have a non-seed active ports version, and
-      // unconditionally re-running bootstrap against that would collide with
-      // the original immutable seed object still sitting at the fixed seed
-      // version.
-      const hasValidCompleteManifest = async () => {
-        try {
-          const { manifest } = await persistence.readManifest()
-          if (!validateManifest(manifest).valid) {
-            return false
-          }
-          return SEED_DATASET_ORDER.every((dataset) =>
-            manifest.datasets.some((entry) => entry.dataset === dataset)
-          )
-        } catch {
-          return false
-        }
-      }
-      if (!(await hasValidCompleteManifest())) {
-        await persistence.writeManifest({
-          manifest: {
-            manifestId: SEED_MANIFEST_ID,
-            version: 'reset-baseline',
-            generatedAt: SEED_TIMESTAMP,
-            datasets: []
-          }
-        })
-        const summary = await bootstrapLocalReferenceData({
-          config: LOCAL_CONFIG,
-          persistence,
-          store: createInMemoryDataStore(),
-          logger: SILENT_LOGGER
-        })
-        expect(summary.status).toBe('completed')
-      }
+      await ensureSeededManifest(persistence)
 
       const { manifest } = await persistence.readManifest()
       originalPortsEntry = manifest.datasets.find(

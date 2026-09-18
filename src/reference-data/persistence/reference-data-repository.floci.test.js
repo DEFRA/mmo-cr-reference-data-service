@@ -5,34 +5,22 @@
 import { randomUUID } from 'node:crypto'
 import { beforeAll, describe, expect, test } from 'vitest'
 
-import { createReferenceDataRepository } from './reference-data-repository.js'
 import { DATASETS } from '#/common/domain/datasets.js'
+import {
+  FLOCI_HEALTH_URL,
+  createFlociRepository,
+  isFlociAvailable
+} from '#/reference-data/floci-test-helpers.js'
 
-const FLOCI_HEALTH_URL = 'http://localhost:4566/_floci/health'
-const BUCKET = 'mmo-cr-reference-data-service'
 // Isolates this suite's objects from developer/seed data without changing production key logic.
 const TEST_RUN_PREFIX = `test-${randomUUID()}`
 
-let floccyAvailable = false
-
-try {
-  const response = await fetch(FLOCI_HEALTH_URL, {
-    signal: AbortSignal.timeout(1000)
-  })
-  floccyAvailable = response.ok
-} catch {
-  floccyAvailable = false
-}
+const floccyAvailable = await isFlociAvailable()
 
 describe.skipIf(!floccyAvailable)(
   '#referenceDataRepository (Floci integration)',
   () => {
-    const repository = createReferenceDataRepository({
-      region: 'eu-west-2',
-      endpointUrl: 'http://localhost:4566',
-      forcePathStyle: true,
-      bucket: BUCKET
-    })
+    const repository = createFlociRepository()
 
     beforeAll(async () => {
       const health = await fetch(FLOCI_HEALTH_URL)
@@ -147,10 +135,7 @@ describe.skipIf(!floccyAvailable)(
     // Points at a definitely-nonexistent bucket name; never touches the real
     // configured bucket, so it cannot corrupt shared local-dev state.
     test('a missing bucket is handled distinctly from a missing object', async () => {
-      const missingBucketRepository = createReferenceDataRepository({
-        region: 'eu-west-2',
-        endpointUrl: 'http://localhost:4566',
-        forcePathStyle: true,
+      const missingBucketRepository = createFlociRepository({
         bucket: `${TEST_RUN_PREFIX}-nonexistent-bucket`
       })
 

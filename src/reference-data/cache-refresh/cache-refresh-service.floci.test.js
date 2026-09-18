@@ -6,95 +6,30 @@
 
 import { beforeAll, describe, expect, test } from 'vitest'
 
-import { createReferenceDataRepository } from '#/reference-data/persistence/reference-data-repository.js'
 import { createInMemoryDataStore } from '#/reference-data/in-memory-store/index.js'
 import { createCacheRefreshService } from '#/reference-data/cache-refresh/cache-refresh-service.js'
-import { validateManifest } from '#/reference-data/cache-refresh/manifest-validation.js'
-import {
-  bootstrapLocalReferenceData,
-  SEED_MANIFEST_ID,
-  SEED_TIMESTAMP
-} from '#/reference-data/command/bootstrap-local-reference-data.js'
 import { SEED_DATASET_ORDER } from '#/reference-data/command/seed-loader.js'
 import { DATASETS } from '#/common/domain/datasets.js'
+import {
+  FLOCI_HEALTH_URL,
+  SILENT_LOGGER,
+  createFlociRepository,
+  ensureSeededManifest,
+  isFlociAvailable
+} from '#/reference-data/floci-test-helpers.js'
 
-const FLOCI_HEALTH_URL = 'http://localhost:4566/_floci/health'
-const BUCKET = 'mmo-cr-reference-data-service'
-
-const LOCAL_CONFIG = {
-  get: (key) =>
-    ({
-      cdpEnvironment: 'local',
-      'aws.endpointUrl': 'http://localhost:4566',
-      'referenceData.bucket': BUCKET
-    })[key]
-}
-
-const SILENT_LOGGER = { info: () => {}, error: () => {}, warn: () => {} }
-
-let floccyAvailable = false
-
-try {
-  const response = await fetch(FLOCI_HEALTH_URL, {
-    signal: AbortSignal.timeout(1000)
-  })
-  floccyAvailable = response.ok
-} catch {
-  floccyAvailable = false
-}
+const floccyAvailable = await isFlociAvailable()
 
 describe.skipIf(!floccyAvailable)(
   '#createCacheRefreshService hydrate (Floci integration)',
   () => {
-    const persistence = createReferenceDataRepository({
-      region: 'eu-west-2',
-      endpointUrl: 'http://localhost:4566',
-      forcePathStyle: true,
-      bucket: BUCKET
-    })
+    const persistence = createFlociRepository()
 
     beforeAll(async () => {
       const health = await fetch(FLOCI_HEALTH_URL)
       expect(health.ok).toBe(true)
 
-      // Guarantee a valid, seeded active manifest exists — reuses the existing,
-      // already-tested idempotent Step 23 provisioning rather than a second
-      // bootstrap mechanism (same pattern as the sibling bootstrap Floci suite).
-      // Only (re-)bootstraps when no valid manifest yet covers every mandatory
-      // dataset — an already-complete manifest may have since been replaced (e.g.
-      // by the replace-collection Floci suite) with a non-seed active version,
-      // and re-running bootstrap against that would collide with the original
-      // immutable seed object still sitting at the fixed seed version.
-      const hasValidCompleteManifest = async () => {
-        try {
-          const { manifest } = await persistence.readManifest()
-          if (!validateManifest(manifest).valid) {
-            return false
-          }
-          return SEED_DATASET_ORDER.every((dataset) =>
-            manifest.datasets.some((entry) => entry.dataset === dataset)
-          )
-        } catch {
-          return false
-        }
-      }
-      if (!(await hasValidCompleteManifest())) {
-        await persistence.writeManifest({
-          manifest: {
-            manifestId: SEED_MANIFEST_ID,
-            version: 'reset-baseline',
-            generatedAt: SEED_TIMESTAMP,
-            datasets: []
-          }
-        })
-        const summary = await bootstrapLocalReferenceData({
-          config: LOCAL_CONFIG,
-          persistence,
-          store: createInMemoryDataStore(),
-          logger: SILENT_LOGGER
-        })
-        expect(summary.status).toBe('completed')
-      }
+      await ensureSeededManifest(persistence)
     })
 
     test('the real Cache Refresh Module hydrates an isolated store and becomes ready', async () => {
