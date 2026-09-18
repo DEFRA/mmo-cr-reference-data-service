@@ -279,4 +279,30 @@ describe('#gearsRoute', () => {
     expect(body.items[0].applicableCharacteristics[0].fixed).toBe(true)
     expect(body.items[0].applicableCharacteristics[0].required).toBe(true)
   })
+
+  test('returns a single gear by GUID in canonical view', async () => {
+    server = await buildTestServer()
+    const response = await server.inject({
+      method: 'GET',
+      url: `/__test/gears/${GEAR_ID}`,
+      headers: { authorization: 'Bearer read-token' }
+    })
+    expect(response.statusCode).toBe(200)
+    const body = JSON.parse(response.payload)
+    expect(body.id).toBe(GEAR_ID)
+    expect(body).toHaveProperty('applicableCharacteristics')
+  })
+
+  test('returns a single gear by GUID in mobile view without internal projection fields', async () => {
+    server = await buildTestServer()
+    const response = await server.inject({
+      method: 'GET',
+      url: `/__test/gears/${GEAR_ID}?view=mobile`,
+      headers: { authorization: 'Bearer read-token' }
+    })
+    expect(response.statusCode).toBe(200)
+    const body = JSON.parse(response.payload)
+    expect(body.id).toBe(GEAR_ID)
+    expect(body).not.toHaveProperty('__referencedCharacteristicIds')
+  })
 })

@@ -68,6 +68,23 @@ describe('#createIssueCollector', () => {
     ).toBe(true)
   })
 
+  test('bounds the number of collected warnings and reports truncation', () => {
+    const collector = createIssueCollector({ maxIssues: 2 })
+
+    collector.addWarning({ code: 'normalisation_warning', message: 'one' })
+    collector.addWarning({ code: 'normalisation_warning', message: 'two' })
+    collector.addWarning({ code: 'normalisation_warning', message: 'three' })
+
+    const result = collector.toResult()
+
+    expect(
+      result.warnings.filter((w) => w.code === 'normalisation_warning')
+    ).toHaveLength(2)
+    expect(
+      result.warnings.some((w) => w.code === 'validation_issues_truncated')
+    ).toBe(true)
+  })
+
   test('includes receivedCount and normalisedCount only when supplied', () => {
     const collector = createIssueCollector()
 

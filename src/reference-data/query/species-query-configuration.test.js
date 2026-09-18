@@ -256,4 +256,38 @@ describe('#speciesQueryConfiguration', () => {
     })
     expect(result.items).toHaveLength(0)
   })
+
+  test('rejects a non-string countryCode value (e.g. a repeated query parameter array)', () => {
+    const service = createService([buildSpecies()])
+    expect(() =>
+      service.queryCollection(speciesQueryConfiguration, {
+        countryCode: ['GBR', 'FRA']
+      })
+    ).toThrow(/must be a string/)
+  })
+
+  test('sorts by faoCode and scientificName', () => {
+    const service = createService([
+      buildSpecies(),
+      buildSpecies({
+        id: '22222222-2222-4222-8222-222222222222',
+        faoCode: 'BSS',
+        scientificName: 'Dicentrarchus labrax'
+      })
+    ])
+
+    expect(
+      service
+        .queryCollection(speciesQueryConfiguration, { sort: 'faoCode' })
+        .items.map((s) => s.faoCode)
+    ).toEqual(['BSS', 'COD'])
+
+    expect(
+      service
+        .queryCollection(speciesQueryConfiguration, {
+          sort: 'scientificName'
+        })
+        .items.map((s) => s.scientificName)
+    ).toEqual(['Dicentrarchus labrax', 'Gadus morhua'])
+  })
 })

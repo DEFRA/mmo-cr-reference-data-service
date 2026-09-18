@@ -12,6 +12,14 @@ describe('#parseBoundingBox', () => {
     })
   })
 
+  test('rejects a non-string value', () => {
+    expect(() => parseBoundingBox(undefined)).toThrow(/non-empty string/)
+  })
+
+  test('rejects a whitespace-only value', () => {
+    expect(() => parseBoundingBox('   ')).toThrow(/non-empty string/)
+  })
+
   test('rejects fewer than four values', () => {
     expect(() => parseBoundingBox('-6,49.5,2')).toThrow(/exactly four/)
   })

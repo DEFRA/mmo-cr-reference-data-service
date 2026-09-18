@@ -216,4 +216,27 @@ describe('#validateGearsCollection', () => {
 
     expect(first.errors).toEqual(second.errors)
   })
+
+  test('tolerates missing categories/characteristics arrays and items with no applicableCharacteristics', () => {
+    const collection = {
+      items: [
+        {
+          id: '44444444-4444-4444-8444-444444444444',
+          code: 'OTB',
+          name: 'Otter trawl',
+          categoryId: CATEGORY_ID
+        }
+      ]
+    }
+
+    expect(() => validateGearsCollection(collection)).not.toThrow()
+  })
+
+  test('tolerates a null characteristic entry when checking numeric ranges', () => {
+    const collection = baseCollection({
+      characteristics: [null, ...baseCollection().characteristics]
+    })
+
+    expect(() => validateGearsCollection(collection)).not.toThrow()
+  })
 })

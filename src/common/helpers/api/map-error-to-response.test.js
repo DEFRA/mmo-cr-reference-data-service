@@ -148,6 +148,30 @@ describe('#mapErrorToResponse Boom/validation errors', () => {
     ])
   })
 
+  test('stringifies a non-array Joi detail path', () => {
+    const boomValidationError = {
+      isBoom: true,
+      output: { statusCode: 400 },
+      details: [{ path: 'limit', message: '"limit" must be a number' }]
+    }
+    const result = mapErrorToResponse(boomValidationError)
+    expect(result.envelope.error.details).toEqual([
+      { path: 'limit', message: '"limit" must be a number' }
+    ])
+  })
+
+  test('defaults a missing Joi detail path to an empty string', () => {
+    const boomValidationError = {
+      isBoom: true,
+      output: { statusCode: 400 },
+      details: [{ message: 'unknown field' }]
+    }
+    const result = mapErrorToResponse(boomValidationError)
+    expect(result.envelope.error.details).toEqual([
+      { path: '', message: 'unknown field' }
+    ])
+  })
+
   test('maps an unmatched route (plain Boom 404, no details) to route_not_found', () => {
     const boomNotFound = { isBoom: true, output: { statusCode: 404 } }
     const result = mapErrorToResponse(boomNotFound, { correlationId: 'c3' })

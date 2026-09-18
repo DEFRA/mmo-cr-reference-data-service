@@ -200,3 +200,20 @@ describe('#createCollectionQueryService observability', () => {
     )
   })
 })
+
+describe('#createCollectionQueryService mobile view without a configured projector', () => {
+  test('raises an internal error rather than returning canonical data', () => {
+    const configWithoutProjector = createQueryConfiguration({
+      dataset: 'vessels',
+      format: 'json',
+      getGuid: (r) => r.id,
+      textSearchFields: [(r) => r.name],
+      sortFields: { name: (r) => r.name }
+    })
+    const service = createCollectionQueryService({ store: createStore() })
+
+    expect(() =>
+      service.queryCollection(configWithoutProjector, { view: 'mobile' })
+    ).toThrow(/no mobile projector configured/i)
+  })
+})

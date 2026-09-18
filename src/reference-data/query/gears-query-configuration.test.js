@@ -118,4 +118,72 @@ describe('#gearsQueryConfiguration', () => {
     })
     expect(result.items[0].requiredMeasurementIds).toEqual(['char-1'])
   })
+
+  test('sorting by type, categoryName, categoryCode, and pairFishing', () => {
+    const store = createInMemoryDataStore()
+    const twoItemCollection = {
+      categories: COLLECTION.categories,
+      characteristics: COLLECTION.characteristics,
+      items: [
+        COLLECTION.items[0],
+        {
+          ...COLLECTION.items[0],
+          id: '22222222-2222-4222-8222-222222222222',
+          code: 'AAA',
+          name: 'Another gear',
+          type: 'another-type',
+          pairFishing: true
+        }
+      ]
+    }
+    store.setCollection('gears', twoItemCollection, {
+      collectionId: 'c2',
+      schemaVersion: '1.0',
+      version: 'v1'
+    })
+    const service = createCollectionQueryService({ store })
+
+    expect(
+      service
+        .queryCollection(gearsQueryConfiguration, { sort: 'type' })
+        .items.map((gear) => gear.type)
+    ).toEqual(['another-type', 'trawl'])
+
+    expect(
+      service.queryCollection(gearsQueryConfiguration, { sort: 'categoryName' })
+        .items
+    ).toHaveLength(2)
+
+    expect(
+      service.queryCollection(gearsQueryConfiguration, { sort: 'categoryCode' })
+        .items
+    ).toHaveLength(2)
+
+    expect(
+      service
+        .queryCollection(gearsQueryConfiguration, { sort: 'pairFishing' })
+        .items.map((gear) => gear.pairFishing)
+    ).toEqual([false, true])
+  })
+
+  test('a gear referencing an unresolved category still resolves without throwing', () => {
+    const store = createInMemoryDataStore()
+    const collectionWithUnresolvedCategory = {
+      categories: [],
+      characteristics: COLLECTION.characteristics,
+      items: [{ ...COLLECTION.items[0], categoryId: 'missing-category' }]
+    }
+    store.setCollection('gears', collectionWithUnresolvedCategory, {
+      collectionId: 'c3',
+      schemaVersion: '1.0',
+      version: 'v1'
+    })
+    const service = createCollectionQueryService({ store })
+
+    const result = service.queryCollection(gearsQueryConfiguration, {
+      categoryCode: 'trawl'
+    })
+
+    expect(result.items).toHaveLength(0)
+  })
 })

@@ -82,3 +82,4 @@ Test files may be excluded from copy-paste duplication calculations only through
 
 ```properties
 sonar.cpd.exclusions=**/*.test.js
+```

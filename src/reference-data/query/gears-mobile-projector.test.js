@@ -3,6 +3,7 @@ import { describe, expect, test } from 'vitest'
 import {
   buildGearLookupIndexes,
   projectGearToMobile,
+  projectMeasurement,
   collectPageMeasurements,
   stripInternalProjectionFields
 } from './gears-mobile-projector.js'
@@ -144,6 +145,48 @@ describe('#projectGearToMobile', () => {
     projectGearToMobile(GEAR, { categoriesById, characteristicsById })
     expect(GEAR).toEqual(clone)
   })
+
+  test('raises an internal error for a gear referencing an unresolved category', () => {
+    const gear = { ...GEAR, categoryId: 'missing-category' }
+    expect(() =>
+      projectGearToMobile(gear, { categoriesById, characteristicsById })
+    ).toThrow(/unresolved category/)
+  })
+
+  test('includes a characteristic with no declared vesselLengthApplicability regardless of band', () => {
+    const gear = {
+      ...GEAR,
+      applicableCharacteristics: [
+        { id: 'rel-1', characteristicId: 'char-1', fixed: true, required: true }
+      ]
+    }
+    const mobile = projectGearToMobile(gear, {
+      categoriesById,
+      characteristicsById,
+      vesselLengthBand: 'under-10m'
+    })
+    expect(mobile.requiredMeasurementIds).toEqual(['char-1'])
+  })
+})
+
+describe('#projectMeasurement defaults', () => {
+  test('defaults a missing unit/minimumValue/maximumValue to null', () => {
+    const measurement = projectMeasurement({
+      id: 'char-2',
+      code: 'DEPTH',
+      name: 'Depth',
+      dataType: 'number'
+    })
+    expect(measurement).toEqual({
+      id: 'char-2',
+      code: 'DEPTH',
+      label: 'Depth',
+      kind: 'number',
+      unit: null,
+      minimumValue: null,
+      maximumValue: null
+    })
+  })
 })
 
 describe('#collectPageMeasurements', () => {
@@ -165,6 +208,27 @@ describe('#collectPageMeasurements', () => {
     )
     expect(measurements).toHaveLength(1)
     expect(measurements[0].id).toBe('char-1')
+  })
+
+  test('skips a referenced characteristic id that cannot be resolved', () => {
+    const mobile = projectGearToMobile(GEAR, {
+      categoriesById,
+      characteristicsById
+    })
+    const emptyCharacteristicsById = new Map()
+    const measurements = collectPageMeasurements(
+      [mobile],
+      emptyCharacteristicsById
+    )
+    expect(measurements).toEqual([])
+  })
+
+  test('treats an item with no __referencedCharacteristicIds as contributing nothing', () => {
+    const measurements = collectPageMeasurements(
+      [{ id: 'gear-1' }],
+      characteristicsById
+    )
+    expect(measurements).toEqual([])
   })
 })
 

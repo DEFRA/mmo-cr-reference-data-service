@@ -49,4 +49,7 @@ describe('#parseVesselLengthMetres', () => {
   test('rejects a non-numeric string', () => {
     expect(() => parseVesselLengthMetres('abc')).toThrow()
   })
+  test('rejects zero', () => {
+    expect(() => parseVesselLengthMetres('0')).toThrow(/positive number/)
+  })
 })

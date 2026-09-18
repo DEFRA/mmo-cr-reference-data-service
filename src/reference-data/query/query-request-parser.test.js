@@ -105,6 +105,12 @@ describe('#parseCollectionQuery', () => {
     ).toThrow(/too long/)
   })
 
+  test('rejects a non-string query value (e.g. a repeated query parameter array)', () => {
+    expect(() => parseCollectionQuery(config, { query: ['a', 'b'] })).toThrow(
+      /query must be a string/
+    )
+  })
+
   test('parses and de-duplicates ids', () => {
     const guid1 = '11111111-1111-4111-8111-111111111111'
     const guid2 = '22222222-2222-4222-8222-222222222222'
@@ -127,6 +133,29 @@ describe('#parseCollectionQuery', () => {
     )
   })
 
+  test('rejects a non-string ids value', () => {
+    expect(() => parseCollectionQuery(config, { ids: ['a', 'b'] })).toThrow(
+      /non-empty comma-separated list/
+    )
+  })
+
+  test('rejects a whitespace-only ids value', () => {
+    expect(() => parseCollectionQuery(config, { ids: '   ' })).toThrow(
+      /non-empty comma-separated list/
+    )
+  })
+
+  test('rejects too many ids', () => {
+    const guids = Array.from(
+      { length: 51 },
+      (_unused, index) =>
+        `11111111-1111-4111-8111-${String(index).padStart(12, '0')}`
+    )
+    expect(() =>
+      parseCollectionQuery(config, { ids: guids.join(',') })
+    ).toThrow(/too many values/)
+  })
+
   test('parses exact filters, case-insensitive', () => {
     const parsed = parseCollectionQuery(config, { cfr: '  GBR123  ' })
     expect(parsed.exactFilters).toEqual({ cfr: 'GBR123' })
@@ -136,6 +165,18 @@ describe('#parseCollectionQuery', () => {
     expect(() => parseCollectionQuery(config, { cfr: '' })).toThrow(
       /must not be empty/
     )
+  })
+
+  test('rejects a non-string exact filter value', () => {
+    expect(() => parseCollectionQuery(config, { cfr: ['a', 'b'] })).toThrow(
+      /cfr must be a string/
+    )
+  })
+
+  test('rejects an overlong exact filter value', () => {
+    expect(() =>
+      parseCollectionQuery(config, { cfr: 'a'.repeat(300) })
+    ).toThrow(/cfr is too long/)
   })
 
   test('parses custom filters via their parse function', () => {
@@ -178,6 +219,18 @@ describe('#parseCollectionQuery', () => {
   test('rejects an unsupported sort field', () => {
     expect(() => parseCollectionQuery(config, { sort: 'unknown' })).toThrow(
       /Unsupported sort field/
+    )
+  })
+
+  test('rejects a non-string sort value', () => {
+    expect(() => parseCollectionQuery(config, { sort: ['name'] })).toThrow(
+      /sort must be a non-empty string/
+    )
+  })
+
+  test('rejects a whitespace-only sort value', () => {
+    expect(() => parseCollectionQuery(config, { sort: '   ' })).toThrow(
+      /sort must be a non-empty string/
     )
   })
 

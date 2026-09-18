@@ -200,4 +200,27 @@ describe('#validateVesselsCollection', () => {
 
     expect(first.errors).toEqual(second.errors)
   })
+
+  test('tolerates a collection with no items array', () => {
+    expect(validateVesselsCollection({})).toEqual({
+      valid: true,
+      errors: [],
+      warnings: []
+    })
+  })
+
+  test('reports a missing natural identifier when the identifiers object itself is absent', () => {
+    const collection = collectionOf([
+      { id: '11111111-1111-4111-8111-111111111111' }
+    ])
+
+    const result = validateVesselsCollection(collection)
+
+    expect(result.valid).toBe(false)
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: 'missing_natural_identifier' })
+      ])
+    )
+  })
 })

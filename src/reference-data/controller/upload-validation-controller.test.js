@@ -384,4 +384,63 @@ describe('#createUploadValidationController observability', () => {
       expect.objectContaining({ outcome: 'conflict' })
     )
   })
+
+  test('an unexpected, non-conflict replacement failure audits a generic failure outcome', async () => {
+    const { recordAuditEvent } =
+      await import('#/common/helpers/observability/audit.js')
+    const persistence = {
+      ...createFakePersistence(),
+      readManifest: async () => {
+        throw new Error('S3 unavailable')
+      }
+    }
+    const { handler } = createUploadValidationController({
+      authenticationClient: createStubAuthenticationClient(),
+      persistence,
+      store: createInMemoryDataStore(),
+      clock: { now: () => '2026-09-17T00:00:00Z' }
+    })
+
+    await expect(
+      invoke(handler, {
+        authorization: 'Bearer write-token',
+        payload: { file: filePart(validPortsCollection) },
+        query: {}
+      })
+    ).rejects.toThrow('S3 unavailable')
+
+    expect(recordAuditEvent).toHaveBeenLastCalledWith(
+      expect.objectContaining({ outcome: 'failure' })
+    )
+  })
+
+  test('a partial in-memory publication failure audits a partial-failure outcome', async () => {
+    const { recordAuditEvent } =
+      await import('#/common/helpers/observability/audit.js')
+    const persistence = createFakePersistence()
+    const store = {
+      ...createInMemoryDataStore(),
+      setCollection: () => {
+        throw new Error('store full')
+      }
+    }
+    const { handler } = createUploadValidationController({
+      authenticationClient: createStubAuthenticationClient(),
+      persistence,
+      store,
+      clock: { now: () => '2026-09-17T00:00:00Z' }
+    })
+
+    await expect(
+      invoke(handler, {
+        authorization: 'Bearer write-token',
+        payload: { file: filePart(validPortsCollection) },
+        query: {}
+      })
+    ).rejects.toMatchObject({ partialFailure: true })
+
+    expect(recordAuditEvent).toHaveBeenLastCalledWith(
+      expect.objectContaining({ outcome: 'partial-failure' })
+    )
+  })
 })

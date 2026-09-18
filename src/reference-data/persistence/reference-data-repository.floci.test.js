@@ -112,6 +112,11 @@ describe.skipIf(!floccyAvailable)(
     })
 
     test('a manifest can be written and read back', async () => {
+      // Restores whatever manifest was active beforehand (Step 27 test-isolation
+      // requirement) so this round-trip check never permanently clobbers active
+      // seed/bootstrap state shared with other Floci suites in the same run.
+      const previous = await repository.readManifest().catch(() => null)
+
       const manifest = {
         manifestId: `${TEST_RUN_PREFIX}-manifest`,
         datasets: []
@@ -123,6 +128,10 @@ describe.skipIf(!floccyAvailable)(
         await repository.readManifest()
       expect(readManifest).toEqual(manifest)
       expect(metadata.etag).toBe(writeResult.etag)
+
+      if (previous) {
+        await repository.writeManifest({ manifest: previous.manifest })
+      }
     })
 
     test('a missing object is handled correctly', async () => {
@@ -132,6 +141,25 @@ describe.skipIf(!floccyAvailable)(
           collectionVersion: `${TEST_RUN_PREFIX}-does-not-exist`
         })
       ).rejects.toMatchObject({ code: 'dataset_not_found' })
+    })
+
+    // Step 27: a missing bucket must remain distinguishable from a missing object.
+    // Points at a definitely-nonexistent bucket name; never touches the real
+    // configured bucket, so it cannot corrupt shared local-dev state.
+    test('a missing bucket is handled distinctly from a missing object', async () => {
+      const missingBucketRepository = createReferenceDataRepository({
+        region: 'eu-west-2',
+        endpointUrl: 'http://localhost:4566',
+        forcePathStyle: true,
+        bucket: `${TEST_RUN_PREFIX}-nonexistent-bucket`
+      })
+
+      await expect(
+        missingBucketRepository.readCollection({
+          dataset: DATASETS.SPECIES,
+          collectionVersion: `${TEST_RUN_PREFIX}-irrelevant`
+        })
+      ).rejects.toMatchObject({ code: 'reference_store_unavailable' })
     })
   }
 )

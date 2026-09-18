@@ -221,6 +221,119 @@ describe('#cacheRefreshService hydration', () => {
   })
 })
 
+describe('#cacheRefreshService failure-detail defaults', () => {
+  test('an active manifest that fails schema validation is treated as unavailable', async () => {
+    const service = createCacheRefreshService({
+      persistence: {
+        readManifest: async () => ({
+          manifest: { manifestId: 'not-a-guid' },
+          metadata: {}
+        })
+      },
+      store: createInMemoryDataStore(),
+      mandatoryDatasets: MANDATORY_DATASETS,
+      hydrationTimeoutMs: 5000,
+      refreshConcurrency: 3
+    })
+
+    const result = await service.hydrate()
+
+    expect(result.status).toBe('failed')
+    expect(service.getReadinessState().ready).toBe(false)
+  })
+
+  test('a dataset read failure without an error code defaults to reference-store-unavailable', async () => {
+    const manifest = buildManifest(['ports'])
+    const service = createCacheRefreshService({
+      persistence: {
+        readManifest: async () => ({ manifest, metadata: {} }),
+        readCollection: async () => {
+          throw new Error('connection reset')
+        }
+      },
+      store: createInMemoryDataStore(),
+      mandatoryDatasets: ['ports'],
+      hydrationTimeoutMs: 5000,
+      refreshConcurrency: 3
+    })
+
+    const result = await service.hydrate()
+
+    expect(result.failedDatasets).toEqual([
+      expect.objectContaining({
+        dataset: 'ports',
+        code: 'reference_store_unavailable',
+        retryable: true
+      })
+    ])
+  })
+
+  test('a publication failure without an error code defaults to internal_error', async () => {
+    const manifest = buildManifest(['ports'])
+    const realStore = createInMemoryDataStore()
+    const store = {
+      ...realStore,
+      setCollection: () => {
+        throw new Error('publish failed')
+      }
+    }
+    const service = createCacheRefreshService({
+      persistence: {
+        readManifest: async () => ({ manifest, metadata: {} }),
+        readCollection: async () => ({
+          content: validPortsCollection,
+          metadata: {}
+        })
+      },
+      store,
+      mandatoryDatasets: ['ports'],
+      hydrationTimeoutMs: 5000,
+      refreshConcurrency: 3
+    })
+
+    const result = await service.hydrate()
+
+    expect(result.failedDatasets).toEqual([
+      expect.objectContaining({
+        dataset: 'ports',
+        stage: 'publication',
+        code: 'internal_error'
+      })
+    ])
+  })
+
+  test('an unexpected failure after processing (e.g. manifest publish) defaults to reference_data_unavailable', async () => {
+    const manifest = buildManifest(['ports'])
+    const realStore = createInMemoryDataStore()
+    const store = {
+      ...realStore,
+      setManifest: () => {
+        throw new Error('manifest publish failed')
+      }
+    }
+    const service = createCacheRefreshService({
+      persistence: {
+        readManifest: async () => ({ manifest, metadata: {} }),
+        readCollection: async () => ({
+          content: validPortsCollection,
+          metadata: {}
+        })
+      },
+      store,
+      mandatoryDatasets: ['ports'],
+      hydrationTimeoutMs: 5000,
+      refreshConcurrency: 3
+    })
+
+    const result = await service.hydrate()
+
+    expect(result.status).toBe('failed')
+    expect(result.failedDatasets).toEqual([
+      expect.objectContaining({ code: 'reference_data_unavailable' })
+    ])
+  })
+})
+
 describe('#cacheRefreshService hydration timeout', () => {
   beforeEach(() => vi.useFakeTimers())
   afterEach(() => vi.useRealTimers())

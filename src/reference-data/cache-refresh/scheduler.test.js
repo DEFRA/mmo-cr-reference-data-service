@@ -67,6 +67,35 @@ describe('#createScheduler', () => {
     expect(task).toHaveBeenCalledTimes(1)
   })
 
+  test('stopping while a run is still in flight prevents scheduleNext from rearming the timer', async () => {
+    let resolveTask
+    const task = vi.fn(
+      () =>
+        new Promise((resolve) => {
+          resolveTask = resolve
+        })
+    )
+    const scheduler = createScheduler({
+      intervalMs: 1000,
+      initialDelayMs: 1000,
+      task
+    })
+    scheduler.start()
+
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(task).toHaveBeenCalledTimes(1)
+
+    // stop() runs while the in-flight task promise is still unresolved, so its
+    // clearTimeout(timer) has no pending timer to cancel.
+    scheduler.stop()
+    resolveTask()
+    await vi.advanceTimersByTimeAsync(0)
+
+    await vi.advanceTimersByTimeAsync(5000)
+    expect(task).toHaveBeenCalledTimes(1)
+    expect(scheduler.isRunning()).toBe(false)
+  })
+
   test('a failed task invokes onError and scheduling continues', async () => {
     const onError = vi.fn()
     const task = vi.fn().mockRejectedValue(new Error('boom'))
