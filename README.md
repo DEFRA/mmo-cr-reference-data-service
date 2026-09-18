@@ -1,6 +1,6 @@
 # mmo-cr-reference-data-service
 
-Core delivery platform Node.js Backend Template.
+Reference Data Service backend for the Catch Recording application (vessels, gears, ports, species, and map-location data).
 
 - [Requirements](#requirements)
   - [Node.js](#nodejs)
@@ -14,6 +14,12 @@ Core delivery platform Node.js Backend Template.
   - [Formatting](#formatting)
     - [Windows prettier issue](#windows-prettier-issue)
 - [API endpoints](#api-endpoints)
+- [Observability](#observability)
+- [Security](#security)
+- [Reference Data Domain Model](#reference-data-domain-model)
+- [Canonical Schemas](#canonical-schemas)
+- [In-Memory Data Store](#in-memory-data-store)
+- [Persistence Module](#persistence-module)
 - [Development helpers](#development-helpers)
   - [Proxy](#proxy)
 - [Docker](#docker)
@@ -22,8 +28,14 @@ Core delivery platform Node.js Backend Template.
   - [Docker Compose](#docker-compose)
   - [Dependabot](#dependabot)
   - [SonarCloud](#sonarcloud)
+- [Known limitations and deferred work](#known-limitations-and-deferred-work)
 - [Licence](#licence)
   - [About the licence](#about-the-licence)
+
+Focused, linked documents:
+
+- [docs/api-reference.md](./docs/api-reference.md) — the authoritative API contract (every route, parameter, view, error, and example)
+- [docs/troubleshooting.md](./docs/troubleshooting.md) — operational troubleshooting guide
 
 ## Requirements
 
@@ -54,7 +66,7 @@ npm install
 Install git hooks (optional)
 
 ```bash
-npm run git:hooks
+npm run setup:husky
 ```
 
 ### Development
@@ -213,12 +225,24 @@ git config --global core.autocrlf false
 
 ## API endpoints
 
-| Endpoint                               | Description                                      |
-| :------------------------------------- | :----------------------------------------------- |
-| `GET: /health`                         | Liveness                                         |
-| `GET: /health/ready`                   | Readiness (cache-hydration state)                |
-| `GET: /health/dependencies`            | Safe dependency status summary (see below)       |
-| `GET: /api/v1/reference-data/manifest` | Active dataset versions and metadata (see below) |
+Full request/response detail, query parameters, canonical/mobile views, ETag behaviour, and
+examples for every route below live in the authoritative [API reference](./docs/api-reference.md).
+
+| Endpoint                                                     | Description                                               |
+| :----------------------------------------------------------- | :-------------------------------------------------------- |
+| `GET: /health`                                               | Liveness                                                  |
+| `GET: /health/ready`                                         | Readiness (cache-hydration state)                         |
+| `GET: /health/dependencies`                                  | Safe dependency status summary (see below)                |
+| `GET: /api/v1/reference-data/manifest`                       | Active dataset versions and metadata (see below)          |
+| `GET: /api/v1/reference-data/vessels`, `/vessels/{id}`       | Vessel reference data (canonical/mobile)                  |
+| `GET: /api/v1/reference-data/gears`, `/gears/{id}`           | Gear reference data (canonical/mobile)                    |
+| `GET: /api/v1/reference-data/ports`, `/ports/{id}`           | Port reference data (canonical/mobile), radius search     |
+| `GET: /api/v1/reference-data/species`, `/species/{id}`       | Species reference data (canonical/mobile)                 |
+| `GET: /api/v1/reference-data/map/land`                       | Land GeoJSON layer                                        |
+| `GET: /api/v1/reference-data/map/statistical-areas`, `/{id}` | Statistical-area GeoJSON layer                            |
+| `GET: /api/v1/reference-data/map/ports`                      | Derived port GeoJSON layer (from `ports`, never uploaded) |
+| `PUT: /api/v1/reference-data/{dataset}?validateOnly=true`    | Validate a full collection upload without activating it   |
+| `PUT: /api/v1/reference-data/{dataset}`                      | Atomically replace and activate a full collection         |
 
 ### Health, readiness, and dependency status
 
@@ -341,9 +365,153 @@ never rolls back an already-completed business operation. Deferred (not implemen
 every authentication/authorisation denial — no existing policy requires it, and doing so would
 audit every unauthenticated read request.
 
+## Security
+
+This section consolidates the security and privacy controls implemented across the service (full
+detail lives in the sections referenced below). It reflects the Step 30 security and privacy
+hardening review.
+
+### Authentication and permission model
+
+All write operations and the manifest/collection read APIs require a `Bearer` token validated by
+the existing Authentication Service integration (`reference-data.read` / `reference-data.write`,
+checked via exact-match only — no substring or implicit matching). Authentication fails **closed**:
+a missing token, an invalid/expired token, a malformed Authentication Service response, or an
+unavailable Authentication Service all result in a rejected request (`401`/`403`/`503`), never a
+partially-trusted one. Only the Validation Module calls the Authentication Service. Health and
+readiness endpoints remain unauthenticated by design (platform health-probe convention) and never
+expose reference data.
+
+### Sensitive-data redaction
+
+Bearer tokens, credentials, and security-sensitive headers are never logged: production logging
+redacts `req.headers.authorization`, `req.headers.cookie`, and `res.headers`; every other
+environment redacts the entire `req`/`res`/`responseTime` objects (see
+[Structured logging](#structured-logging)). Error responses never include stack traces, raw
+Joi/Boom internals, or raw AWS SDK errors (see
+[`map-error-to-response.js`](./src/common/helpers/api/map-error-to-response.js)).
+`GET /health/dependencies` never exposes bucket names, object keys, or Authentication Service URLs
+(see [Health, readiness, and dependency status](#health-readiness-and-dependency-status)).
+
+### Input and upload limits
+
+Collection uploads are bounded by `REFERENCE_DATA_MAX_UPLOAD_BYTES` (25 MiB default), enforced by
+Hapi at the payload layer before JSON parsing begins (`413` when exceeded). Uploaded file content
+types are checked exactly against the dataset's expected `application/json`/`application/geo+json`
+(`415` otherwise). JSON parsing uses Hapi's built-in `@hapi/bourne`-based parser, which strips
+dangerous `__proto__` keys, protecting against prototype pollution. Object keys used for S3/Floci
+persistence are built only from an allowlisted prefix plus a validated `[A-Za-z0-9._-]+` collection
+version (see [Persistence Module](#persistence-module)) — traversal sequences (`.`, `..`, `/`) are
+rejected before any key is constructed.
+
+### Error-response protections
+
+Every error reaching the API boundary is mapped through a single, fixed precedence (known service
+error → classified Boom error → generic `internal_server_error`) that never serialises a stack
+trace or internal exception detail into the HTTP response (see
+[`map-error-to-response.js`](./src/common/helpers/api/map-error-to-response.js)).
+
+### Timeout and retry policy
+
+Every outbound dependency call is bounded: Authentication Service requests
+(`AUTHENTICATION_SERVICE_TIMEOUT_MS`, default 2000ms, via `AbortController`, at most
+`AUTHENTICATION_SERVICE_RETRY_COUNT` bounded retries — default 1 — with a fixed delay, never
+retried on a non-retryable status such as `401`/`403`), the health dependency probe
+(`HEALTH_DEPENDENCY_PROBE_TIMEOUT_MS`, default 2000ms), and startup cache hydration
+(`REFERENCE_DATA_HYDRATION_TIMEOUT_MS`, default 10000ms). No unbounded wait or unbounded retry loop
+exists anywhere in the service.
+
+### Persistence and authentication boundaries
+
+Only the Persistence Module imports the AWS S3 SDK or talks to S3/Floci; only the Validation Module
+calls the Authentication Service — both enforced automatically by
+[`architecture-boundaries.test.js`](./src/architecture-boundaries.test.js). Validation-only uploads
+(`?validateOnly=true`) never persist, never update the manifest, and never replace the in-memory
+active collection. `map-ports` remains derived from `ports` and can never be uploaded or persisted
+independently.
+
+### Bootstrap safeguards
+
+The local reference-data bootstrap command refuses to run unless **all three** of
+`cdpEnvironment === "local"`, `NODE_ENV !== "production"`, and a local `AWS_ENDPOINT_URL` are set —
+see [Deterministic local seed data and bootstrap](#deterministic-local-seed-data-and-bootstrap).
+
+### Health-status exposure
+
+See [Health, readiness, and dependency status](#health-readiness-and-dependency-status): only a
+small, fixed status enum, counts, and timestamps are ever returned — never raw dependency errors,
+bucket/object identifiers, or Authentication Service URLs.
+
+### Security headers and CORS
+
+Every route sets HSTS (1 year, `includeSubDomains`), `X-XSS-Protection`, `X-Content-Type-Options:
+nosniff`, and `X-Frame-Options` (see `routes.security` in [`src/server.js`](./src/server.js)). No
+CORS plugin or per-route CORS configuration is registered, so Hapi's secure default applies (no
+`Access-Control-Allow-Origin` header is ever sent) — appropriate for a server-to-server API with no
+direct browser consumer in the approved architecture.
+
+### Secret management
+
+No credential or production URL is hardcoded anywhere in `src/`. Local AWS credentials
+(`compose/aws.env`) are fixed dummy values consumed only by Floci. Deployed environments must not
+set `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY` (the platform's IAM role is used instead — see the
+[Configuration](#configuration) table). `.npmrc`'s `ignore-scripts=true` blocks arbitrary
+install-time script execution.
+
+### Dependency review
+
+`npm audit` reports **0 vulnerabilities** (info/low/moderate/high/critical) as of the Step 30
+review. `npm run security-audit` (`npm audit --audit-level=critical`) runs in the pre-commit hook
+and in CI (`check-pull-request.yml`) on every change.
+
+### Confirmed residual risks (accepted, not implemented)
+
+- **No explicit maximum item/feature/coordinate count** on uploaded collections beyond the overall
+  byte-size limit above — deferred pending an owner decision on specific limits, since this would
+  be a canonical-schema/business-rule change.
+- **No in-application rate limiting** — rate limiting is a platform-layer (AWS API Gateway) concern
+  in the approved deployment architecture, not an in-app one.
+- **SonarCloud Connected Mode / CI Sonar scan remain disabled** pending a `SONAR_TOKEN` secret and
+  Defra org onboarding (an infrastructure/owner decision — see [SonarCloud](#sonarcloud)).
+
+### Testing and SonarCloud verification
+
+Security-relevant behaviour (authentication failure, permission separation, redaction, upload
+limits, media-type rejection, safe error envelopes, bootstrap guard, ETag/concurrency protection)
+is covered by the existing Docker-free unit suite and the
+[end-to-end API smoke suite](#end-to-end-api-smoke-suite-step-28). Standalone SonarQube analysis of
+the most security-sensitive files reported zero issues; full Defra SonarCloud quality-gate
+verification remains pending CI (see [SonarCloud](#sonarcloud)).
+
 ## Reference Data Domain Model
 
 Shared domain types and contracts live under [src/common/domain](./src/common/domain) and [src/common/contracts](./src/common/contracts). They define the vocabulary and boundaries later steps implement against; none of them implement business behaviour.
+
+### Component overview
+
+```mermaid
+flowchart LR
+    Client["API consumer\n(Catch Recording / mobile backend)"] --> Controller["Reference Data Controller"]
+    Controller --> Validation["Validation Module"]
+    Controller --> Query["Query Module"]
+    Controller --> Command["Command Module"]
+    Validation -->|authenticate/authorise| Auth["Authentication Service"]
+    Command --> Normalisation["Data Normalisation Module"]
+    Command --> Persistence["Persistence Module"]
+    Query --> Store["In-Memory Data Store"]
+    CacheRefresh["Cache Refresh Module"] --> Store
+    CacheRefresh --> Persistence
+    Persistence -->|only component that talks to S3| S3[("S3 / Floci\nreference-data bucket")]
+```
+
+Only the Persistence Module accesses S3/Floci; only the Validation Module calls the Authentication
+Service (both enforced by [`architecture-boundaries.test.js`](./src/architecture-boundaries.test.js)).
+Read APIs (Query Module) only ever read process-local in-memory state — never S3/Floci directly.
+Startup hydration (Cache Refresh Module) rebuilds that in-memory state from the active manifest;
+periodic refresh later detects and loads only changed collections. The active manifest object in
+S3/Floci is the durable source of truth; the In-Memory Data Store is a cache, rebuilt on every
+process start and lost on restart (see [Startup hydration and cache refresh](#persistence-module)
+for multi-instance implications).
 
 ### Datasets and capabilities
 
@@ -471,7 +639,6 @@ A local environment with:
 
 - Floci for AWS services (S3, SQS, SNS etc)
 - This service.
-- A commented out frontend example.
 
 ```bash
 docker compose up --build -d
@@ -604,6 +771,36 @@ the [.github/example.dependabot.yml](.github/example.dependabot.yml) to `.github
 ### SonarCloud
 
 Instructions for setting up SonarCloud can be found in [sonar-project.properties](./sonar-project.properties)
+
+## Known limitations and deferred work
+
+This section states, plainly, what is intentionally reduced or not yet implemented — see also
+[docs/troubleshooting.md](./docs/troubleshooting.md) for operational diagnosis.
+
+- **Reduced integration/end-to-end test scope**: the Floci integration suite (`npm run
+test:floci`) and the end-to-end suite (`npm run test:e2e`) are deliberately **minimal/reduced**
+  smoke suites proving the critical paths work against a real S3-compatible endpoint and a real
+  HTTP server, not exhaustive integration or contract test coverage. Exhaustive behavioural
+  coverage lives in the Docker-free unit suite (`npm test`) instead.
+- **No machine-readable API contract (OpenAPI) exists yet.** [docs/api-reference.md](./docs/api-reference.md)
+  is the authoritative human-readable contract; generating and maintaining an accurate OpenAPI 3.1
+  document for every route/schema is deferred future work.
+- **The Authentication Service contract is provisional.** No real Authentication Service contract
+  has been confirmed; the implemented HTTP client assumes a specific request/response shape
+  (documented in [Security](#security)) pending confirmation of the real contract.
+- **No explicit maximum item/feature/coordinate count** on uploaded collections beyond the overall
+  `REFERENCE_DATA_MAX_UPLOAD_BYTES` byte-size limit — deferred pending an owner decision, since
+  adding one would be a canonical-schema/business-rule change.
+- **No in-application rate limiting** — treated as a platform-layer (AWS API Gateway) concern in
+  the approved deployment architecture, not an in-app one.
+- **Antimeridian-crossing bounding boxes are rejected**, not supported, for `bbox` map queries.
+- **SonarCloud Connected Mode / CI Sonar scan remain disabled**, pending a `SONAR_TOKEN` secret and
+  Defra org onboarding — local standalone analysis has been run instead (see
+  [SonarCloud](#sonarcloud)).
+- **Ports without coordinates** are excluded from the derived `map-ports` GeoJSON layer but remain
+  present in the canonical `ports` JSON collection.
+- **No production AWS infrastructure, monitoring/alerting, or audit-retention policy** is defined
+  by this repository — those are deployment-environment concerns outside a single service's scope.
 
 ## Licence
 
