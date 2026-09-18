@@ -90,6 +90,15 @@ describe('#validateCommonEnvelope', () => {
     ).toEqual([])
   })
 
+  test('skips itemCount and GUID-uniqueness checks when items is missing/not an array', () => {
+    const issues = validateCommonEnvelope({
+      dataset: 'ports',
+      collection: baseJsonCollection({ items: undefined })
+    })
+
+    expect(issues).toEqual([])
+  })
+
   test('does not mutate the supplied collection', () => {
     const collection = baseJsonCollection()
     const before = structuredClone(collection)

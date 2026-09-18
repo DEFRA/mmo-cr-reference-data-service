@@ -52,6 +52,18 @@ describe('#createTestAuthenticationClient', () => {
     expect(outcome.failure.code).toBe('unauthorized')
   })
 
+  test('defaults to no permissions when a token entry omits them', async () => {
+    const client = createTestAuthenticationClient({
+      tokens: { 'no-permissions-token': { actorId: 'actor-1' } }
+    })
+
+    const outcome = await client.authenticate({
+      token: 'no-permissions-token'
+    })
+
+    expect(outcome.actor.permissions).toEqual([])
+  })
+
   test('simulates Authentication Service unavailability', async () => {
     const client = createTestAuthenticationClient({
       tokens: { 'down-token': { unavailable: true } }

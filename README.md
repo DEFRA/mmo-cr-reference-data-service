@@ -92,14 +92,86 @@ To test the application run:
 npm run test
 ```
 
-Floci integration tests for the Persistence Module and the local bootstrap workflow live
-alongside their unit tests (`*.floci.test.js`) and are skipped automatically by `npm test`
-when Floci is not reachable, so the default test run never requires Docker. To run them
-explicitly against a real local S3:
+Floci integration tests for the Persistence Module, the local bootstrap workflow, the
+real Cache Refresh Module, and atomic full-collection replacement live alongside their
+unit tests (`*.floci.test.js`) and are skipped automatically by `npm test` when Floci
+is not reachable, so the default test run never requires Docker. To run them explicitly
+against a real local S3:
 
 ```bash
 npm run test:floci
 ```
+
+This is a deliberately **reduced** integration suite (Step 27) proving the critical
+end-to-end path works against a real S3-compatible endpoint, not exhaustive coverage
+(that remains in the Docker-free unit suite). It verifies:
+
+- Floci/bucket reachability, a JSON and a GeoJSON collection read, and manifest
+  read/write (existing Persistence Module and bootstrap tests).
+- The real Cache Refresh Module (`createCacheRefreshService().hydrate()`, not a
+  hand-rolled loop) hydrating an isolated store and becoming ready.
+- `replaceCollection()` (atomic full replacement) against `ports`: an immutable write
+  that is not active until the manifest is updated, conditional manifest activation,
+  unrelated dataset entries left unchanged, the read API/derived `map-ports` layer
+  reflecting the change, restart hydration loading the persisted (not just in-memory)
+  replacement, a stale `If-Match` conflict, and a failed activation leaving the
+  previous manifest active.
+- A missing object vs. a missing bucket remain distinguishable persistence errors.
+
+**Isolation**: collection objects use a per-run `test-<uuid>-...` version prefix, so
+they never collide with seed or developer data. The shared active manifest is
+necessarily mutated by the replacement scenarios; the suite reactivates the exact
+original `ports` manifest entry at the end (a direct manifest write, since the
+immutable seed object itself is never deleted) so the bucket is left in its prior
+state regardless of which order Vitest runs the Floci files in. If you see a stale
+`collection_modified` or `collection_version_exists` conflict while iterating on
+these tests locally, run `npm run floci:reset` for a guaranteed-clean bucket.
+
+### End-to-end API smoke suite (Step 28)
+
+A minimal end-to-end suite exercises the real public HTTP API, end to end:
+Floci -> Persistence Module -> startup hydration -> In-Memory Data Store -> Hapi.js
+API -> validation-only upload -> atomic replacement -> manifest activation -> updated
+read API -> restart hydration. Requires Docker/Floci and self-skips like the other
+Floci suites, so `npm test` is unaffected:
+
+```bash
+npm run test:e2e
+```
+
+It boots the real `createServer()` composition root (not route-level fakes) against
+Floci, using dummy local AWS credentials and the existing bucket/endpoint
+configuration — no new S3 emulator or bucket-name variable. It verifies: health and
+readiness; the manifest API and its bodyless `304`; one representative read per
+domain (vessels, gears, ports, species, map-statistical-areas, map-ports), including
+GUID preservation, the correct gear vessel-length band, and a port code with a
+leading zero (`GB007`); a valid and an invalid validation-only ports upload; an
+atomic ports replacement reflected by the read API and derived `map-ports`; a stale
+`If-Match` conflict; a failed (structurally invalid) replacement leaving state
+unchanged; restart hydration proving the replacement survives a fresh process; and a
+few security/logging smoke checks (missing/insufficient authentication rejected,
+`Cache-Control: no-store` on the replacement response, no bearer tokens or AWS
+secrets in captured logs).
+
+**Test authentication**: production routes always call the real HTTP authentication
+client against the documented provisional Authentication Service contract
+(`POST {serviceUrl}/validate`). This suite starts a tiny local stub server
+implementing that same contract with three fixed dummy tokens (read, write, and
+no-permission identities) and points the app at it via `AUTHENTICATION_SERVICE_URL`
+— never a global auth bypass, and actor identity always comes from the stub's
+response, never from the request payload.
+
+**Design notes**: the suite is intentionally ONE sequential smoke scenario (later
+steps depend on state — e.g. a captured ETag — produced by earlier ones), not
+independent tests; `afterAll` always stops the server(s) and restores the original
+`ports` manifest entry regardless of any earlier failure. Readiness is polled with a
+bounded timeout (8s) rather than an arbitrary sleep. `If-Match` must be the active
+manifest entry's deterministic `{collectionId, version}` etag (computed the same way
+`replaceCollection` does), which is a different value from the per-request `GET`
+collection ETag — the suite reads it from the manifest response rather than the
+collection read API. This is intentionally minimal: it is not a substitute for the
+Docker-free unit suite, the focused Floci suite, or future security (Step 30) and
+deployment testing.
 
 ### Production
 
@@ -518,7 +590,10 @@ curl http://localhost:3001/api/v1/reference-data/vessels
   for a guaranteed-clean bucket, then bootstrap again.
 
 Focused Floci integration tests for the bootstrap workflow live in
-`src/reference-data/command/bootstrap-local-reference-data.floci.test.js` and run via
+`src/reference-data/command/bootstrap-local-reference-data.floci.test.js`; the real
+Cache Refresh Module and atomic full-collection replacement are additionally covered
+by `src/reference-data/cache-refresh/cache-refresh-service.floci.test.js` and
+`src/reference-data/command/replace-collection.floci.test.js`. All run via
 `npm run test:floci` alongside the existing Persistence Module Floci tests.
 
 ### Dependabot

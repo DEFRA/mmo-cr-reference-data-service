@@ -61,4 +61,12 @@ describe('#validatePortsCollection', () => {
 
     expect(collection).toEqual(before)
   })
+
+  test('tolerates a collection with no items array', () => {
+    expect(validatePortsCollection({})).toEqual({
+      valid: true,
+      errors: [],
+      warnings: []
+    })
+  })
 })

@@ -407,4 +407,53 @@ describe('#replaceCollection', () => {
 
     expect(validPortsCollection).toEqual(before)
   })
+
+  test('propagates an unexpected manifest-read failure unrelated to a missing manifest', async () => {
+    const persistence = {
+      ...createFakePersistence(),
+      readManifest: async () => {
+        throw new Error('S3 unavailable')
+      }
+    }
+    const store = createInMemoryDataStore()
+
+    await expect(
+      replaceCollection({
+        dataset: 'ports',
+        schemaVersion: '1.0',
+        collection: validPortsCollection,
+        collectionVersion: validPortsCollection.version,
+        persistence,
+        store,
+        clock: createClock(['2026-09-17T00:00:00Z'])
+      })
+    ).rejects.toThrow('S3 unavailable')
+  })
+
+  test('surfaces a partial-failure error when in-memory publication fails after persistence succeeded', async () => {
+    const persistence = createFakePersistence()
+    const store = {
+      ...createInMemoryDataStore(),
+      setCollection: () => {
+        throw new Error('store full')
+      }
+    }
+
+    await expect(
+      replaceCollection({
+        dataset: 'ports',
+        schemaVersion: '1.0',
+        collection: validPortsCollection,
+        collectionVersion: validPortsCollection.version,
+        persistence,
+        store,
+        clock: createClock(['2026-09-17T00:00:00Z'])
+      })
+    ).rejects.toMatchObject({
+      code: 'internal_error',
+      dataset: 'ports',
+      retryable: true,
+      partialFailure: true
+    })
+  })
 })

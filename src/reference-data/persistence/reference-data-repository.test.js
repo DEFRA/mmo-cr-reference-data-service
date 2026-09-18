@@ -794,6 +794,69 @@ describe('#getObjectMetadata', () => {
     ).rejects.toMatchObject({ code: 'forbidden' })
   })
 
+  test('a not-found condition is also detected purely from the HTTP status code when the error name differs', async () => {
+    // getExistingEtag's HeadObjectCommand pre-check treats this as "no pre-existing
+    // object", so the write proceeds — exercising isNotFoundError's metadata-only path.
+    const client = {
+      send: vi.fn(async (command) => {
+        if (command instanceof HeadObjectCommand) {
+          const error = new Error('Not Found')
+          error.name = 'UnexpectedErrorName'
+          error.$metadata = { httpStatusCode: 404 }
+          throw error
+        }
+        if (command instanceof PutObjectCommand) {
+          return { ETag: '"etag-1"', LastModified: FIXED_DATE }
+        }
+        throw new Error(`unexpected command: ${command.constructor.name}`)
+      })
+    }
+    const repository = createReferenceDataRepository({
+      bucket: BUCKET,
+      client
+    })
+
+    const result = await repository.writeCollection({
+      dataset: DATASETS.VESSELS,
+      collectionVersion: 'v1',
+      content: { items: [] }
+    })
+
+    expect(result.etag).toBe('etag-1')
+  })
+
+  test('a precondition-failed write is also detected purely from the HTTP status code when the error name differs', async () => {
+    const client = {
+      send: vi.fn(async (command) => {
+        if (command instanceof HeadObjectCommand) {
+          const error = new Error('Not Found')
+          error.name = 'NotFound'
+          error.$metadata = { httpStatusCode: 404 }
+          throw error
+        }
+        if (command instanceof PutObjectCommand) {
+          const error = new Error('Precondition Failed')
+          error.name = 'UnexpectedErrorName'
+          error.$metadata = { httpStatusCode: 412 }
+          throw error
+        }
+        throw new Error(`unexpected command: ${command.constructor.name}`)
+      })
+    }
+    const repository = createReferenceDataRepository({
+      bucket: BUCKET,
+      client
+    })
+
+    await expect(
+      repository.writeCollection({
+        dataset: DATASETS.VESSELS,
+        collectionVersion: 'v1',
+        content: { items: [] }
+      })
+    ).rejects.toMatchObject({ code: 'collection_version_exists' })
+  })
+
   test('the manifest can be resolved as a metadata target', async () => {
     const client = createFakeS3Client({
       'reference-data/manifest.json': seededObject({

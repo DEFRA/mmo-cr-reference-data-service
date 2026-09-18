@@ -23,6 +23,13 @@ describe('#extractSingleUploadedFile', () => {
     expect(file.payload).toEqual({ a: 1 })
   })
 
+  test('normalises a missing content-type header to null rather than throwing', () => {
+    const file = extractSingleUploadedFile({
+      file: { filename: 'collection.json', headers: {}, payload: { a: 1 } }
+    })
+    expect(file.contentType).toBeNull()
+  })
+
   test('rejects a missing file', () => {
     expect(() => extractSingleUploadedFile({})).toThrow(/required/)
   })
@@ -172,5 +179,13 @@ describe('#resolveUploadMetadata', () => {
     const before = structuredClone(collection)
     resolveUploadMetadata({ fields: {}, collection })
     expect(collection).toEqual(before)
+  })
+
+  test('treats a missing/non-object collection as an empty envelope', () => {
+    const metadata = resolveUploadMetadata({
+      fields: { schemaVersion: '1.0', version: '2026.09.17.1' }
+    })
+    expect(metadata.schemaVersion).toBe('1.0')
+    expect(metadata.version).toBe('2026.09.17.1')
   })
 })

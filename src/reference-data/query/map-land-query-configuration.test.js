@@ -111,4 +111,22 @@ describe('#mapLandQueryConfiguration', () => {
     })
     expect(feature).toEqual(clone)
   })
+
+  test('sorts by name', () => {
+    const featureB = buildFeature({
+      id: '22222222-2222-4222-8222-222222222222',
+      properties: {
+        id: '22222222-2222-4222-8222-222222222222',
+        name: 'Anglesey'
+      }
+    })
+    const result = createService([buildFeature(), featureB]).queryCollection(
+      mapLandQueryConfiguration,
+      { sort: 'name' }
+    )
+    expect(result.items.map((f) => f.properties.name)).toEqual([
+      'Anglesey',
+      'Island'
+    ])
+  })
 })

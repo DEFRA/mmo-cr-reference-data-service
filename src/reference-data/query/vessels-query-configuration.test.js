@@ -120,4 +120,56 @@ describe('#vesselsQueryConfiguration', () => {
     })
     expect(result.items.map((v) => v.lengthOverallMetres)).toEqual([5, 12])
   })
+
+  test('sorting by namePln, cfr, externalMark, and registrationNumber', () => {
+    const service = createService([
+      vessel({
+        id: '11111111-1111-4111-8111-111111111111',
+        namePln: 'PZ100',
+        identifiers: {
+          ...vessel().identifiers,
+          cfr: 'GBR000B2222',
+          externalMark: 'ZZ999',
+          registrationNumber: 'ZZ999'
+        }
+      }),
+      vessel({
+        id: '22222222-2222-4222-8222-222222222222',
+        name: 'Beta',
+        namePln: 'AB1',
+        identifiers: {
+          ...vessel().identifiers,
+          cfr: 'GBR000A1111',
+          externalMark: 'AA111',
+          registrationNumber: 'AA111'
+        }
+      })
+    ])
+
+    expect(
+      service
+        .queryCollection(vesselsQueryConfiguration, { sort: 'namePln' })
+        .items.map((v) => v.namePln)
+    ).toEqual(['AB1', 'PZ100'])
+
+    expect(
+      service
+        .queryCollection(vesselsQueryConfiguration, { sort: 'cfr' })
+        .items.map((v) => v.identifiers.cfr)
+    ).toEqual(['GBR000A1111', 'GBR000B2222'])
+
+    expect(
+      service
+        .queryCollection(vesselsQueryConfiguration, { sort: 'externalMark' })
+        .items.map((v) => v.identifiers.externalMark)
+    ).toEqual(['AA111', 'ZZ999'])
+
+    expect(
+      service
+        .queryCollection(vesselsQueryConfiguration, {
+          sort: 'registrationNumber'
+        })
+        .items.map((v) => v.identifiers.registrationNumber)
+    ).toEqual(['AA111', 'ZZ999'])
+  })
 })

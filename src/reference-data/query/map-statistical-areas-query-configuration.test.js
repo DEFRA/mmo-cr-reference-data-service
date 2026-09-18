@@ -225,4 +225,39 @@ describe('#mapStatisticalAreasQueryConfiguration', () => {
     )
     expect(result.offset).toBeUndefined()
   })
+
+  test('sorts by name and by code', () => {
+    const featureA = buildFeature({
+      id: '22222222-2222-4222-8222-222222222222',
+      properties: {
+        id: '22222222-2222-4222-8222-222222222222',
+        code: '10A11',
+        name: 'ICES subrectangle 10A11',
+        areaType: 'ices-subrectangle',
+        parentCode: '10A1',
+        parentName: 'ICES rectangle 10A1',
+        areaKm2: 312.48,
+        centroid: { latitude: 50.25, longitude: -4.5 }
+      }
+    })
+    const service = createService([buildFeature(), featureA])
+
+    const byName = service.queryCollection(
+      mapStatisticalAreasQueryConfiguration,
+      { sort: 'name' }
+    )
+    expect(byName.items.map((f) => f.properties.name)).toEqual([
+      'ICES subrectangle 10A11',
+      'ICES subrectangle 27D86'
+    ])
+
+    const byCode = service.queryCollection(
+      mapStatisticalAreasQueryConfiguration,
+      { sort: 'code' }
+    )
+    expect(byCode.items.map((f) => f.properties.code)).toEqual([
+      '10A11',
+      '27D86'
+    ])
+  })
 })

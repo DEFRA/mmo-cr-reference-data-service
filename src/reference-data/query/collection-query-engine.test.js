@@ -147,6 +147,39 @@ describe('#runCollectionQuery', () => {
     expect(desc.items.map((r) => r.id)).toEqual(['a-guid', 'b-guid'])
   })
 
+  test('sorting treats equal values as a tie (stable, no reordering)', () => {
+    const tiedRecords = [
+      { id: 'x-guid', name: 'X', code: 'X', active: true, length: 5 },
+      { id: 'y-guid', name: 'Y', code: 'Y', active: true, length: 5 }
+    ]
+    const result = runCollectionQuery({
+      config,
+      records: tiedRecords,
+      parsedRequest: baseRequest({
+        sort: { field: 'length', direction: 'asc' }
+      })
+    })
+    expect(result.items.map((r) => r.id)).toEqual(['x-guid', 'y-guid'])
+  })
+
+  test('sorting places a null/undefined field value after defined values', () => {
+    const partialRecords = [
+      { id: 'defined-guid', name: 'Defined', code: 'D', active: true },
+      { id: 'undefined-guid', name: undefined, code: 'U', active: true }
+    ]
+    const result = runCollectionQuery({
+      config,
+      records: partialRecords,
+      parsedRequest: baseRequest({
+        sort: { field: 'name', direction: 'asc' }
+      })
+    })
+    expect(result.items.map((r) => r.id)).toEqual([
+      'defined-guid',
+      'undefined-guid'
+    ])
+  })
+
   test('applies pagination for non-full-collection requests', () => {
     const result = runCollectionQuery({
       config,

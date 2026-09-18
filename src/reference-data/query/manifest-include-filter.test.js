@@ -7,6 +7,12 @@ describe('#parseIncludeFilter', () => {
     expect(parseIncludeFilter(undefined)).toBeNull()
   })
 
+  test('rejects a non-string value (e.g. a repeated query parameter array)', () => {
+    expect(() => parseIncludeFilter(['vessels', 'ports'])).toThrow(
+      /must be a string/
+    )
+  })
+
   test('parses one dataset', () => {
     expect(parseIncludeFilter('vessels')).toEqual(['vessels'])
   })

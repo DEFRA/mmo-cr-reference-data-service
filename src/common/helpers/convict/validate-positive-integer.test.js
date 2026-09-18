@@ -18,4 +18,12 @@ describe('#convictValidatePositiveInteger', () => {
   test('With a non-integer number, should throw', () => {
     expect(() => convictValidatePositiveInteger.validate(1.5)).toThrow()
   })
+
+  test('coerces a numeric string env value to a number', () => {
+    expect(convictValidatePositiveInteger.coerce('60000')).toBe(60000)
+  })
+
+  test('passes through a non-string value unchanged', () => {
+    expect(convictValidatePositiveInteger.coerce(60000)).toBe(60000)
+  })
 })

@@ -263,4 +263,25 @@ describe('#bootstrapLocalReferenceData', () => {
     expect(summary.failedDatasets[0].dataset).toBe(SEED_DATASET_ORDER[0])
     expect(store.getManifest()).toBeNull()
   })
+
+  test('stops when a seed collection loads but fails schema/business validation', async () => {
+    const persistence = createFakePersistence()
+    const store = createInMemoryDataStore()
+    const invalidLoader = () => ({ not: 'a valid collection' })
+
+    const summary = await bootstrapLocalReferenceData({
+      config: createLocalConfig(),
+      persistence,
+      store,
+      logger: createSilentLogger(),
+      loadSeedCollection: invalidLoader
+    })
+
+    expect(summary.status).toBe('failed')
+    expect(summary.failedDatasets[0]).toMatchObject({
+      dataset: SEED_DATASET_ORDER[0],
+      code: 'schema_or_business_validation_failed'
+    })
+    expect(store.getManifest()).toBeNull()
+  })
 })

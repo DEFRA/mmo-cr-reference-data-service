@@ -92,4 +92,12 @@ describe('#validateMapStatisticalAreasCollection', () => {
 
     expect(collection).toEqual(before)
   })
+
+  test('tolerates a collection with no features array', () => {
+    expect(validateMapStatisticalAreasCollection({})).toEqual({
+      valid: true,
+      errors: [],
+      warnings: []
+    })
+  })
 })

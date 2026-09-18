@@ -250,4 +250,31 @@ describe('#validateSpeciesCollection', () => {
 
     expect(collection).toEqual(before)
   })
+
+  test('tolerates a collection with no items array', () => {
+    expect(validateSpeciesCollection({})).toEqual({
+      valid: true,
+      errors: [],
+      warnings: []
+    })
+  })
+
+  test('tolerates an item with no commonNames/localNames arrays', () => {
+    const collection = {
+      items: [
+        {
+          id: 'da465aa5-abcf-443a-bc7e-62e78978bca7',
+          faoCode: 'COD',
+          scientificName: 'Gadus morhua',
+          active: true
+        }
+      ]
+    }
+
+    expect(validateSpeciesCollection(collection)).toEqual({
+      valid: true,
+      errors: [],
+      warnings: []
+    })
+  })
 })

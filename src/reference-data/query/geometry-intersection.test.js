@@ -52,6 +52,17 @@ describe('#segmentsIntersect', () => {
   test('returns false for disjoint segments', () => {
     expect(segmentsIntersect([0, 0], [1, 1], [5, 5], [6, 6])).toBe(false)
   })
+
+  test('detects overlapping collinear segments where only the second endpoint of the first pair falls within the other segment', () => {
+    // A = [0,10]; B endpoint [20,0] is outside A, endpoint [5,0] is inside A —
+    // resolved via the o2 collinear check.
+    expect(segmentsIntersect([0, 0], [10, 0], [20, 0], [5, 0])).toBe(true)
+  })
+
+  test('detects overlapping collinear segments where only the first endpoint of the second pair falls within the first segment', () => {
+    // A = [10,20]; B = [0,25] fully contains A, resolved via the o3 collinear check
+    expect(segmentsIntersect([10, 0], [20, 0], [0, 0], [25, 0])).toBe(true)
+  })
 })
 
 describe('#isPointOnRingBoundary / #isPointInLinearRing', () => {
@@ -82,6 +93,21 @@ describe('#isPointOnRingBoundary / #isPointInLinearRing', () => {
       )
     ).toThrow()
   })
+
+  test('throws for a ring containing a non-finite position', () => {
+    expect(() =>
+      isPointInLinearRing(
+        [1, 1],
+        [
+          [0, 0],
+          [0, 10],
+          [Number.NaN, 10],
+          [10, 0],
+          [0, 0]
+        ]
+      )
+    ).toThrow(/malformed geojson position/i)
+  })
 })
 
 describe('#isPointInPolygonalSurface (holes)', () => {
@@ -95,6 +121,10 @@ describe('#isPointInPolygonalSurface (holes)', () => {
 
   test('a point on the hole boundary is still on the surface', () => {
     expect(isPointInPolygonalSurface([5, 10], FRAME_POLYGON)).toBe(true)
+  })
+
+  test('a point outside the exterior ring is not on the surface', () => {
+    expect(isPointInPolygonalSurface([50, 50], FRAME_POLYGON)).toBe(false)
   })
 })
 
