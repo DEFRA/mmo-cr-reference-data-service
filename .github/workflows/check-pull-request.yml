@@ -37,7 +37,7 @@ jobs:
       - name: Test Docker Image Build
         run: |
           set +e
-          docker build --no-cache --tag cdp-node-backend-template .
+          docker build --no-cache --tag mmo-cr-reference-data-service .
           exit $?
 
 #      - name: SonarCloud Scan
