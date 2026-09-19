@@ -36,42 +36,42 @@
 
 ## 3. Architecture conformance
 
-| Rule | Status | Evidence |
-| --- | --- | --- |
-| Only the Persistence Module accesses S3/Floci | **Confirmed** | `architecture-boundaries.test.js` scans every `src/` file for `@aws-sdk/client-s3` imports outside `reference-data/persistence/`; passes |
-| Only the Validation Module accesses the Authentication Service | **Confirmed** | Same file, second assertion, scans for `http-authentication-client.js` imports outside `reference-data/validation/`; passes |
-| Query operations read only through the In-Memory Data Store | **Confirmed** | `collection-query-service.test.js`, `map-ports-query-service.test.js`, `query-service.test.js` each explicitly assert no calls to persistence/authentication/cache-refresh |
-| Controllers remain transport-focused | **Confirmed** | Spot-checked `collection-route-controller.js`, `geojson-collection-route-controller.js`, `manifest-controller.js`, `upload-validation-controller.js` — all delegate business logic to Query/Command modules; controllers only shape HTTP request/response |
-| Validation and normalisation remain separate responsibilities | **Confirmed** | Distinct top-level directories (`src/reference-data/validation/`, `src/reference-data/normalisation/`) with no cross-imports of internals |
-| Mobile responses are projections of canonical data | **Confirmed** | Dedicated `*-mobile-projector.js` files per dataset; mobile view is computed per-request, never persisted |
-| `map-ports` remains derived, not independently persisted | **Confirmed** | `in-memory-data-store.js` rejects `setCollection` for any `isDerivedDataset` (map-ports); no manifest entry or upload path exists for it |
-| Validation-only uploads do not persist or activate data | **Confirmed** | `upload-validation-controller.js`'s validation-only path calls only `validateCollectionUpload`, never `persistence.write*`/`store.setCollection` |
-| Complete replacement preserves approved concurrency/publication behaviour | **Confirmed** | `replace-collection.js`: immutable versioned writes, conditional manifest activation, atomic in-memory publish, idempotency and `If-Match` handling all present with dedicated tests |
-| Read requests do not trigger cache refresh | **Confirmed** | Same query-module tests above assert zero cache-refresh calls |
-| No database or Redis introduced | **Confirmed** | `package.json` dependencies contain no `mongodb`/`mongo-locks`/`redis`/`ioredis`; `compose.yml` has only `floci` and the app service |
+| Rule                                                                      | Status        | Evidence                                                                                                                                                                                                                                                  |
+| ------------------------------------------------------------------------- | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Only the Persistence Module accesses S3/Floci                             | **Confirmed** | `architecture-boundaries.test.js` scans every `src/` file for `@aws-sdk/client-s3` imports outside `reference-data/persistence/`; passes                                                                                                                  |
+| Only the Validation Module accesses the Authentication Service            | **Confirmed** | Same file, second assertion, scans for `http-authentication-client.js` imports outside `reference-data/validation/`; passes                                                                                                                               |
+| Query operations read only through the In-Memory Data Store               | **Confirmed** | `collection-query-service.test.js`, `map-ports-query-service.test.js`, `query-service.test.js` each explicitly assert no calls to persistence/authentication/cache-refresh                                                                                |
+| Controllers remain transport-focused                                      | **Confirmed** | Spot-checked `collection-route-controller.js`, `geojson-collection-route-controller.js`, `manifest-controller.js`, `upload-validation-controller.js` — all delegate business logic to Query/Command modules; controllers only shape HTTP request/response |
+| Validation and normalisation remain separate responsibilities             | **Confirmed** | Distinct top-level directories (`src/reference-data/validation/`, `src/reference-data/normalisation/`) with no cross-imports of internals                                                                                                                 |
+| Mobile responses are projections of canonical data                        | **Confirmed** | Dedicated `*-mobile-projector.js` files per dataset; mobile view is computed per-request, never persisted                                                                                                                                                 |
+| `map-ports` remains derived, not independently persisted                  | **Confirmed** | `in-memory-data-store.js` rejects `setCollection` for any `isDerivedDataset` (map-ports); no manifest entry or upload path exists for it                                                                                                                  |
+| Validation-only uploads do not persist or activate data                   | **Confirmed** | `upload-validation-controller.js`'s validation-only path calls only `validateCollectionUpload`, never `persistence.write*`/`store.setCollection`                                                                                                          |
+| Complete replacement preserves approved concurrency/publication behaviour | **Confirmed** | `replace-collection.js`: immutable versioned writes, conditional manifest activation, atomic in-memory publish, idempotency and `If-Match` handling all present with dedicated tests                                                                      |
+| Read requests do not trigger cache refresh                                | **Confirmed** | Same query-module tests above assert zero cache-refresh calls                                                                                                                                                                                             |
+| No database or Redis introduced                                           | **Confirmed** | `package.json` dependencies contain no `mongodb`/`mongo-locks`/`redis`/`ioredis`; `compose.yml` has only `floci` and the app service                                                                                                                      |
 
 **Dependency-direction concerns**: none found. **Unverified architecture assumptions**: the Authentication Service and production AWS S3 boundaries are only exercised against a local stub/Floci, not the real external systems — this is a known, previously accepted scope limit, not a new finding.
 
 ## 4. Implementation assessment
 
-| Area | Status |
-| --- | --- |
-| Persistence | Implemented and verified (unit + Floci integration tests) |
-| Validation (structural + business) | Implemented and verified |
-| Normalisation | Implemented and verified |
-| Cache lifecycle (hydration + refresh) | Implemented and verified (unit + Floci integration) |
-| Authentication | Implemented and verified against a **provisional** contract (deferred by design pending the real Authentication Service contract) |
-| Manifest | Implemented and verified |
-| Query engine | Implemented and verified |
-| Read APIs (vessels/gears/ports/species/map-*) | Implemented and verified |
-| Upload validation | Implemented and verified |
-| Collection replacement | Implemented and verified |
-| Bootstrap | Implemented and verified (Floci integration) |
-| Operational endpoints (health/readiness/dependencies) | Implemented and verified |
-| Security and privacy | Implemented and verified (Step 30 review found zero confirmed vulnerabilities; `npm audit` clean) |
-| Observability (logging/metrics/audit) | Implemented and verified |
-| Testing | Implemented — Docker-free unit suite is exhaustive by design; Floci and e2e suites are **intentionally reduced/minimal** smoke suites (documented, not a gap) |
-| Documentation | Implemented (Step 31) — README, `docs/api-reference.md`, `docs/troubleshooting.md` all present and cross-checked against implementation |
+| Area                                                  | Status                                                                                                                                                        |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Persistence                                           | Implemented and verified (unit + Floci integration tests)                                                                                                     |
+| Validation (structural + business)                    | Implemented and verified                                                                                                                                      |
+| Normalisation                                         | Implemented and verified                                                                                                                                      |
+| Cache lifecycle (hydration + refresh)                 | Implemented and verified (unit + Floci integration)                                                                                                           |
+| Authentication                                        | Implemented and verified against a **provisional** contract (deferred by design pending the real Authentication Service contract)                             |
+| Manifest                                              | Implemented and verified                                                                                                                                      |
+| Query engine                                          | Implemented and verified                                                                                                                                      |
+| Read APIs (vessels/gears/ports/species/map-*)         | Implemented and verified                                                                                                                                      |
+| Upload validation                                     | Implemented and verified                                                                                                                                      |
+| Collection replacement                                | Implemented and verified                                                                                                                                      |
+| Bootstrap                                             | Implemented and verified (Floci integration)                                                                                                                  |
+| Operational endpoints (health/readiness/dependencies) | Implemented and verified                                                                                                                                      |
+| Security and privacy                                  | Implemented and verified (Step 30 review found zero confirmed vulnerabilities; `npm audit` clean)                                                             |
+| Observability (logging/metrics/audit)                 | Implemented and verified                                                                                                                                      |
+| Testing                                               | Implemented — Docker-free unit suite is exhaustive by design; Floci and e2e suites are **intentionally reduced/minimal** smoke suites (documented, not a gap) |
+| Documentation                                         | Implemented (Step 31) — README, `docs/api-reference.md`, `docs/troubleshooting.md` all present and cross-checked against implementation                       |
 
 ## 5. Potential gaps
 
@@ -139,14 +139,17 @@ No **confirmed** architectural, security, or correctness defects were found in t
 **Critical**: None.
 
 **High**:
+
 - Provision `SONAR_TOKEN` and enable the CI SonarCloud scan step in all three workflows (addresses G1) before treating the Defra quality gate as satisfied.
 
 **Medium**:
+
 - Confirm the real Authentication Service contract and re-validate the client against it (G2).
 - Define explicit upload item/feature/coordinate limits if the owner judges the byte-size cap insufficient (G5).
 - Confirm platform-level rate limiting is actually configured for the deployed API Gateway (G6).
 
 **Low**:
+
 - Author an OpenAPI 3.1 specification from `docs/api-reference.md` (G3).
 - Consider expanding Floci integration coverage to every uploadable dataset, not only `ports` (G4).
 
@@ -167,18 +170,18 @@ None of these are required by the approved implementation plan; all are optional
 
 ## 9. Verification status
 
-| Check | Result |
-| --- | --- |
-| Unit tests | Pass — 1,509 passed, 29 skipped (150 files) |
-| Integration tests (Floci) | Pass — 20 tests, 4 files |
-| Acceptance/contract tests | Not a separate suite; covered by the e2e smoke suite (reduced scope, see G4) |
-| End-to-end tests | Pass — 9 tests, 1 file |
-| Coverage | 98.18% statements / 97.03% branches / 97.57% functions / 98.29% lines |
-| Linting | Pass (ESLint, neostandard) |
-| Formatting | Pass (Prettier) |
-| Build | No dedicated build step exists (plain Node service); `npm ci` + server boot is the equivalent, confirmed working via prior-step evidence |
-| Dependency audit | 0 vulnerabilities (`npm audit --audit-level=critical`) |
-| SonarCloud | **No live quality-gate result exists.** Local standalone analysis (multiple prior steps) found zero issues on inspected files, but this is not equivalent to a full org-ruleset scan. **Local Sonar review evidence inspected; final SonarCloud quality-gate verification remains pending CI.** |
+| Check                     | Result                                                                                                                                                                                                                                                                                          |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Unit tests                | Pass — 1,509 passed, 29 skipped (150 files)                                                                                                                                                                                                                                                     |
+| Integration tests (Floci) | Pass — 20 tests, 4 files                                                                                                                                                                                                                                                                        |
+| Acceptance/contract tests | Not a separate suite; covered by the e2e smoke suite (reduced scope, see G4)                                                                                                                                                                                                                    |
+| End-to-end tests          | Pass — 9 tests, 1 file                                                                                                                                                                                                                                                                          |
+| Coverage                  | 98.18% statements / 97.03% branches / 97.57% functions / 98.29% lines                                                                                                                                                                                                                           |
+| Linting                   | Pass (ESLint, neostandard)                                                                                                                                                                                                                                                                      |
+| Formatting                | Pass (Prettier)                                                                                                                                                                                                                                                                                 |
+| Build                     | No dedicated build step exists (plain Node service); `npm ci` + server boot is the equivalent, confirmed working via prior-step evidence                                                                                                                                                        |
+| Dependency audit          | 0 vulnerabilities (`npm audit --audit-level=critical`)                                                                                                                                                                                                                                          |
+| SonarCloud                | **No live quality-gate result exists.** Local standalone analysis (multiple prior steps) found zero issues on inspected files, but this is not equivalent to a full org-ruleset scan. **Local Sonar review evidence inspected; final SonarCloud quality-gate verification remains pending CI.** |
 
 ## 10. Release-readiness conclusion
 
@@ -189,12 +192,14 @@ None of these are required by the approved implementation plan; all are optional
 **Release blockers**: None identified as absolute blockers, provided the owner formally accepts G1–G6 below as residual risk.
 
 **Required owner decisions**:
+
 1. Accept or reject the pending SonarCloud CI enablement timeline (G1).
 2. Confirm whether the real Authentication Service contract must be validated before go-live (G2).
 3. Decide whether explicit upload size/count limits are required now or can remain deferred (G5).
 4. Confirm platform-level (API Gateway) rate limiting is actually configured for the target environment (G6).
 
 **Recommended next actions**:
+
 1. Provision `SONAR_TOKEN` and enable CI SonarCloud scanning.
 2. Schedule confirmation of the real Authentication Service contract.
 3. Proceed with first-environment deployment planning once the above owner decisions are recorded.

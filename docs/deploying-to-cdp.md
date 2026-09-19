@@ -85,18 +85,18 @@ Set these per environment in the CDP Portal's environment-variable/secrets scree
 service (never hard-coded, never committed). Everything not listed uses the documented default
 (see [README § Configuration](../README.md#configuration) and [src/config.js](../src/config.js)).
 
-| Variable                             | Value in deployed environments                                                             |
-| ------------------------------------- | -------------------------------------------------------------------------------------------- |
-| `REFERENCE_DATA_BUCKET`               | The bucket name provisioned in [§3](#3-requesting-the-s3-bucket-this-service-needs) for that environment |
-| `AWS_REGION`                          | Region the bucket was provisioned in (`eu-west-2` unless the portal says otherwise)         |
-| `AWS_ENDPOINT_URL`                    | **Leave unset** — must not be set outside local development                                 |
-| `S3_FORCE_PATH_STYLE`                 | **Leave unset/`false`** — only needed for Floci locally                                     |
-| `AUTHENTICATION_SERVICE_URL`          | The deployed Authentication Service's URL for that environment (see [§8](#8-networking-calling-and-being-called-by-other-cdp-services)) |
-| `AUTHENTICATION_SERVICE_TIMEOUT_MS`   | Tune only if the real service's latency profile requires it (default `2000`)                |
-| `REFERENCE_DATA_REFRESH_INTERVAL_MS`  | Default `60000` unless the team decides otherwise                                            |
-| `REFERENCE_DATA_MAX_UPLOAD_BYTES`     | Default `26214400` (25 MiB) unless a specific dataset is known to exceed it                 |
-| `LOG_LEVEL`                           | `info` in `prod`; `debug` temporarily in `dev`/`test` if needed for troubleshooting          |
-| `METRICS_ENABLED` / `AUDIT_ENABLED`   | Leave at default (`true`) in every deployed environment                                     |
+| Variable                             | Value in deployed environments                                                                                                          |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `REFERENCE_DATA_BUCKET`              | The bucket name provisioned in [§3](#3-requesting-the-s3-bucket-this-service-needs) for that environment                                |
+| `AWS_REGION`                         | Region the bucket was provisioned in (`eu-west-2` unless the portal says otherwise)                                                     |
+| `AWS_ENDPOINT_URL`                   | **Leave unset** — must not be set outside local development                                                                             |
+| `S3_FORCE_PATH_STYLE`                | **Leave unset/`false`** — only needed for Floci locally                                                                                 |
+| `AUTHENTICATION_SERVICE_URL`         | The deployed Authentication Service's URL for that environment (see [§8](#8-networking-calling-and-being-called-by-other-cdp-services)) |
+| `AUTHENTICATION_SERVICE_TIMEOUT_MS`  | Tune only if the real service's latency profile requires it (default `2000`)                                                            |
+| `REFERENCE_DATA_REFRESH_INTERVAL_MS` | Default `60000` unless the team decides otherwise                                                                                       |
+| `REFERENCE_DATA_MAX_UPLOAD_BYTES`    | Default `26214400` (25 MiB) unless a specific dataset is known to exceed it                                                             |
+| `LOG_LEVEL`                          | `info` in `prod`; `debug` temporarily in `dev`/`test` if needed for troubleshooting                                                     |
+| `METRICS_ENABLED` / `AUDIT_ENABLED`  | Leave at default (`true`) in every deployed environment                                                                                 |
 
 `PORT`, `SERVICE_VERSION`, and `ENVIRONMENT` are set by the CDP platform itself at deploy time —
 don't set them manually. `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY` must never be set in a
