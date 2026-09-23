@@ -63,7 +63,7 @@
 | Authentication                                        | Implemented and verified against a **provisional** contract (deferred by design pending the real Authentication Service contract)                             |
 | Manifest                                              | Implemented and verified                                                                                                                                      |
 | Query engine                                          | Implemented and verified                                                                                                                                      |
-| Read APIs (vessels/gears/ports/species/map-*)         | Implemented and verified                                                                                                                                      |
+| Read APIs (vessels/gears/ports/species/map-\*)        | Implemented and verified                                                                                                                                      |
 | Upload validation                                     | Implemented and verified                                                                                                                                      |
 | Collection replacement                                | Implemented and verified                                                                                                                                      |
 | Bootstrap                                             | Implemented and verified (Floci integration)                                                                                                                  |

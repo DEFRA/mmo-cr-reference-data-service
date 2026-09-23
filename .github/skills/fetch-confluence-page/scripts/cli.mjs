@@ -29,12 +29,17 @@ Options:
 Only the single page identified by <url|id> is fetched. Child, related and
 linked pages are never fetched or traversed.`
 
-async function runPage (ref, config, withAttachments) {
+async function runPage(ref, config, withAttachments) {
   const client = createConfluenceClient(config)
   const pageId = parsePageRef(ref, { expectedHost: config.egressHosts[0] })
   const rawPage = await client.getPage(pageId)
   if (!rawPage) {
-    return { schemaVersion: SCHEMA_VERSION, kind: 'confluence-page', pageId, error: 'Page was not found or is not accessible.' }
+    return {
+      schemaVersion: SCHEMA_VERSION,
+      kind: 'confluence-page',
+      pageId,
+      error: 'Page was not found or is not accessible.'
+    }
   }
   let attachments = []
   let truncated = false
@@ -52,7 +57,7 @@ async function runPage (ref, config, withAttachments) {
 
 // Splits positional args from flags. Unknown flags are rejected so a typo can
 // never be misread as a page reference.
-function parseArgs (argv) {
+function parseArgs(argv) {
   const positionals = []
   const unknownFlags = []
   let withAttachments = true
@@ -64,7 +69,10 @@ function parseArgs (argv) {
     else if (arg.startsWith('--out=')) outPath = arg.slice(6)
     else if (arg === '--out' || arg === '-o') {
       const next = argv[i + 1]
-      if (next && !next.startsWith('-')) { outPath = next; i += 1 } else outPath = true
+      if (next && !next.startsWith('-')) {
+        outPath = next
+        i += 1
+      } else outPath = true
     } else if (arg.startsWith('-')) unknownFlags.push(arg)
     else positionals.push(arg)
   }
@@ -74,9 +82,12 @@ function parseArgs (argv) {
 // Emits the result: either the full JSON to stdout, or (with --out) the full
 // JSON to a file plus a compact summary to stdout so large pages never overflow
 // the terminal.
-function emit (result, outPath) {
+function emit(result, outPath) {
   const json = JSON.stringify(result, null, 2)
-  if (outPath === undefined) { process.stdout.write(json + '\n'); return }
+  if (outPath === undefined) {
+    process.stdout.write(json + '\n')
+    return
+  }
   const id = result.pageId ?? 'page'
   let file
   if (outPath === true) {
@@ -102,10 +113,17 @@ function emit (result, outPath) {
   process.stdout.write(JSON.stringify(summary, null, 2) + '\n')
 }
 
-async function main () {
-  const { positionals, withAttachments, unknownFlags, outPath } = parseArgs(process.argv.slice(2))
+async function main() {
+  const { positionals, withAttachments, unknownFlags, outPath } = parseArgs(
+    process.argv.slice(2)
+  )
   if (unknownFlags.length > 0) {
-    process.stderr.write(JSON.stringify({ error: `Unknown option(s): ${unknownFlags.join(', ')}`, code: 'ERR_INPUT' }) + '\n')
+    process.stderr.write(
+      JSON.stringify({
+        error: `Unknown option(s): ${unknownFlags.join(', ')}`,
+        code: 'ERR_INPUT'
+      }) + '\n'
+    )
     process.exit(1)
   }
   if (positionals.length === 0 || positionals[0] === '--help') {

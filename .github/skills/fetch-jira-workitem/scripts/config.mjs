@@ -81,10 +81,11 @@ function parseSite(raw) {
       code: 'ERR_CONFIG_INVALID'
     })
   }
-  if (url.protocol !== 'https:')
-    {throw new SafeError('JIRA_BASE_URL must use https.', {
+  if (url.protocol !== 'https:') {
+    throw new SafeError('JIRA_BASE_URL must use https.', {
       code: 'ERR_CONFIG_INVALID'
-    })}
+    })
+  }
   // Preserve any sub-path (some Jira sites are hosted under a path) while
   // dropping trailing slashes so request URLs join cleanly.
   const path = url.pathname.replace(/\/+$/, '')

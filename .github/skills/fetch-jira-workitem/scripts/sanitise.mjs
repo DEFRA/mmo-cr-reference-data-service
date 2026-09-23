@@ -69,8 +69,9 @@ function reduceAdf(doc) {
     doc.type !== 'doc' ||
     !Array.isArray(doc.content)
   ) {
-    if (doc != null)
-      {state.warnings.push('description was not valid ADF; omitted')}
+    if (doc != null) {
+      state.warnings.push('description was not valid ADF; omitted')
+    }
     return { text: '', urls: [], warnings: state.warnings }
   }
   return {
@@ -109,8 +110,9 @@ function renderList(items, state, marker) {
 }
 
 function renderNode(node, state) {
-  if (!node || typeof node !== 'object' || typeof node.type !== 'string')
-    {return ''}
+  if (!node || typeof node !== 'object' || typeof node.type !== 'string') {
+    return ''
+  }
   switch (node.type) {
     case 'text':
       collectMarkUrls(node, state)
@@ -251,10 +253,12 @@ const ACCOUNT_ID_RE = /accountId=/i
 export function scanForPii(value, path = '$', out = [], seen = new WeakSet()) {
   if (value == null) return out
   if (typeof value === 'string') {
-    if (EMAIL_RE.test(value))
-      {out.push({ path, reason: 'email address in value' })}
-    if (ACCOUNT_ID_RE.test(value))
-      {out.push({ path, reason: 'accountId in value' })}
+    if (EMAIL_RE.test(value)) {
+      out.push({ path, reason: 'email address in value' })
+    }
+    if (ACCOUNT_ID_RE.test(value)) {
+      out.push({ path, reason: 'accountId in value' })
+    }
     return out
   }
   if (typeof value !== 'object' || seen.has(value)) return out
@@ -264,8 +268,9 @@ export function scanForPii(value, path = '$', out = [], seen = new WeakSet()) {
     return out
   }
   for (const [key, val] of Object.entries(value)) {
-    if (FORBIDDEN_KEYS.has(key.toLowerCase()))
-      {out.push({ path: `${path}.${key}`, reason: 'forbidden identity key' })}
+    if (FORBIDDEN_KEYS.has(key.toLowerCase())) {
+      out.push({ path: `${path}.${key}`, reason: 'forbidden identity key' })
+    }
     scanForPii(val, `${path}.${key}`, out, seen)
   }
   return out
@@ -403,8 +408,9 @@ function sanitiseLabels(labels) {
 
 function assertItemShape(record) {
   for (const key of Object.keys(record)) {
-    if (!ALLOWED_ITEM_KEYS.has(key))
-      {throw new Error(`sanitiser produced an unexpected key "${key}"`)}
+    if (!ALLOWED_ITEM_KEYS.has(key)) {
+      throw new Error(`sanitiser produced an unexpected key "${key}"`)
+    }
   }
   return record
 }
