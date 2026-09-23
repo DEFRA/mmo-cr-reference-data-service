@@ -9,6 +9,7 @@ from the committed local seed data under
 [resources/reference-data/seed](../resources/reference-data/seed).
 
 - [1. Start the service](#1-start-the-service)
+- [1a. Configuring .env for manual testing](#1a-configuring-env-for-manual-testing)
 - [2. Start a local authentication stub (required for authenticated routes)](#2-start-a-local-authentication-stub-required-for-authenticated-routes)
 - [3. Health and readiness (no auth)](#3-health-and-readiness-no-auth)
 - [4. Manifest](#4-manifest)
@@ -45,6 +46,27 @@ The app listens on `http://localhost:3001`. Confirm the manifest was bootstrappe
 ```bash
 npm run floci:manifest
 ```
+
+## 1a. Configuring .env for manual testing
+
+Copy [.env.sample](../.env.sample) to `.env` at the repository root, then change only the values
+below — everything else in `.env.sample` already matches Floci/local defaults and doesn't need to
+change:
+
+| Variable                     | `.env.sample` value             | Change to (manual testing) | Why                                                                                                                                                       |
+| ---------------------------- | ------------------------------- | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AWS_ACCESS_KEY_ID`          | `required`                      | `test`                     | Floci accepts any static credential; `test` matches [compose/aws.env](../compose/aws.env)                                                                 |
+| `AWS_SECRET_ACCESS_KEY`      | `required`                      | `test`                     | Same as above                                                                                                                                             |
+| `AUTHENTICATION_SERVICE_URL` | _(empty)_                       | `http://localhost:4599`    | Must point at the local auth stub from [§2](#2-start-a-local-authentication-stub-required-for-authenticated-routes), or every authenticated request fails |
+| `AWS_ENDPOINT_URL`           | `http://localhost:4566`         | _(no change)_              | Matches Floci's exposed port in [compose.yml](../compose.yml)                                                                                             |
+| `S3_FORCE_PATH_STYLE`        | `true`                          | _(no change)_              | Required by Floci                                                                                                                                         |
+| `AWS_REGION`                 | `eu-west-2`                     | _(no change)_              | Matches `compose/aws.env`                                                                                                                                 |
+| `REFERENCE_DATA_BUCKET`      | `mmo-cr-reference-data-service` | _(no change)_              | Matches the default the `floci:*`/bootstrap scripts use                                                                                                   |
+| `PORT` / `HOST`              | `3001` / `0.0.0.0`              | _(no change)_              | Matches `npm run dev` and the `$BASE_URL` used throughout this document                                                                                   |
+| Everything else              | defaults                        | _(no change)_              | `LOG_*`, `REFERENCE_DATA_REFRESH_*`, `HEALTH_*`, `METRICS_ENABLED`, `AUDIT_ENABLED` are all fine as-is                                                    |
+
+`node --env-file-if-exists=.env` (used by `npm run dev`/`server:watch`) picks up `.env`
+automatically — no extra flag or export needed once it's in place.
 
 ## 2. Start a local authentication stub (required for authenticated routes)
 

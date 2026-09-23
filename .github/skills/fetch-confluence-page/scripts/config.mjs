@@ -16,7 +16,7 @@ const DEFAULTS = {
 }
 
 // Minimal KEY=VALUE .env reader. Values already present in the environment win.
-function loadEnvFile (env) {
+function loadEnvFile(env) {
   let text
   try {
     text = readFileSync(ENV_FILE, 'utf8')
@@ -29,7 +29,10 @@ function loadEnvFile (env) {
     if (!m) continue
     if (merged[m[1]] != null && merged[m[1]] !== '') continue
     let val = m[2].trim()
-    if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+    if (
+      (val.startsWith('"') && val.endsWith('"')) ||
+      (val.startsWith("'") && val.endsWith("'"))
+    ) {
       val = val.slice(1, -1)
     }
     merged[m[1]] = val
@@ -37,7 +40,7 @@ function loadEnvFile (env) {
   return merged
 }
 
-function requireEnv (env, name) {
+function requireEnv(env, name) {
   const value = env[name]
   if (typeof value !== 'string' || value.trim() === '') {
     throw new SafeError(
@@ -48,21 +51,26 @@ function requireEnv (env, name) {
   return value.trim()
 }
 
-function parsePositiveInt (raw, fallback) {
+function parsePositiveInt(raw, fallback) {
   const n = Number.parseInt(raw, 10)
   return Number.isInteger(n) && n > 0 ? n : fallback
 }
 
 // Parses the site URL and derives the Confluence Cloud REST base. Accepts the
 // site root or a URL already ending in /wiki; always normalises to `.../wiki`.
-function parseSite (raw) {
+function parseSite(raw) {
   let url
   try {
     url = new URL(raw)
   } catch {
-    throw new SafeError('CONFLUENCE_BASE_URL is not a valid URL.', { code: 'ERR_CONFIG_INVALID' })
+    throw new SafeError('CONFLUENCE_BASE_URL is not a valid URL.', {
+      code: 'ERR_CONFIG_INVALID'
+    })
   }
-  if (url.protocol !== 'https:') throw new SafeError('CONFLUENCE_BASE_URL must use https.', { code: 'ERR_CONFIG_INVALID' })
+  if (url.protocol !== 'https:')
+    throw new SafeError('CONFLUENCE_BASE_URL must use https.', {
+      code: 'ERR_CONFIG_INVALID'
+    })
   const path = url.pathname.replace(/\/+$/, '')
   const wikiBase = /\/wiki$/.test(path)
     ? `${url.protocol}//${url.host}${path}`
@@ -70,7 +78,7 @@ function parseSite (raw) {
   return { wikiBase, host: url.host }
 }
 
-export function loadConfig (rawEnv = process.env) {
+export function loadConfig(rawEnv = process.env) {
   const env = loadEnvFile(rawEnv)
   const site = parseSite(requireEnv(env, 'CONFLUENCE_BASE_URL'))
 
@@ -81,6 +89,9 @@ export function loadConfig (rawEnv = process.env) {
     egressHosts: Object.freeze([site.host]),
     email: requireEnv(env, 'CONFLUENCE_EMAIL'),
     apiToken: requireEnv(env, 'CONFLUENCE_API_TOKEN'),
-    maxAttachments: parsePositiveInt(env.CONFLUENCE_MAX_ATTACHMENTS, DEFAULTS.maxAttachments)
+    maxAttachments: parsePositiveInt(
+      env.CONFLUENCE_MAX_ATTACHMENTS,
+      DEFAULTS.maxAttachments
+    )
   })
 }

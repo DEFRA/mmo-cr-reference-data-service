@@ -17,14 +17,15 @@ const ACCOUNT_ID_RE = /accountId=/i
 // 07584 335414) and UK trunk with no separators (07786126445). Deliberately
 // requires a leading '+' or '0' so it never matches unrelated digit runs
 // (build/version/ticket numbers) elsewhere in the body.
-const PHONE_RE_G = /\+[ ]?\d{1,4}[ ]?\d{6,12}\b|\b0\d{9,10}\b|\b0\d{1,4}(?:[ ]\d{2,6}){1,3}\b/g
+const PHONE_RE_G =
+  /\+[ ]?\d{1,4}[ ]?\d{6,12}\b|\b0\d{9,10}\b|\b0\d{1,4}(?:[ ]\d{2,6}){1,3}\b/g
 // Table column headers whose cell content should be treated as a person's name.
 const NAME_COLUMN_RE = /\bnames?\b/i
 
 // --- URL policy -----------------------------------------------------------
 
 // Drops query and fragment (removes tracking params and embedded identifiers).
-function sanitiseUrl (raw) {
+function sanitiseUrl(raw) {
   if (typeof raw !== 'string' || raw.trim() === '') return null
   let url
   try {
@@ -42,21 +43,31 @@ function sanitiseUrl (raw) {
 // "@[redacted]"; link/card URLs are kept inline in the text (query/fragment
 // stripped); unknown nodes contribute nested text only. Table cells under a
 // "Name"-headed column have their plain text redacted (see renderTable).
-function reduceAdf (doc) {
+function reduceAdf(doc) {
   const state = { warnings: [], redactPlainTextAsName: false }
-  if (!doc || typeof doc !== 'object' || doc.type !== 'doc' || !Array.isArray(doc.content)) {
+  if (
+    !doc ||
+    typeof doc !== 'object' ||
+    doc.type !== 'doc' ||
+    !Array.isArray(doc.content)
+  ) {
     if (doc != null) state.warnings.push('body was not valid ADF; omitted')
     return { text: '', warnings: state.warnings }
   }
-  return { text: renderNodes(doc.content, state).trim(), warnings: state.warnings }
+  return {
+    text: renderNodes(doc.content, state).trim(),
+    warnings: state.warnings
+  }
 }
 
-function renderNodes (nodes, state) {
-  return Array.isArray(nodes) ? nodes.map((n) => renderNode(n, state)).join('') : ''
+function renderNodes(nodes, state) {
+  return Array.isArray(nodes)
+    ? nodes.map((n) => renderNode(n, state)).join('')
+    : ''
 }
 
 // Returns the sanitised href of a text node's link mark, if any.
-function linkHref (node) {
+function linkHref(node) {
   if (!Array.isArray(node.marks)) return null
   for (const mark of node.marks) {
     if (mark?.type === 'link' && typeof mark.attrs?.href === 'string') {
@@ -66,17 +77,19 @@ function linkHref (node) {
   return null
 }
 
-function clampLevel (level) {
+function clampLevel(level) {
   const n = Number.parseInt(level, 10)
   return Number.isInteger(n) ? Math.min(6, Math.max(1, n)) : 1
 }
 
-function renderList (items, state, marker) {
+function renderList(items, state, marker) {
   if (!Array.isArray(items)) return ''
-  return items.map((item, i) => `${marker(i)}${renderNode(item, state)}`).join('\n')
+  return items
+    .map((item, i) => `${marker(i)}${renderNode(item, state)}`)
+    .join('\n')
 }
 
-function cellHeaderLabel (cell, state) {
+function cellHeaderLabel(cell, state) {
   return renderNodes(cell?.content, state).trim()
 }
 
@@ -87,7 +100,7 @@ function cellHeaderLabel (cell, state) {
 // 0 is always used for column detection regardless of cell type. Every cell in
 // a flagged column is then rendered with `redactPlainTextAsName` set, so plain
 // text typed directly into that cell (not an ADF mention) is redacted too.
-function renderTable (node, state) {
+function renderTable(node, state) {
   const rows = Array.isArray(node.content) ? node.content : []
   const nameColumns = new Set()
   const out = []
@@ -95,25 +108,31 @@ function renderTable (node, state) {
     const cells = Array.isArray(row?.content) ? row.content : []
     if (rowIndex === 0) {
       cells.forEach((cell, i) => {
-        if (NAME_COLUMN_RE.test(cellHeaderLabel(cell, state))) nameColumns.add(i)
+        if (NAME_COLUMN_RE.test(cellHeaderLabel(cell, state)))
+          nameColumns.add(i)
       })
       out.push(renderNodes(row.content, state))
       return
     }
-    out.push(cells.map((cell, i) => {
-      if (!nameColumns.has(i)) return renderNode(cell, state)
-      const restore = state.redactPlainTextAsName
-      state.redactPlainTextAsName = true
-      const rendered = renderNodes(cell?.content, state)
-      state.redactPlainTextAsName = restore
-      return rendered
-    }).join(''))
+    out.push(
+      cells
+        .map((cell, i) => {
+          if (!nameColumns.has(i)) return renderNode(cell, state)
+          const restore = state.redactPlainTextAsName
+          state.redactPlainTextAsName = true
+          const rendered = renderNodes(cell?.content, state)
+          state.redactPlainTextAsName = restore
+          return rendered
+        })
+        .join('')
+    )
   })
   return out.join('')
 }
 
-function renderNode (node, state) {
-  if (!node || typeof node !== 'object' || typeof node.type !== 'string') return ''
+function renderNode(node, state) {
+  if (!node || typeof node !== 'object' || typeof node.type !== 'string')
+    return ''
   switch (node.type) {
     case 'text': {
       const text = typeof node.text === 'string' ? node.text : ''
@@ -132,7 +151,13 @@ function renderNode (node, state) {
     case 'heading':
       return `\n${'#'.repeat(clampLevel(node.attrs?.level))} ${renderNodes(node.content, state).trim()}\n\n`
     case 'blockquote':
-      return renderNodes(node.content, state).trim().split('\n').map((l) => `> ${l}`).join('\n') + '\n\n'
+      return (
+        renderNodes(node.content, state)
+          .trim()
+          .split('\n')
+          .map((l) => `> ${l}`)
+          .join('\n') + '\n\n'
+      )
     case 'bulletList':
       return renderList(node.content, state, () => '- ') + '\n'
     case 'orderedList':
@@ -142,7 +167,13 @@ function renderNode (node, state) {
     case 'taskItem':
       return renderNodes(node.content, state).trim()
     case 'codeBlock':
-      return '```' + (typeof node.attrs?.language === 'string' ? node.attrs.language : '') + '\n' + renderNodes(node.content, state) + '\n```\n\n'
+      return (
+        '```' +
+        (typeof node.attrs?.language === 'string' ? node.attrs.language : '') +
+        '\n' +
+        renderNodes(node.content, state) +
+        '\n```\n\n'
+      )
     case 'panel':
     case 'expand':
     case 'nestedExpand':
@@ -172,14 +203,16 @@ function renderNode (node, state) {
     case 'mediaInline':
       return ''
     default:
-      state.warnings.push(`unknown ADF node "${node.type}" reduced to text only`)
+      state.warnings.push(
+        `unknown ADF node "${node.type}" reduced to text only`
+      )
       return renderNodes(node.content, state)
   }
 }
 
 // Redacts any email address surviving in free text (a manually typed address is
 // not an ADF mention node, so the reducer would otherwise pass it through).
-function redactEmails (text, warnings) {
+function redactEmails(text, warnings) {
   if (typeof text !== 'string' || text === '') return text
   if (!EMAIL_RE_G.test(text)) return text
   warnings.push('redacted one or more email addresses in body')
@@ -188,7 +221,7 @@ function redactEmails (text, warnings) {
 
 // Redacts telephone numbers typed directly into the body (e.g. in a
 // "Telephone Number" table column or inline in prose).
-function redactPhoneNumbers (text, warnings) {
+function redactPhoneNumbers(text, warnings) {
   if (typeof text !== 'string' || text === '') return text
   if (!PHONE_RE_G.test(text)) return text
   warnings.push('redacted one or more telephone numbers in body')
@@ -198,17 +231,38 @@ function redactPhoneNumbers (text, warnings) {
 // --- PII guards -----------------------------------------------------------
 
 const FORBIDDEN_KEYS = new Set([
-  'accountid', 'authorid', 'ownerid', 'lastownerid', 'emailaddress', 'email',
-  'displayname', 'avatarurls', 'avatarurl', 'timezone', 'accounttype', 'author',
-  'owner', 'createdby', 'updatedby', 'creator', 'watches', 'watchers', 'likes',
-  'self', 'mention', 'username', 'profilepicture'
+  'accountid',
+  'authorid',
+  'ownerid',
+  'lastownerid',
+  'emailaddress',
+  'email',
+  'displayname',
+  'avatarurls',
+  'avatarurl',
+  'timezone',
+  'accounttype',
+  'author',
+  'owner',
+  'createdby',
+  'updatedby',
+  'creator',
+  'watches',
+  'watchers',
+  'likes',
+  'self',
+  'mention',
+  'username',
+  'profilepicture'
 ])
 
-export function scanForPii (value, path = '$', out = [], seen = new WeakSet()) {
+export function scanForPii(value, path = '$', out = [], seen = new WeakSet()) {
   if (value == null) return out
   if (typeof value === 'string') {
-    if (EMAIL_RE.test(value)) out.push({ path, reason: 'email address in value' })
-    if (ACCOUNT_ID_RE.test(value)) out.push({ path, reason: 'accountId in value' })
+    if (EMAIL_RE.test(value))
+      out.push({ path, reason: 'email address in value' })
+    if (ACCOUNT_ID_RE.test(value))
+      out.push({ path, reason: 'accountId in value' })
     return out
   }
   if (typeof value !== 'object' || seen.has(value)) return out
@@ -218,16 +272,20 @@ export function scanForPii (value, path = '$', out = [], seen = new WeakSet()) {
     return out
   }
   for (const [key, val] of Object.entries(value)) {
-    if (FORBIDDEN_KEYS.has(key.toLowerCase())) out.push({ path: `${path}.${key}`, reason: 'forbidden identity key' })
+    if (FORBIDDEN_KEYS.has(key.toLowerCase()))
+      out.push({ path: `${path}.${key}`, reason: 'forbidden identity key' })
     scanForPii(val, `${path}.${key}`, out, seen)
   }
   return out
 }
 
-function assertNoPii (value) {
+function assertNoPii(value) {
   const violations = scanForPii(value)
   if (violations.length > 0) {
-    throw new SafeError(`PII guard blocked output: ${violations.map((v) => `${v.path} (${v.reason})`).join(', ')}`, { code: 'ERR_PII_LEAK' })
+    throw new SafeError(
+      `PII guard blocked output: ${violations.map((v) => `${v.path} (${v.reason})`).join(', ')}`,
+      { code: 'ERR_PII_LEAK' }
+    )
   }
   return value
 }
@@ -235,53 +293,75 @@ function assertNoPii (value) {
 // --- Allowlist ------------------------------------------------------------
 
 const ALLOWED_ITEM_KEYS = new Set([
-  'schemaVersion', 'pageId', 'title', 'status', 'spaceId', 'parentId', 'body',
-  'labels', 'attachments', 'sourceConfluenceUrl', 'provenance',
-  'truncated', 'sanitisationWarnings', 'error', 'notes'
+  'schemaVersion',
+  'pageId',
+  'title',
+  'status',
+  'spaceId',
+  'parentId',
+  'body',
+  'labels',
+  'attachments',
+  'sourceConfluenceUrl',
+  'provenance',
+  'truncated',
+  'sanitisationWarnings',
+  'error',
+  'notes'
 ])
 
-function safeString (value) {
+function safeString(value) {
   return typeof value === 'string' && value.trim() !== '' ? value.trim() : null
 }
 
-function safeId (value) {
+function safeId(value) {
   const s = String(value ?? '')
   return ID_RE.test(s) ? s : null
 }
 
-function safeFilename (name) {
+function safeFilename(name) {
   if (typeof name !== 'string' || name.trim() === '') return 'attachment'
-  const base = name.replace(/^.*[\\/]/, '').replace(/[^A-Za-z0-9._-]/g, '_').replace(/^\.+/, '').slice(0, 128)
+  const base = name
+    .replace(/^.*[\\/]/, '')
+    .replace(/[^A-Za-z0-9._-]/g, '_')
+    .replace(/^\.+/, '')
+    .slice(0, 128)
   return base || 'attachment'
 }
 
-function extensionOf (filename) {
+function extensionOf(filename) {
   const m = /\.([A-Za-z0-9]+)$/.exec(filename)
   return m ? m[1].toLowerCase() : ''
 }
 
 // Confluence v2 attachment ids look like "att123456"; keep them as opaque, safe
 // tokens. Author/version identity on the attachment is never emitted.
-function sanitiseAttachments (raw, warnings) {
+function sanitiseAttachments(raw, warnings) {
   if (!Array.isArray(raw)) return []
   const out = []
   for (const att of raw) {
     if (!att || typeof att !== 'object') continue
     const id = safeString(String(att.id ?? ''))
-    if (!id || !/^[A-Za-z0-9._-]{1,64}$/.test(id)) { warnings.push('dropped an attachment with an invalid id'); continue }
+    if (!id || !/^[A-Za-z0-9._-]{1,64}$/.test(id)) {
+      warnings.push('dropped an attachment with an invalid id')
+      continue
+    }
     const filename = safeFilename(att.title)
     out.push({
       id,
       safeFilename: filename,
       mediaType: safeString(att.mediaType) ?? 'application/octet-stream',
-      size: Number.isInteger(att.fileSize) && att.fileSize >= 0 ? att.fileSize : null,
+      size:
+        Number.isInteger(att.fileSize) && att.fileSize >= 0
+          ? att.fileSize
+          : null,
       isDesignAsset: DESIGN_EXTENSIONS.has(extensionOf(filename))
     })
   }
   return out
 }
 
-function sanitiseLabels (labels) {
+function sanitiseLabels(labels) {
   const results = labels?.results
   if (!Array.isArray(results)) return []
   return results
@@ -289,16 +369,17 @@ function sanitiseLabels (labels) {
     .filter((n) => typeof n === 'string' && /^[^\s]{1,255}$/.test(n))
 }
 
-function assertItemShape (record) {
+function assertItemShape(record) {
   for (const key of Object.keys(record)) {
-    if (!ALLOWED_ITEM_KEYS.has(key)) throw new Error(`sanitiser produced an unexpected key "${key}"`)
+    if (!ALLOWED_ITEM_KEYS.has(key))
+      throw new Error(`sanitiser produced an unexpected key "${key}"`)
   }
   return record
 }
 
 // Parses the ADF body, which the v2 API returns as a JSON string inside
 // `body.atlas_doc_format.value`.
-function parseAdfBody (rawPage, warnings) {
+function parseAdfBody(rawPage, warnings) {
   const value = rawPage?.body?.atlas_doc_format?.value
   if (value == null || value === '') return null
   if (typeof value !== 'string') return value
@@ -310,7 +391,7 @@ function parseAdfBody (rawPage, warnings) {
   }
 }
 
-function buildSourceUrl (rawPage, pageId, wikiBase) {
+function buildSourceUrl(rawPage, pageId, wikiBase) {
   const webui = rawPage?._links?.webui
   if (typeof webui === 'string' && webui.startsWith('/')) {
     const clean = sanitiseUrl(`${wikiBase}${webui}`)
@@ -319,14 +400,21 @@ function buildSourceUrl (rawPage, pageId, wikiBase) {
   return `${wikiBase}/pages/${pageId}`
 }
 
-export function sanitisePage (rawPage, rawAttachments = [], { wikiBase, retrievedAt = new Date().toISOString(), truncated = false } = {}) {
+export function sanitisePage(
+  rawPage,
+  rawAttachments = [],
+  { wikiBase, retrievedAt = new Date().toISOString(), truncated = false } = {}
+) {
   const warnings = []
   const pageId = safeId(rawPage?.id)
   if (!pageId) throw new Error('sanitisePage: raw page is missing a valid id')
 
   const reduced = reduceAdf(parseAdfBody(rawPage, warnings))
   warnings.push(...reduced.warnings)
-  const withoutEmails = redactEmails(reduced.text === '' ? null : reduced.text, warnings)
+  const withoutEmails = redactEmails(
+    reduced.text === '' ? null : reduced.text,
+    warnings
+  )
   const body = redactPhoneNumbers(withoutEmails, warnings)
 
   const core = {
@@ -348,10 +436,14 @@ export function sanitisePage (rawPage, rawAttachments = [], { wikiBase, retrieve
     notes: null,
     provenance: {
       retrievedAt,
-      confluenceVersion: Number.isInteger(rawPage?.version?.number) ? rawPage.version.number : null,
+      confluenceVersion: Number.isInteger(rawPage?.version?.number)
+        ? rawPage.version.number
+        : null,
       confluenceUpdated: safeString(rawPage?.version?.createdAt),
       sanitiserVersion: SANITISER_VERSION,
-      contentHash: 'sha256:' + createHash('sha256').update(JSON.stringify(core)).digest('hex')
+      contentHash:
+        'sha256:' +
+        createHash('sha256').update(JSON.stringify(core)).digest('hex')
     },
     truncated,
     sanitisationWarnings: warnings

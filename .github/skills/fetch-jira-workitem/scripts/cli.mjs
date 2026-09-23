@@ -171,9 +171,9 @@ async function main() {
   const config = loadConfig()
   let result
   if (positionals[0] === 'item') result = await runItem(positionals[1], config)
-  else if (positionals[0] === 'details')
-    {result = await runDetails(positionals[1], config, traverse)}
-  else if (!traverse) result = await runItem(positionals[0], config)
+  else if (positionals[0] === 'details') {
+    result = await runDetails(positionals[1], config, traverse)
+  } else if (!traverse) result = await runItem(positionals[0], config)
   else result = await runIndex(positionals[0], config)
   emit(result, outPath)
 }

@@ -11,20 +11,29 @@ const SECRET_PATTERNS = [
 ]
 
 const SECRET_KEYS = new Set([
-  'authorization', 'token', 'apitoken', 'api_token', 'password', 'secret',
-  'cookie', 'email', 'emailaddress'
+  'authorization',
+  'token',
+  'apitoken',
+  'api_token',
+  'password',
+  'secret',
+  'cookie',
+  'email',
+  'emailaddress'
 ])
 
-export function redactString (value) {
+export function redactString(value) {
   if (typeof value !== 'string') return value
   let out = value
   for (const pattern of SECRET_PATTERNS) {
-    out = out.replace(pattern, (match, p1) => (p1 && /^[a-z_]+$/i.test(p1) ? `${p1}=${REDACTED}` : REDACTED))
+    out = out.replace(pattern, (match, p1) =>
+      p1 && /^[a-z_]+$/i.test(p1) ? `${p1}=${REDACTED}` : REDACTED
+    )
   }
   return out
 }
 
-export function redact (input, seen = new WeakSet()) {
+export function redact(input, seen = new WeakSet()) {
   if (input == null) return input
   if (typeof input === 'string') return redactString(input)
   if (typeof input !== 'object') return input
@@ -41,7 +50,7 @@ export function redact (input, seen = new WeakSet()) {
 // An Error whose message is always redacted. Throw this instead of raw errors
 // that might carry secrets or PII.
 export class SafeError extends Error {
-  constructor (message, { code = 'ERR_SAFE' } = {}) {
+  constructor(message, { code = 'ERR_SAFE' } = {}) {
     super(redactString(String(message)))
     this.name = 'SafeError'
     this.code = code
