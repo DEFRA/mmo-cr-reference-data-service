@@ -41,6 +41,7 @@ services:
       - cdp-tenant
     volumes:
       - ./src:/home/node/src
+      - ./resources:/home/node/resources
       - ./package.json:/home/node/package.json
       - ./.env:/home/node/.env:ro
 
