@@ -2,9 +2,11 @@ import { findDuplicates } from '../duplicate-detection.js'
 import { VALIDATION_ISSUE_CODE } from '../error-codes.js'
 
 /**
- * Map-statistical-area-specific business rules (Step 09). `parentCode` resolution
- * within the same collection is deliberately not enforced (owner decision,
- * 2026-09-16): it remains structural-only (non-empty string or null).
+ * Map-statistical-area-specific business rules. Per
+ * docs/adr/0001-map-statistical-areas-raw-epsg3857-contract.md, this dataset serves
+ * the raw upstream ArcGIS export: the business-uniqueness key is `properties.sub_code`
+ * (not `ICESNAME`, which legitimately repeats across subrectangles of the same
+ * parent ICES rectangle).
  */
 export function validateMapStatisticalAreasCollection(collection) {
   const features = Array.isArray(collection?.features)
@@ -13,8 +15,8 @@ export function validateMapStatisticalAreasCollection(collection) {
 
   // Area codes are compared case-insensitively per owner decision (2026-09-16).
   const entries = features.map((feature, itemIndex) => ({
-    value: feature?.properties?.code,
-    path: `features[${itemIndex}].properties.code`,
+    value: feature?.properties?.sub_code,
+    path: `features[${itemIndex}].properties.sub_code`,
     itemIndex
   }))
 

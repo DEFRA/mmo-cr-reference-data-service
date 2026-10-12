@@ -1,47 +1,44 @@
-// Step 20: map-statistical-areas query configuration. GeoJSON; `code`/`parentCode`
-// are exact, case-insensitive; general search covers name/code/areaType/parentCode/
-// parentName (owner-approved broad option, 2026-09-16); `bbox` uses true polygon
-// intersection via geometry-intersection.js.
+// map-statistical-areas query configuration. Per
+// docs/adr/0001-map-statistical-areas-raw-epsg3857-contract.md this dataset is served
+// as the raw upstream ArcGIS export: the item identifier is `properties.OBJECTID`
+// (not a GUID), exact filters/search are repointed to `sub_code`/`ICESNAME` (the
+// fields that actually exist in the raw shape), and `bbox` is removed — a WGS84-
+// degree bounding box cannot be applied to EPSG:3857 metre coordinates without
+// reprojection, which this dataset deliberately avoids.
+
+import Joi from 'joi'
 
 import { createQueryConfiguration } from './query-configuration.js'
 import { DATASETS } from '#/common/domain/datasets.js'
-import { parseBoundingBox } from './bounding-box.js'
-import { featureGeometryIntersectsBoundingBox } from './geometry-intersection.js'
+
+const OBJECT_ID_PATTERN = /^\d+$/
 
 export const mapStatisticalAreasQueryConfiguration = createQueryConfiguration({
   dataset: DATASETS.MAP_STATISTICAL_AREAS,
   format: 'geojson',
-  getGuid: (feature) => feature.id,
+  getGuid: (feature) => String(feature.properties.OBJECTID),
+  idSchema: Joi.string().pattern(OBJECT_ID_PATTERN),
+  crs: 'EPSG:3857',
   exactFilters: [
     {
-      param: 'code',
+      param: 'sub_code',
       caseInsensitive: true,
-      getValue: (feature) => feature.properties.code
+      getValue: (feature) => feature.properties.sub_code
     },
     {
-      param: 'parentCode',
+      param: 'ICESNAME',
       caseInsensitive: true,
-      getValue: (feature) => feature.properties.parentCode
+      getValue: (feature) => feature.properties.ICESNAME
     }
   ],
-  customFilters: {
-    bbox: {
-      parse: (raw) => parseBoundingBox(raw),
-      predicate: (feature, bbox) =>
-        featureGeometryIntersectsBoundingBox(feature.geometry, bbox)
-    }
-  },
   textSearchFields: [
-    (feature) => feature.properties.name,
-    (feature) => feature.properties.code,
-    (feature) => feature.properties.areaType,
-    (feature) => feature.properties.parentCode,
-    (feature) => feature.properties.parentName
+    (feature) => feature.properties.ICESNAME,
+    (feature) => feature.properties.sub_code
   ],
   sortFields: {
-    name: (feature) => feature.properties.name,
-    code: (feature) => feature.properties.code
+    OBJECTID: (feature) => feature.properties.OBJECTID,
+    sub_code: (feature) => feature.properties.sub_code
   },
-  defaultSort: [{ field: 'name', direction: 'asc' }],
+  defaultSort: [{ field: 'OBJECTID', direction: 'asc' }],
   pagination: { allowPagination: false }
 })

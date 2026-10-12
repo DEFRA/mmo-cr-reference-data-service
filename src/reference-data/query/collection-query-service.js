@@ -147,6 +147,7 @@ function queryCollection(
     metadata,
     view: parsedRequest.view,
     context,
+    crs: collection.crs,
     totalCount: result.totalCount,
     offset: result.offset,
     limit: result.limit,

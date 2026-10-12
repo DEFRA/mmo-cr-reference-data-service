@@ -59,14 +59,19 @@ const DATASET_CAPABILITIES = Object.freeze({
     uploadable: true,
     persisted: true,
     derived: false,
-    format: DATASET_FORMAT.GEOJSON
+    format: DATASET_FORMAT.GEOJSON,
+    crs: 'EPSG:4326'
   }),
   [DATASETS.MAP_STATISTICAL_AREAS]: Object.freeze({
     queryable: true,
     uploadable: true,
     persisted: true,
     derived: false,
-    format: DATASET_FORMAT.GEOJSON
+    format: DATASET_FORMAT.GEOJSON,
+    // See docs/adr/0001-map-statistical-areas-raw-epsg3857-contract.md: this dataset
+    // is served as the raw upstream ArcGIS export, unprojected (EPSG:3857 metres),
+    // unlike every other GeoJSON dataset.
+    crs: 'EPSG:3857'
   }),
   [DATASETS.MAP_PORTS]: Object.freeze({
     queryable: true,
@@ -74,6 +79,7 @@ const DATASET_CAPABILITIES = Object.freeze({
     persisted: false,
     derived: true,
     format: DATASET_FORMAT.GEOJSON,
+    crs: 'EPSG:4326',
     sourceDataset: DATASETS.PORTS
   })
 })

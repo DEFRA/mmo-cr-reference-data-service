@@ -799,6 +799,14 @@ test:floci`) and the end-to-end suite (`npm run test:e2e`) are deliberately **mi
   [SonarCloud](#sonarcloud)).
 - **Ports without coordinates** are excluded from the derived `map-ports` GeoJSON layer but remain
   present in the canonical `ports` JSON collection.
+- **`map-statistical-areas` is a breaking-change exception**: it serves the **raw upstream ArcGIS
+  export, unchanged** (EPSG:3857 metres, ArcGIS field names, no `Feature.id`, `bbox`/`code`/
+  `parentCode` removed) rather than the canonical WGS84 shape used by every other map dataset, and is
+  **not RFC 7946-conformant**. See
+  [ADR 0001](./docs/adr/0001-map-statistical-areas-raw-epsg3857-contract.md) and the
+  [Map statistical areas](./docs/api-reference.md#map-statistical-areas) API reference section for
+  the full rationale and contract. The persistence manifest's `crs` projection still reports
+  `EPSG:4326` for this dataset (a known, deferred inconsistency — see the ADR's Negative/Trade-offs).
 - **No production AWS infrastructure, monitoring/alerting, or audit-retention policy** is defined
   by this repository — those are deployment-environment concerns outside a single service's scope.
 

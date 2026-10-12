@@ -129,4 +129,28 @@ describe('#mapLandQueryConfiguration', () => {
       'Island'
     ])
   })
+
+  // Regression guard for the map-statistical-areas raw-EPSG:3857 change (ADR 0001):
+  // the shared `idSchema` seam must default to guidSchema when a configuration does
+  // not override it, so map-land's GUID-based id/ids validation is unaffected.
+  describe('GUID id-validation default (shared idSchema seam regression guard)', () => {
+    test('retrieves a feature by GUID', () => {
+      const service = createService([buildFeature()])
+      const result = service.getItemById(
+        mapLandQueryConfiguration,
+        '11111111-1111-4111-8111-111111111111',
+        {}
+      )
+      expect(result.item.properties.name).toBe('Island')
+    })
+
+    test('rejects a non-GUID id', () => {
+      const service = createService([buildFeature()])
+      expect(() =>
+        service.queryCollection(mapLandQueryConfiguration, {
+          ids: 'not-a-guid'
+        })
+      ).toThrow(/invalid GUID/)
+    })
+  })
 })

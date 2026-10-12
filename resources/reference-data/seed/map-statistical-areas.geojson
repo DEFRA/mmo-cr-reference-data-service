@@ -6,79 +6,114 @@
   "generatedAt": "2026-01-01T00:00:00Z",
   "itemCount": 3,
   "type": "FeatureCollection",
+  "crs": {
+    "type": "name",
+    "properties": {
+      "name": "urn:ogc:def:crs:EPSG::3857"
+    }
+  },
   "features": [
     {
       "type": "Feature",
-      "id": "00000000-0000-4000-8000-000000000061",
       "properties": {
-        "id": "00000000-0000-4000-8000-000000000061",
-        "code": "27D8",
-        "name": "ICES rectangle 27D8",
-        "areaType": "ices-rectangle",
-        "parentCode": null,
-        "parentName": null,
-        "areaKm2": 1250.5,
-        "centroid": { "latitude": 50.25, "longitude": -4.5 }
+        "OBJECTID_1": 25719,
+        "OBJECTID": 25719,
+        "ICESNAME": "27D8",
+        "SOUTH": 49.0,
+        "WEST": -12.0,
+        "NORTH": 49.5,
+        "EAST": -11.0,
+        "AREA_KM2": 4048,
+        "stat_x": -11.5,
+        "stat_y": 49.25,
+        "sub_code": "27D86",
+        "sub_str": 6,
+        "sub_x": -11.5,
+        "sub_y": 49.0833333333,
+        "Shape_Leng": 130867.6104,
+        "Shape_Area": 1051127177.62
       },
       "geometry": {
-        "type": "Polygon",
+        "type": "MultiPolygon",
         "coordinates": [
           [
-            [-4.7, 50.1],
-            [-4.7, 50.4],
-            [-4.3, 50.4],
-            [-4.3, 50.1],
-            [-4.7, 50.1]
+            [
+              [-1264519.10360127, 6303188.702299997],
+              [-1261620.8957000002, 6303188.702299997],
+              [-1261620.8957000002, 6281307.218207956],
+              [-1264519.10360127, 6281307.218207956],
+              [-1264519.10360127, 6303188.702299997]
+            ]
           ]
         ]
       }
     },
     {
       "type": "Feature",
-      "id": "00000000-0000-4000-8000-000000000062",
       "properties": {
-        "id": "00000000-0000-4000-8000-000000000062",
-        "code": "27D86",
-        "name": "ICES subrectangle 27D86",
-        "areaType": "ices-subrectangle",
-        "parentCode": "27D8",
-        "parentName": "ICES rectangle 27D8",
-        "areaKm2": 312.48,
-        "centroid": { "latitude": 50.25, "longitude": -4.5 }
+        "OBJECTID_1": 25720,
+        "OBJECTID": 25720,
+        "ICESNAME": "27D8",
+        "SOUTH": 49.0,
+        "WEST": -12.0,
+        "NORTH": 49.5,
+        "EAST": -11.0,
+        "AREA_KM2": 4048,
+        "stat_x": -11.5,
+        "stat_y": 49.25,
+        "sub_code": "27D89",
+        "sub_str": 9,
+        "sub_x": -11.1666666667,
+        "sub_y": 49.0833333333,
+        "Shape_Leng": 130867.6106,
+        "Shape_Area": 1051127180.45
       },
       "geometry": {
-        "type": "Polygon",
+        "type": "MultiPolygon",
         "coordinates": [
           [
-            [-4.6, 50.2],
-            [-4.6, 50.3],
-            [-4.4, 50.3],
-            [-4.6, 50.2]
+            [
+              [-1261620.8957000002, 6281307.218207956],
+              [-1261620.8957000002, 6303188.702299997],
+              [-1224514.3986999989, 6303188.702299997],
+              [-1224514.3986999989, 6281307.218207956],
+              [-1261620.8957000002, 6281307.218207956]
+            ]
           ]
         ]
       }
     },
     {
       "type": "Feature",
-      "id": "00000000-0000-4000-8000-000000000063",
       "properties": {
-        "id": "00000000-0000-4000-8000-000000000063",
-        "code": "27D87",
-        "name": "ICES subrectangle 27D87",
-        "areaType": "ices-subrectangle",
-        "parentCode": "27D8",
-        "parentName": "ICES rectangle 27D8",
-        "areaKm2": 289.1,
-        "centroid": { "latitude": 50.15, "longitude": -4.35 }
+        "OBJECTID_1": 25722,
+        "OBJECTID": 25722,
+        "ICESNAME": "27D8",
+        "SOUTH": 49.0,
+        "WEST": -12.0,
+        "NORTH": 49.5,
+        "EAST": -11.0,
+        "AREA_KM2": 4048,
+        "stat_x": -11.5,
+        "stat_y": 49.25,
+        "sub_code": "27D85",
+        "sub_str": 5,
+        "sub_x": -11.5,
+        "sub_y": 49.25,
+        "Shape_Leng": 131058.633,
+        "Shape_Area": 1054671267.38
       },
       "geometry": {
-        "type": "Polygon",
+        "type": "MultiPolygon",
         "coordinates": [
           [
-            [-4.45, 50.1],
-            [-4.45, 50.2],
-            [-4.25, 50.2],
-            [-4.45, 50.1]
+            [
+              [-1264519.10360127, 6331611.521899998],
+              [-1261620.8957000002, 6331611.521899998],
+              [-1261620.8957000002, 6303188.702299997],
+              [-1264519.10360127, 6303188.702299997],
+              [-1264519.10360127, 6331611.521899998]
+            ]
           ]
         ]
       }

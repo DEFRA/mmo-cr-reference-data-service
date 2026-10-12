@@ -62,6 +62,19 @@ describe('#mapLandRoute', () => {
     expect(body.features[0].id).toBe(FEATURE_ID)
   })
 
+  // Regression guard for the map-statistical-areas raw-EPSG:3857 change (ADR 0001):
+  // map-land's shared controller/query-configuration/id-validation seam defaults must
+  // remain exactly as before — EPSG:4326 and GUID-based features — unaffected by the
+  // additive, per-dataset `crs`/`idSchema` overrides introduced for that other dataset.
+  test('still advertises EPSG:4326 and keeps GUID features (shared-code regression guard)', async () => {
+    server = await buildTestServer()
+    const response = await injectAuthenticatedGet(server, MAP_LAND_PATH)
+    const body = JSON.parse(response.payload)
+    expect(body.metadata.crs).toBe('EPSG:4326')
+    expect(body).not.toHaveProperty('crs')
+    expect(body.features[0].id).toMatch(/^[0-9a-f-]{36}$/i)
+  })
+
   test('general search matches by name', async () => {
     server = await buildTestServer()
     const response = await server.inject({
