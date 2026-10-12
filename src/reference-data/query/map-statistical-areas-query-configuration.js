@@ -36,8 +36,13 @@ export const mapStatisticalAreasQueryConfiguration = createQueryConfiguration({
     (feature) => feature.properties.sub_code
   ],
   sortFields: {
-    OBJECTID: (feature) => feature.properties.OBJECTID,
-    sub_code: (feature) => feature.properties.sub_code
+    // These keys are the public `sort=` query-parameter values (looked up directly in
+    // collection-query-engine.js), not function names — matching the raw ArcGIS column
+    // names per docs/adr/0001-map-statistical-areas-raw-epsg3857-contract.md. Renaming
+    // them to satisfy the naming-convention rule would break that published contract,
+    // so the rule is a false positive here and is suppressed on these two lines only.
+    OBJECTID: (feature) => feature.properties.OBJECTID, // NOSONAR
+    sub_code: (feature) => feature.properties.sub_code // NOSONAR
   },
   defaultSort: [{ field: 'OBJECTID', direction: 'asc' }],
   pagination: { allowPagination: false }
