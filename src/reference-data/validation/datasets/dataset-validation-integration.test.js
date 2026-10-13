@@ -148,9 +148,13 @@ describe('#datasetValidationIntegration', () => {
       expect(result.valid).toBe(false)
     })
 
-    test('a statistical-area parentCode with no matching feature does not fail end-to-end', () => {
+    test('a statistical-area ICESNAME repeated across distinct sub_codes does not fail end-to-end', () => {
       const collection = structuredClone(validMapStatisticalAreasCollection)
-      collection.features[0].properties.parentCode = 'no-such-area'
+      const secondFeature = structuredClone(collection.features[0])
+      secondFeature.properties.OBJECTID = 2
+      secondFeature.properties.sub_code = '27D86'
+      collection.features.push(secondFeature)
+      collection.itemCount = 2
 
       const result = validateCollection({
         dataset: 'map-statistical-areas',

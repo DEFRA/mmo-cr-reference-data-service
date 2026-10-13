@@ -273,37 +273,55 @@ describe('species seed', () => {
 })
 
 describe('map seed', () => {
-  test.each([DATASETS.MAP_LAND, DATASETS.MAP_STATISTICAL_AREAS])(
-    '%s is a FeatureCollection of valid, closed, non-empty Polygon geometries',
-    (dataset) => {
-      const collection = seedCollections[dataset]
-      expect(collection.type).toBe('FeatureCollection')
-      for (const feature of collection.features) {
-        expect(feature.type).toBe('Feature')
-        expect(feature.geometry.type).toBe('Polygon')
-        const [ring] = feature.geometry.coordinates
-        expect(ring.length).toBeGreaterThanOrEqual(4)
-        expect(ring[0]).toEqual(ring[ring.length - 1])
-        for (const [longitude, latitude] of ring) {
-          expect(longitude).toBeGreaterThanOrEqual(-180)
-          expect(longitude).toBeLessThanOrEqual(180)
-          expect(latitude).toBeGreaterThanOrEqual(-90)
-          expect(latitude).toBeLessThanOrEqual(90)
-        }
+  test('map-land is a FeatureCollection of valid, closed, non-empty WGS84 Polygon geometries', () => {
+    const collection = seedCollections[DATASETS.MAP_LAND]
+    expect(collection.type).toBe('FeatureCollection')
+    for (const feature of collection.features) {
+      expect(feature.type).toBe('Feature')
+      expect(feature.geometry.type).toBe('Polygon')
+      const [ring] = feature.geometry.coordinates
+      expect(ring.length).toBeGreaterThanOrEqual(4)
+      expect(ring[0]).toEqual(ring[ring.length - 1])
+      for (const [longitude, latitude] of ring) {
+        expect(longitude).toBeGreaterThanOrEqual(-180)
+        expect(longitude).toBeLessThanOrEqual(180)
+        expect(latitude).toBeGreaterThanOrEqual(-90)
+        expect(latitude).toBeLessThanOrEqual(90)
       }
     }
-  )
+  })
 
-  test('map-statistical-areas codes are unique and parent-code links are consistent', () => {
-    const { features } = seedCollections[DATASETS.MAP_STATISTICAL_AREAS]
-    const codes = features.map((feature) => feature.properties.code)
-    expect(new Set(codes).size).toBe(codes.length)
-    const withParent = features.filter(
-      (feature) => feature.properties.parentCode
-    )
-    expect(withParent.length).toBeGreaterThan(0)
-    for (const feature of withParent) {
-      expect(codes).toContain(feature.properties.parentCode)
+  // Per docs/adr/0001-map-statistical-areas-raw-epsg3857-contract.md this dataset is
+  // the raw upstream ArcGIS export: MultiPolygon geometry in EPSG:3857 metres (not
+  // WGS84 degrees), and a top-level GeoJSON `crs` member naming EPSG:3857.
+  test('map-statistical-areas is a FeatureCollection of valid, closed, non-empty EPSG:3857 MultiPolygon geometries', () => {
+    const collection = seedCollections[DATASETS.MAP_STATISTICAL_AREAS]
+    expect(collection.type).toBe('FeatureCollection')
+    expect(collection.crs).toEqual({
+      type: 'name',
+      properties: { name: 'urn:ogc:def:crs:EPSG::3857' }
+    })
+    for (const feature of collection.features) {
+      expect(feature.type).toBe('Feature')
+      expect(feature.id).toBeUndefined()
+      expect(feature.geometry.type).toBe('MultiPolygon')
+      const [[ring]] = feature.geometry.coordinates
+      expect(ring.length).toBeGreaterThanOrEqual(4)
+      expect(ring[0]).toEqual(ring[ring.length - 1])
     }
+  })
+
+  test('map-statistical-areas OBJECTIDs and sub_codes are each unique', () => {
+    const { features } = seedCollections[DATASETS.MAP_STATISTICAL_AREAS]
+    const objectIds = features.map((feature) => feature.properties.OBJECTID)
+    const subCodes = features.map((feature) => feature.properties.sub_code)
+    expect(new Set(objectIds).size).toBe(objectIds.length)
+    expect(new Set(subCodes).size).toBe(subCodes.length)
+  })
+
+  test('map-statistical-areas ICESNAME legitimately repeats across subrectangles', () => {
+    const { features } = seedCollections[DATASETS.MAP_STATISTICAL_AREAS]
+    const icesNames = features.map((feature) => feature.properties.ICESNAME)
+    expect(new Set(icesNames).size).toBeLessThan(icesNames.length)
   })
 })

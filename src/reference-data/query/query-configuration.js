@@ -1,6 +1,8 @@
 // Step 15: reusable dataset query-configuration mechanism. Each dataset step (16-20)
 // registers one of these instead of modifying the common query engine.
 
+import { guidSchema } from '#/common/schemas/fragments/guid.js'
+
 const DEFAULT_PAGINATION_LIMIT = 50
 const MAX_PAGINATION_LIMIT = 500
 
@@ -122,6 +124,13 @@ function assertOptionalFunctions({
  * @param {string} input.dataset one of the DATASETS identifiers
  * @param {'json'|'geojson'} input.format
  * @param {(record: object) => string} input.getGuid
+ * @param {import('joi').Schema} [input.idSchema] validates each `ids`/`{id}` value;
+ *   defaults to `guidSchema` so every dataset without an explicit override keeps
+ *   requiring GUIDs (additive seam — see map-statistical-areas-query-configuration.js
+ *   for a dataset that overrides it to validate ArcGIS OBJECTID strings instead).
+ * @param {string} [input.crs] GeoJSON datasets only: the CRS label surfaced in the
+ *   collection response's `metadata.crs`; defaults to `null`, meaning the controller
+ *   falls back to its own default (`EPSG:4326`).
  * @param {Array<{param:string, getValue:(record:object)=>*, caseInsensitive?:boolean}>} [input.exactFilters]
  * @param {Array<(record:object)=>string|null|undefined>} [input.textSearchFields]
  * @param {Object.<string, {parse:(raw:string)=>*, predicate:(record:object,value:*)=>boolean}>} [input.customFilters]
@@ -143,6 +152,8 @@ export function createQueryConfiguration({
   dataset,
   format,
   getGuid,
+  idSchema = guidSchema,
+  crs = null,
   exactFilters = [],
   textSearchFields = [],
   customFilters = {},
@@ -179,6 +190,8 @@ export function createQueryConfiguration({
     dataset,
     format,
     getGuid,
+    idSchema,
+    crs,
     prepareRecords,
     buildContext,
     exactFilters: Object.freeze(exactFilters),

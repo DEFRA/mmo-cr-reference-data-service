@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest'
+import Joi from 'joi'
 
 import { createQueryConfiguration } from './query-configuration.js'
 import { parseCollectionQuery } from './query-request-parser.js'
@@ -154,6 +155,29 @@ describe('#parseCollectionQuery', () => {
     expect(() =>
       parseCollectionQuery(config, { ids: guids.join(',') })
     ).toThrow(/too many values/)
+  })
+
+  test('validates ids against a configuration-supplied idSchema instead of GUID (additive seam)', () => {
+    const integerIdConfig = createQueryConfiguration({
+      ...config,
+      dataset: 'map-statistical-areas',
+      idSchema: Joi.string().pattern(/^\d+$/)
+    })
+
+    expect(parseCollectionQuery(integerIdConfig, { ids: '1,2' }).ids).toEqual([
+      '1',
+      '2'
+    ])
+    expect(() =>
+      parseCollectionQuery(integerIdConfig, {
+        ids: '11111111-1111-4111-8111-111111111111'
+      })
+    ).toThrow(/invalid id\(s\)/)
+    expect(() =>
+      parseCollectionQuery(integerIdConfig, {
+        ids: '11111111-1111-4111-8111-111111111111'
+      })
+    ).not.toThrow(/invalid GUID/)
   })
 
   test('parses exact filters, case-insensitive', () => {

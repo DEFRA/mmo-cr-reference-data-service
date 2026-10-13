@@ -18,9 +18,9 @@ function positionsEqual(a, b) {
   return a.length === b.length && a.every((value, index) => value === b[index])
 }
 
-function validateRing(ring, path, itemIndex, issues) {
+function validateRing(ring, path, itemIndex, issues, { checkWgs84Range }) {
   ring.forEach((position, positionIndex) => {
-    if (isOutOfWgs84Range(position)) {
+    if (checkWgs84Range && isOutOfWgs84Range(position)) {
       issues.push({
         code: VALIDATION_ISSUE_CODE.INVALID_COORDINATE,
         message: 'Coordinate is outside the WGS84 range.',
@@ -41,7 +41,13 @@ function validateRing(ring, path, itemIndex, issues) {
   }
 }
 
-function validatePolygonCoordinates(coordinates, path, itemIndex, issues) {
+function validatePolygonCoordinates(
+  coordinates,
+  path,
+  itemIndex,
+  issues,
+  options
+) {
   if (!Array.isArray(coordinates) || coordinates.length === 0) {
     issues.push({
       code: VALIDATION_ISSUE_CODE.EMPTY_GEOMETRY,
@@ -53,11 +59,17 @@ function validatePolygonCoordinates(coordinates, path, itemIndex, issues) {
   }
 
   coordinates.forEach((ring, ringIndex) =>
-    validateRing(ring, `${path}[${ringIndex}]`, itemIndex, issues)
+    validateRing(ring, `${path}[${ringIndex}]`, itemIndex, issues, options)
   )
 }
 
-function validateMultiPolygonCoordinates(coordinates, path, itemIndex, issues) {
+function validateMultiPolygonCoordinates(
+  coordinates,
+  path,
+  itemIndex,
+  issues,
+  options
+) {
   if (!Array.isArray(coordinates) || coordinates.length === 0) {
     issues.push({
       code: VALIDATION_ISSUE_CODE.EMPTY_GEOMETRY,
@@ -73,12 +85,13 @@ function validateMultiPolygonCoordinates(coordinates, path, itemIndex, issues) {
       polygonCoordinates,
       `${path}[${polygonIndex}]`,
       itemIndex,
-      issues
+      issues,
+      options
     )
   )
 }
 
-function validateGeometry(geometry, path, itemIndex, issues) {
+function validateGeometry(geometry, path, itemIndex, issues, options) {
   if (!geometry) {
     return
   }
@@ -88,14 +101,16 @@ function validateGeometry(geometry, path, itemIndex, issues) {
       geometry.coordinates,
       `${path}.coordinates`,
       itemIndex,
-      issues
+      issues,
+      options
     )
   } else if (geometry.type === 'MultiPolygon') {
     validateMultiPolygonCoordinates(
       geometry.coordinates,
       `${path}.coordinates`,
       itemIndex,
-      issues
+      issues,
+      options
     )
   } else {
     // Unreachable once structural validation has run: geometrySchema only permits
@@ -105,12 +120,20 @@ function validateGeometry(geometry, path, itemIndex, issues) {
 }
 
 /**
- * Dataset-agnostic GeoJSON business-rule foundation: WGS84 coordinate range, closed
- * polygon rings, and non-empty geometry. Reused by every GeoJSON dataset's
- * dataset-specific validator (map-land, map-statistical-areas). Read-only: never
- * repairs, closes, or simplifies a geometry.
+ * Dataset-agnostic GeoJSON business-rule foundation: closed polygon rings and
+ * non-empty geometry are always checked; the WGS84 coordinate-range check is
+ * additionally applied unless `checkWgs84Range` is explicitly set to `false` — used
+ * by map-statistical-areas (see
+ * docs/adr/0001-map-statistical-areas-raw-epsg3857-contract.md), which serves raw
+ * EPSG:3857 metre coordinates rather than WGS84 degrees. Every other GeoJSON dataset
+ * (map-land, map-ports) keeps the default `true` and is unaffected. Reused by every
+ * GeoJSON dataset's dataset-specific validator. Read-only: never repairs, closes, or
+ * simplifies a geometry.
  */
-export function validateFeatureCollectionGeometries(collection) {
+export function validateFeatureCollectionGeometries(
+  collection,
+  { checkWgs84Range = true } = {}
+) {
   const issues = []
   const features = Array.isArray(collection?.features)
     ? collection.features
@@ -121,7 +144,8 @@ export function validateFeatureCollectionGeometries(collection) {
       feature?.geometry,
       `features[${itemIndex}].geometry`,
       itemIndex,
-      issues
+      issues,
+      { checkWgs84Range }
     )
   })
 
