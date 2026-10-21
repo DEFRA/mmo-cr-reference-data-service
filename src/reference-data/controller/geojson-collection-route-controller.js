@@ -22,9 +22,13 @@ function buildFeatureCollectionBody(config, result) {
       collectionId: result.metadata.collectionId,
       schemaVersion: result.metadata.schemaVersion,
       version: result.metadata.version,
-      crs: GEOJSON_CRS,
+      crs: config.crs ?? GEOJSON_CRS,
       featureCount: result.totalCount
     },
+    // Additive, dataset-driven passthrough of the stored collection's raw top-level
+    // GeoJSON `crs` member (e.g. map-statistical-areas' EPSG:3857 urn); absent for
+    // every dataset whose stored collection has no `crs` member (e.g. map-land).
+    ...(result.crs ? { crs: result.crs } : {}),
     features: result.items
   }
 }

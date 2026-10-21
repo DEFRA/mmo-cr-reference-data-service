@@ -83,7 +83,11 @@ export function validateCommonEnvelope({ dataset, collection }) {
   ]
 
   if (isGeoJson) {
-    issues.push(...validateFeatureCollectionGeometries(collection))
+    issues.push(
+      ...validateFeatureCollectionGeometries(collection, {
+        checkWgs84Range: capabilities.crs !== 'EPSG:3857'
+      })
+    )
   }
 
   return issues

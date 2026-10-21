@@ -16,6 +16,25 @@ describe('#createQueryConfiguration', () => {
     expect(config.pagination.maxLimit).toBe(500)
   })
 
+  test('defaults idSchema to guidSchema and crs to null', () => {
+    const config = createQueryConfiguration(BASE)
+    expect(config.idSchema.validate('not-a-guid').error).toBeDefined()
+    expect(
+      config.idSchema.validate('11111111-1111-4111-8111-111111111111').error
+    ).toBeUndefined()
+    expect(config.crs).toBeNull()
+  })
+
+  test('accepts an overridden idSchema and crs (additive seam)', () => {
+    const config = createQueryConfiguration({
+      ...BASE,
+      idSchema: { validate: (value) => ({ error: value === 'bad' }) },
+      crs: 'EPSG:3857'
+    })
+    expect(config.crs).toBe('EPSG:3857')
+    expect(config.idSchema.validate('bad').error).toBe(true)
+  })
+
   test('rejects a missing dataset', () => {
     expect(() => createQueryConfiguration({ ...BASE, dataset: '' })).toThrow(
       /dataset/

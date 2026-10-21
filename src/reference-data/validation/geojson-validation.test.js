@@ -145,4 +145,86 @@ describe('#validateFeatureCollectionGeometries', () => {
   test('returns an empty array when features is not an array', () => {
     expect(validateFeatureCollectionGeometries({})).toEqual([])
   })
+
+  // Additive option for map-statistical-areas (ADR 0001): serves raw EPSG:3857
+  // metre coordinates, so the WGS84 range check must be skippable without
+  // affecting default behaviour (every other dataset).
+  describe('checkWgs84Range option', () => {
+    test('defaults to true (every existing dataset is unaffected)', () => {
+      const collection = {
+        features: [
+          feature({
+            type: 'Polygon',
+            coordinates: [
+              [
+                [-190, 50.3],
+                [-4.2, 50.4],
+                [-4.1, 50.4],
+                [-190, 50.3]
+              ]
+            ]
+          })
+        ]
+      }
+
+      expect(
+        validateFeatureCollectionGeometries(collection).some(
+          (issue) => issue.code === 'invalid_coordinate'
+        )
+      ).toBe(true)
+    })
+
+    test('when false, out-of-WGS84-range (e.g. EPSG:3857 metre) coordinates do not raise invalid_coordinate', () => {
+      const collection = {
+        features: [
+          feature({
+            type: 'MultiPolygon',
+            coordinates: [
+              [
+                [
+                  [-556597.45, 6446275.84],
+                  [-500937.71, 6446275.84],
+                  [-500937.71, 6489684.53],
+                  [-556597.45, 6489684.53],
+                  [-556597.45, 6446275.84]
+                ]
+              ]
+            ]
+          })
+        ]
+      }
+
+      expect(
+        validateFeatureCollectionGeometries(collection, {
+          checkWgs84Range: false
+        })
+      ).toEqual([])
+    })
+
+    test('when false, ring-closure and empty-geometry checks still run', () => {
+      const openRingCollection = {
+        features: [
+          feature({
+            type: 'MultiPolygon',
+            coordinates: [
+              [
+                [
+                  [-556597.45, 6446275.84],
+                  [-500937.71, 6446275.84],
+                  [-500937.71, 6489684.53]
+                ]
+              ]
+            ]
+          })
+        ]
+      }
+
+      const issues = validateFeatureCollectionGeometries(openRingCollection, {
+        checkWgs84Range: false
+      })
+      expect(issues).toEqual([
+        expect.objectContaining({ code: 'open_polygon_ring' })
+      ])
+    })
+  })
 })

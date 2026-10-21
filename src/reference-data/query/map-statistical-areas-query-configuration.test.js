@@ -4,30 +4,36 @@ import { createInMemoryDataStore } from '#/reference-data/in-memory-store/in-mem
 import { createCollectionQueryService } from './collection-query-service.js'
 import { mapStatisticalAreasQueryConfiguration } from './map-statistical-areas-query-configuration.js'
 
-const SQUARE_RING = [
-  [0, 0],
-  [0, 10],
-  [10, 10],
-  [10, 0],
-  [0, 0]
+const SQUARE_METRE_RING = [
+  [-556597.45, 6446275.84],
+  [-500937.71, 6446275.84],
+  [-500937.71, 6489684.53],
+  [-556597.45, 6489684.53],
+  [-556597.45, 6446275.84]
 ]
 
 function buildFeature(overrides = {}) {
-  const id = overrides.id ?? '11111111-1111-4111-8111-111111111111'
   return {
     type: 'Feature',
-    id,
     properties: {
-      id,
-      code: '27D86',
-      name: 'ICES subrectangle 27D86',
-      areaType: 'ices-subrectangle',
-      parentCode: '27D8',
-      parentName: 'ICES rectangle 27D8',
-      areaKm2: 312.48,
-      centroid: { latitude: 50.25, longitude: -4.5 }
+      OBJECTID: 1,
+      OBJECTID_1: 1,
+      ICESNAME: '27D8',
+      SOUTH: 50.0,
+      WEST: -5.0,
+      NORTH: 50.25,
+      EAST: -4.5,
+      AREA_KM2: 2416.12,
+      stat_x: -500937.71,
+      stat_y: 6489684.53,
+      sub_code: '27D85',
+      sub_str: 1,
+      sub_x: -528767.58,
+      sub_y: 6467951.85,
+      Shape_Leng: 198136.86,
+      Shape_Area: 2416116399.14
     },
-    geometry: { type: 'Polygon', coordinates: [SQUARE_RING] },
+    geometry: { type: 'MultiPolygon', coordinates: [[SQUARE_METRE_RING]] },
     ...overrides
   }
 }
@@ -51,17 +57,17 @@ describe('#mapStatisticalAreasQueryConfiguration', () => {
     expect(result.totalCount).toBe(1)
   })
 
-  describe('code filter', () => {
+  describe('sub_code filter', () => {
     test('matches exactly, case-insensitively', () => {
       const service = createService([buildFeature()])
       expect(
         service.queryCollection(mapStatisticalAreasQueryConfiguration, {
-          code: '27D86'
+          sub_code: '27D85'
         }).items
       ).toHaveLength(1)
       expect(
         service.queryCollection(mapStatisticalAreasQueryConfiguration, {
-          code: '27d86'
+          sub_code: '27d85'
         }).items
       ).toHaveLength(1)
     })
@@ -69,63 +75,60 @@ describe('#mapStatisticalAreasQueryConfiguration', () => {
     test('does not match a partial value', () => {
       const result = createService([buildFeature()]).queryCollection(
         mapStatisticalAreasQueryConfiguration,
-        { code: '27D8' }
+        { sub_code: '27D8' }
       )
       expect(result.items).toHaveLength(0)
     })
 
-    test('preserves the canonical code', () => {
+    test('preserves the canonical sub_code', () => {
       const result = createService([buildFeature()]).queryCollection(
         mapStatisticalAreasQueryConfiguration,
-        { code: '27d86' }
+        { sub_code: '27d85' }
       )
-      expect(result.items[0].properties.code).toBe('27D86')
+      expect(result.items[0].properties.sub_code).toBe('27D85')
     })
   })
 
-  describe('parentCode filter', () => {
+  describe('ICESNAME filter', () => {
     test('matches exactly, case-insensitively', () => {
       const service = createService([buildFeature()])
       expect(
         service.queryCollection(mapStatisticalAreasQueryConfiguration, {
-          parentCode: '27D8'
+          ICESNAME: '27D8'
         }).items
       ).toHaveLength(1)
       expect(
         service.queryCollection(mapStatisticalAreasQueryConfiguration, {
-          parentCode: '27d8'
+          ICESNAME: '27d8'
         }).items
       ).toHaveLength(1)
     })
 
-    test('a null parentCode does not match', () => {
-      const result = createService([
+    test('matches multiple subrectangles sharing the same ICESNAME', () => {
+      const service = createService([
+        buildFeature(),
         buildFeature({
-          properties: { ...buildFeature().properties, parentCode: null }
+          properties: {
+            ...buildFeature().properties,
+            OBJECTID: 2,
+            sub_code: '27D86'
+          }
         })
-      ]).queryCollection(mapStatisticalAreasQueryConfiguration, {
-        parentCode: '27D8'
-      })
-      expect(result.items).toHaveLength(0)
+      ])
+      expect(
+        service.queryCollection(mapStatisticalAreasQueryConfiguration, {
+          ICESNAME: '27D8'
+        }).items
+      ).toHaveLength(2)
     })
   })
 
   describe('general text search', () => {
-    test('matches name, code, areaType, parentCode, and parentName', () => {
+    test('matches ICESNAME and sub_code', () => {
       const service = createService([buildFeature()])
       expect(
         service.queryCollection(mapStatisticalAreasQueryConfiguration, {
-          query: 'subrectangle'
-        }).items
-      ).toHaveLength(1)
-      expect(
-        service.queryCollection(mapStatisticalAreasQueryConfiguration, {
-          query: '27d86'
-        }).items
-      ).toHaveLength(1)
-      expect(
-        service.queryCollection(mapStatisticalAreasQueryConfiguration, {
-          query: 'ices-subrectangle'
+          query: '27D85'
         }).items
       ).toHaveLength(1)
       expect(
@@ -133,131 +136,102 @@ describe('#mapStatisticalAreasQueryConfiguration', () => {
           query: '27d8'
         }).items
       ).toHaveLength(1)
-      expect(
-        service.queryCollection(mapStatisticalAreasQueryConfiguration, {
-          query: 'ICES rectangle'
-        }).items
-      ).toHaveLength(1)
     })
 
-    test('does not match on GUID or geometry', () => {
+    test('does not match on OBJECTID or geometry', () => {
       const service = createService([buildFeature()])
       expect(
         service.queryCollection(mapStatisticalAreasQueryConfiguration, {
-          query: '11111111'
+          query: '6446275'
         }).items
       ).toHaveLength(0)
     })
-
-    test('handles a missing parentCode/parentName safely', () => {
-      const feature = buildFeature({
-        properties: {
-          ...buildFeature().properties,
-          parentCode: null,
-          parentName: null
-        }
-      })
-      const result = createService([feature]).queryCollection(
-        mapStatisticalAreasQueryConfiguration,
-        { query: '27D86' }
-      )
-      expect(result.items).toHaveLength(1)
-    })
-
-    test('a feature matching on multiple fields is returned once', () => {
-      const service = createService([buildFeature()])
-      const result = service.queryCollection(
-        mapStatisticalAreasQueryConfiguration,
-        { query: '27D8' }
-      )
-      expect(result.items).toHaveLength(1)
-    })
   })
 
-  test('bbox filters via true polygon intersection', () => {
+  test('bbox is no longer a recognised query parameter', () => {
     const service = createService([buildFeature()])
-    expect(
+    expect(() =>
       service.queryCollection(mapStatisticalAreasQueryConfiguration, {
         bbox: '2,2,8,8'
-      }).items
-    ).toHaveLength(1)
-    expect(
+      })
+    ).toThrow(/Unsupported query parameter/)
+  })
+
+  test('code and parentCode are no longer recognised query parameters', () => {
+    const service = createService([buildFeature()])
+    expect(() =>
       service.queryCollection(mapStatisticalAreasQueryConfiguration, {
-        bbox: '50,50,60,60'
-      }).items
-    ).toHaveLength(0)
+        code: '27D85'
+      })
+    ).toThrow(/Unsupported query parameter/)
+    expect(() =>
+      service.queryCollection(mapStatisticalAreasQueryConfiguration, {
+        parentCode: '27D8'
+      })
+    ).toThrow(/Unsupported query parameter/)
   })
 
   test('combines filters using AND', () => {
     const service = createService([buildFeature()])
     const result = service.queryCollection(
       mapStatisticalAreasQueryConfiguration,
-      { code: '27D86', parentCode: 'DIFFERENT' }
+      { sub_code: '27D85', ICESNAME: 'DIFFERENT' }
     )
     expect(result.items).toHaveLength(0)
   })
 
-  test('malformed geometry fails the whole request', () => {
-    const service = createService([
-      buildFeature({ geometry: { type: 'Point', coordinates: [0, 0] } })
-    ])
-    expect(() =>
-      service.queryCollection(mapStatisticalAreasQueryConfiguration, {
-        bbox: '2,2,8,8'
-      })
-    ).toThrow()
-  })
-
-  test('retrieves a single feature by GUID', () => {
+  test('retrieves a single feature by OBJECTID', () => {
     const service = createService([buildFeature()])
     const result = service.getItemById(
       mapStatisticalAreasQueryConfiguration,
-      '11111111-1111-4111-8111-111111111111',
+      '1',
       {}
     )
-    expect(result.item.properties.code).toBe('27D86')
+    expect(result.item.properties.sub_code).toBe('27D85')
+  })
+
+  test('a non-integer OBJECTID string is rejected', () => {
+    const service = createService([buildFeature()])
+    expect(() =>
+      service.getItemById(
+        mapStatisticalAreasQueryConfiguration,
+        'not-a-number',
+        {}
+      )
+    ).toThrow(/invalid id/)
   })
 
   test('is not paginated', () => {
     const result = createService([buildFeature()]).queryCollection(
       mapStatisticalAreasQueryConfiguration,
-      { query: '27D86' }
+      { query: '27D85' }
     )
     expect(result.offset).toBeUndefined()
   })
 
-  test('sorts by name and by code', () => {
+  test('sorts by OBJECTID (default) and by sub_code', () => {
     const featureA = buildFeature({
-      id: '22222222-2222-4222-8222-222222222222',
       properties: {
-        id: '22222222-2222-4222-8222-222222222222',
-        code: '10A11',
-        name: 'ICES subrectangle 10A11',
-        areaType: 'ices-subrectangle',
-        parentCode: '10A1',
-        parentName: 'ICES rectangle 10A1',
-        areaKm2: 312.48,
-        centroid: { latitude: 50.25, longitude: -4.5 }
+        ...buildFeature().properties,
+        OBJECTID: 2,
+        sub_code: '10A11'
       }
     })
     const service = createService([buildFeature(), featureA])
 
-    const byName = service.queryCollection(
+    const byObjectId = service.queryCollection(
       mapStatisticalAreasQueryConfiguration,
-      { sort: 'name' }
+      { sort: 'OBJECTID' }
     )
-    expect(byName.items.map((f) => f.properties.name)).toEqual([
-      'ICES subrectangle 10A11',
-      'ICES subrectangle 27D86'
-    ])
+    expect(byObjectId.items.map((f) => f.properties.OBJECTID)).toEqual([1, 2])
 
-    const byCode = service.queryCollection(
+    const bySubCode = service.queryCollection(
       mapStatisticalAreasQueryConfiguration,
-      { sort: 'code' }
+      { sort: 'sub_code' }
     )
-    expect(byCode.items.map((f) => f.properties.code)).toEqual([
+    expect(bySubCode.items.map((f) => f.properties.sub_code)).toEqual([
       '10A11',
-      '27D86'
+      '27D85'
     ])
   })
 })

@@ -5,7 +5,6 @@ import { createCollectionQueryService } from '#/reference-data/query/collection-
 import { mapStatisticalAreasQueryConfiguration } from '#/reference-data/query/map-statistical-areas-query-configuration.js'
 import { createGeoJsonCollectionRouteController } from '#/reference-data/controller/geojson-collection-route-controller.js'
 import {
-  SQUARE_RING,
   createStubAuthenticationClient,
   buildCollectionRouteTestServer,
   registerServerTeardown,
@@ -14,21 +13,29 @@ import {
 
 const COLLECTION_PATH = '/__test/map/statistical-areas'
 const ITEM_PATH = '/__test/map/statistical-areas/{id}'
-const FEATURE_ID = '11111111-1111-4111-8111-111111111111'
+
+const SQUARE_METRE_RING = [
+  [-556597.45, 6446275.84],
+  [-500937.71, 6446275.84],
+  [-500937.71, 6489684.53],
+  [-556597.45, 6489684.53],
+  [-556597.45, 6446275.84]
+]
+
+const COLLECTION_CRS = {
+  type: 'name',
+  properties: { name: 'urn:ogc:def:crs:EPSG::3857' }
+}
 
 function buildFeature(overrides = {}) {
   return {
     type: 'Feature',
-    id: FEATURE_ID,
     properties: {
-      id: FEATURE_ID,
-      code: '27D86',
-      name: 'ICES subrectangle 27D86',
-      areaType: 'ices-subrectangle',
-      parentCode: '27D8',
-      parentName: 'ICES rectangle 27D8'
+      OBJECTID: 1,
+      ICESNAME: '27D8',
+      sub_code: '27D85'
     },
-    geometry: { type: 'Polygon', coordinates: [SQUARE_RING] },
+    geometry: { type: 'MultiPolygon', coordinates: [[SQUARE_METRE_RING]] },
     ...overrides
   }
 }
@@ -37,7 +44,7 @@ async function buildTestServer(features = [buildFeature()]) {
   const store = createInMemoryDataStore()
   store.setCollection(
     'map-statistical-areas',
-    { type: 'FeatureCollection', features },
+    { type: 'FeatureCollection', crs: COLLECTION_CRS, features },
     { collectionId: 'c1', schemaVersion: '1.0', version: 'v1' }
   )
   const query = createCollectionQueryService({ store })
@@ -61,80 +68,103 @@ describe('#mapStatisticalAreasRoute', () => {
 
   registerServerTeardown(() => server)
 
-  test('returns a GeoJSON FeatureCollection', async () => {
+  test('returns a GeoJSON FeatureCollection with EPSG:3857 metadata and raw top-level crs', async () => {
     server = await buildTestServer()
     const response = await injectAuthenticatedGet(server, COLLECTION_PATH)
     expect(response.statusCode).toBe(200)
     expect(response.headers['content-type']).toContain('application/geo+json')
-    expect(JSON.parse(response.payload).features).toHaveLength(1)
+    const body = JSON.parse(response.payload)
+    expect(body.features).toHaveLength(1)
+    expect(body.metadata.crs).toBe('EPSG:3857')
+    expect(body.crs).toEqual(COLLECTION_CRS)
   })
 
-  test('code filter is exact and case-insensitive', async () => {
+  test('sub_code filter is exact and case-insensitive', async () => {
     server = await buildTestServer()
     const response = await server.inject({
       method: 'GET',
-      url: `${COLLECTION_PATH}?code=27d86`,
+      url: `${COLLECTION_PATH}?sub_code=27d85`,
       headers: { authorization: 'Bearer read-token' }
     })
     expect(JSON.parse(response.payload).features).toHaveLength(1)
   })
 
-  test('parentCode filter is exact and case-insensitive', async () => {
+  test('ICESNAME filter is exact and case-insensitive', async () => {
     server = await buildTestServer()
     const response = await server.inject({
       method: 'GET',
-      url: `${COLLECTION_PATH}?parentCode=27d8`,
+      url: `${COLLECTION_PATH}?ICESNAME=27d8`,
       headers: { authorization: 'Bearer read-token' }
     })
     expect(JSON.parse(response.payload).features).toHaveLength(1)
   })
 
-  test('general search covers name, code, areaType, parentCode, and parentName', async () => {
+  test('general search covers ICESNAME and sub_code', async () => {
     server = await buildTestServer()
     const response = await server.inject({
       method: 'GET',
-      url: `${COLLECTION_PATH}?query=ices-subrectangle`,
+      url: `${COLLECTION_PATH}?query=27D85`,
       headers: { authorization: 'Bearer read-token' }
     })
     expect(JSON.parse(response.payload).features).toHaveLength(1)
   })
 
-  test('bbox filters via true polygon intersection', async () => {
+  test('bbox is removed and returns 400', async () => {
     server = await buildTestServer()
     const response = await server.inject({
       method: 'GET',
       url: `${COLLECTION_PATH}?bbox=2,2,8,8`,
       headers: { authorization: 'Bearer read-token' }
     })
-    expect(JSON.parse(response.payload).features).toHaveLength(1)
+    expect(response.statusCode).toBe(400)
   })
 
-  test('returns a feature by GUID', async () => {
+  test('code and parentCode are removed and return 400', async () => {
+    server = await buildTestServer()
+    const codeResponse = await server.inject({
+      method: 'GET',
+      url: `${COLLECTION_PATH}?code=27D85`,
+      headers: { authorization: 'Bearer read-token' }
+    })
+    expect(codeResponse.statusCode).toBe(400)
+
+    const parentCodeResponse = await server.inject({
+      method: 'GET',
+      url: `${COLLECTION_PATH}?parentCode=27D8`,
+      headers: { authorization: 'Bearer read-token' }
+    })
+    expect(parentCodeResponse.statusCode).toBe(400)
+  })
+
+  test('returns a feature by OBJECTID', async () => {
     server = await buildTestServer()
     const response = await server.inject({
       method: 'GET',
-      url: `/__test/map/statistical-areas/${FEATURE_ID}`,
+      url: '/__test/map/statistical-areas/1',
       headers: { authorization: 'Bearer read-token' }
     })
     expect(response.statusCode).toBe(200)
-    expect(JSON.parse(response.payload).id).toBe(FEATURE_ID)
+    const body = JSON.parse(response.payload)
+    expect(body.properties.OBJECTID).toBe(1)
+    expect(body.geometry.type).toBe('MultiPolygon')
+    expect(body.id).toBeUndefined()
   })
 
-  test('unknown GUID returns 404', async () => {
+  test('unknown OBJECTID returns 404', async () => {
     server = await buildTestServer()
     const response = await server.inject({
       method: 'GET',
-      url: '/__test/map/statistical-areas/99999999-9999-4999-8999-999999999999',
+      url: '/__test/map/statistical-areas/999',
       headers: { authorization: 'Bearer read-token' }
     })
     expect(response.statusCode).toBe(404)
   })
 
-  test('invalid GUID returns 400', async () => {
+  test('a non-integer OBJECTID returns 400', async () => {
     server = await buildTestServer()
     const response = await server.inject({
       method: 'GET',
-      url: '/__test/map/statistical-areas/not-a-guid',
+      url: '/__test/map/statistical-areas/not-a-number',
       headers: { authorization: 'Bearer read-token' }
     })
     expect(response.statusCode).toBe(400)

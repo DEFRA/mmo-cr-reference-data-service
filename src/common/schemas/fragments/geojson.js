@@ -51,6 +51,21 @@ export function createFeatureSchema(propertiesSchema) {
   })
 }
 
+// Additive sibling of createFeatureSchema for raw upstream exports (e.g. ArcGIS)
+// that have no Feature.id at all — the key is deliberately absent (not optional),
+// so any stray `id` member still fails closed-object validation. Does not alter
+// createFeatureSchema or any of its existing consumers (e.g. map-land).
+export function createFeatureSchemaWithoutId(
+  propertiesSchema,
+  featureGeometrySchema = geometrySchema
+) {
+  return Joi.object({
+    type: Joi.string().valid('Feature').required(),
+    properties: propertiesSchema.required(),
+    geometry: featureGeometrySchema.required()
+  })
+}
+
 export function createFeatureCollectionSchema(featureSchema) {
   return Joi.object({
     type: Joi.string().valid('FeatureCollection').required(),

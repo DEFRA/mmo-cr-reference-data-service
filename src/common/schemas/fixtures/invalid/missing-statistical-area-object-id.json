@@ -1,0 +1,51 @@
+{
+  "dataset": "map-statistical-areas",
+  "collectionId": "d4e5f6a7-4444-4444-8444-444444444444",
+  "schemaVersion": "1.0",
+  "version": "2026.09.11.1",
+  "generatedAt": "2026-09-11T08:30:00Z",
+  "itemCount": 1,
+  "type": "FeatureCollection",
+  "crs": {
+    "type": "name",
+    "properties": {
+      "name": "urn:ogc:def:crs:EPSG::3857"
+    }
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "OBJECTID_1": 1,
+        "ICESNAME": "27D8",
+        "SOUTH": 50.0,
+        "WEST": -5.0,
+        "NORTH": 50.25,
+        "EAST": -4.5,
+        "AREA_KM2": 2416.12,
+        "stat_x": -500937.71,
+        "stat_y": 6489684.53,
+        "sub_code": "27D85",
+        "sub_str": 1,
+        "sub_x": -528767.58,
+        "sub_y": 6467951.85,
+        "Shape_Leng": 198136.86,
+        "Shape_Area": 2416116399.14
+      },
+      "geometry": {
+        "type": "MultiPolygon",
+        "coordinates": [
+          [
+            [
+              [-556597.45, 6446275.84],
+              [-500937.71, 6446275.84],
+              [-500937.71, 6489684.53],
+              [-556597.45, 6489684.53],
+              [-556597.45, 6446275.84]
+            ]
+          ]
+        ]
+      }
+    }
+  ]
+}

@@ -52,7 +52,7 @@ describe.skipIf(!floccyAvailable)(
       }
     })
 
-    test('hydrated ports and map-statistical-areas preserve GUIDs separately from business codes', async () => {
+    test('hydrated ports and map-statistical-areas preserve identifiers separately from business codes', async () => {
       const store = createInMemoryDataStore()
       const cacheRefresh = createCacheRefreshService({
         persistence,
@@ -77,8 +77,11 @@ describe.skipIf(!floccyAvailable)(
       expect(statisticalAreas.type).toBe('FeatureCollection')
       expect(statisticalAreas.features.length).toBeGreaterThan(0)
       for (const feature of statisticalAreas.features) {
-        expect(feature.id).toMatch(/^[0-9a-f-]{36}$/i)
-        expect(feature.properties.code).not.toBe(feature.id)
+        expect(feature.id).toBeUndefined()
+        expect(typeof feature.properties.OBJECTID).toBe('number')
+        expect(feature.properties.sub_code).not.toBe(
+          String(feature.properties.OBJECTID)
+        )
       }
     })
   }

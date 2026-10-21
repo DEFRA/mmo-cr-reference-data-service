@@ -19,6 +19,7 @@ import invalidGeojsonRootType from './invalid-geojson-root-type.json' with { typ
 import invalidGeojsonGeometryType from './invalid-geojson-geometry-type.json' with { type: 'json' }
 import nonNumericGeojsonCoordinate from './non-numeric-geojson-coordinate.json' with { type: 'json' }
 import missingStatisticalAreaCode from './missing-statistical-area-code.json' with { type: 'json' }
+import missingStatisticalAreaObjectId from './missing-statistical-area-object-id.json' with { type: 'json' }
 
 const FIXTURES = [
   [
@@ -47,9 +48,14 @@ const FIXTURES = [
   ['invalid GeoJSON geometry type', 'map-land', invalidGeojsonGeometryType],
   ['non-numeric GeoJSON coordinate', 'map-land', nonNumericGeojsonCoordinate],
   [
-    'missing statistical-area code',
+    'missing statistical-area code (sub_code)',
     'map-statistical-areas',
     missingStatisticalAreaCode
+  ],
+  [
+    'missing statistical-area identifier (OBJECTID)',
+    'map-statistical-areas',
+    missingStatisticalAreaObjectId
   ]
 ]
 

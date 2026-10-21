@@ -16,8 +16,8 @@ function raiseInvalid(message) {
   throw error
 }
 
-function isGuid(value) {
-  return typeof value === 'string' && !guidSchema.validate(value).error
+function isValidId(value, idSchema) {
+  return typeof value === 'string' && !idSchema.validate(value).error
 }
 
 function parseView(rawView) {
@@ -47,7 +47,7 @@ function parseFreeText(rawQuery) {
   return trimmed
 }
 
-function parseIds(rawIds) {
+function parseIds(rawIds, config) {
   if (rawIds === undefined) {
     return null
   }
@@ -61,9 +61,14 @@ function parseIds(rawIds) {
   if (values.length > MAX_IDS) {
     raiseInvalid('ids lists too many values')
   }
-  const invalid = values.filter((value) => !isGuid(value))
+  const idSchema = config.idSchema ?? guidSchema
+  const invalid = values.filter((value) => !isValidId(value, idSchema))
   if (invalid.length > 0) {
-    raiseInvalid(`ids contains invalid GUID(s): ${invalid.join(', ')}`)
+    // Default (GUID) configurations keep the original, well-known wording; datasets
+    // with an overridden idSchema (e.g. map-statistical-areas' OBJECTID) get a
+    // generic, schema-neutral message instead of a misleading "GUID" reference.
+    const label = idSchema === guidSchema ? 'GUID(s)' : 'id(s)'
+    raiseInvalid(`ids contains invalid ${label}: ${invalid.join(', ')}`)
   }
   return [...new Set(values)]
 }
@@ -203,7 +208,7 @@ export function parseCollectionQuery(config, rawQuery = {}) {
   return {
     view: parseView(rawQuery.view),
     freeText: parseFreeText(rawQuery.query),
-    ids: parseIds(rawQuery.ids),
+    ids: parseIds(rawQuery.ids, config),
     exactFilters: parseExactFilters(rawQuery, config),
     customFilterValues: parseCustomFilters(rawQuery, config),
     compositeFilterValues: parseCompositeFilters(rawQuery, config),

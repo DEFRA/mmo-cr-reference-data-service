@@ -84,6 +84,78 @@ describe('#validateCommonEnvelope', () => {
     expect(issues.some((issue) => issue.code === 'empty_geometry')).toBe(true)
   })
 
+  // Dataset-driven WGS84 range check (ADR 0001): map-land is unaffected and keeps
+  // rejecting out-of-WGS84-range coordinates by default.
+  test('map-land still rejects out-of-WGS84-range coordinates (shared-code regression guard)', () => {
+    const issues = validateCommonEnvelope({
+      dataset: 'map-land',
+      collection: {
+        dataset: 'map-land',
+        itemCount: 1,
+        type: 'FeatureCollection',
+        features: [
+          {
+            type: 'Feature',
+            id: 'f1',
+            properties: {},
+            geometry: {
+              type: 'Polygon',
+              coordinates: [
+                [
+                  [-190, 50.3],
+                  [-4.2, 50.4],
+                  [-4.1, 50.4],
+                  [-190, 50.3]
+                ]
+              ]
+            }
+          }
+        ]
+      }
+    })
+
+    expect(issues.some((issue) => issue.code === 'invalid_coordinate')).toBe(
+      true
+    )
+  })
+
+  // map-statistical-areas (ADR 0001) serves raw EPSG:3857 metre coordinates, so the
+  // WGS84 range check must not apply to it.
+  test('map-statistical-areas does not apply the WGS84 range check to its EPSG:3857 coordinates', () => {
+    const issues = validateCommonEnvelope({
+      dataset: 'map-statistical-areas',
+      collection: {
+        dataset: 'map-statistical-areas',
+        itemCount: 1,
+        type: 'FeatureCollection',
+        features: [
+          {
+            type: 'Feature',
+            properties: {},
+            geometry: {
+              type: 'MultiPolygon',
+              coordinates: [
+                [
+                  [
+                    [-556597.45, 6446275.84],
+                    [-500937.71, 6446275.84],
+                    [-500937.71, 6489684.53],
+                    [-556597.45, 6489684.53],
+                    [-556597.45, 6446275.84]
+                  ]
+                ]
+              ]
+            }
+          }
+        ]
+      }
+    })
+
+    expect(issues.some((issue) => issue.code === 'invalid_coordinate')).toBe(
+      false
+    )
+  })
+
   test('does not throw and returns no issues for a non-object collection', () => {
     expect(
       validateCommonEnvelope({ dataset: 'ports', collection: null })

@@ -300,20 +300,43 @@ route exists (collection-only). No pagination (`offset`/`limit` are not accepted
 
 ## Map statistical areas
 
+> ⚠️ **Breaking change (this dataset only).** This endpoint now serves the **raw upstream ArcGIS
+> export, unchanged** — see
+> [ADR 0001](./adr/0001-map-statistical-areas-raw-epsg3857-contract.md) and
+> [Known limitations and deferred work](../README.md#known-limitations-and-deferred-work) in the
+> README. It is **not** RFC 7946-conformant (non-WGS84 CRS + a `crs` member + id-less features). No
+> other dataset's contract is affected, and the route stays at `/api/v1` (no `/api/v2`).
+
 ```http
 GET /api/v1/reference-data/map/statistical-areas
 GET /api/v1/reference-data/map/statistical-areas/{id}
 ```
 
-GeoJSON `FeatureCollection`/`Feature` (`application/geo+json`). No pagination.
+Returns the raw ArcGIS/shapefile export `FeatureCollection`/`Feature` (`application/geo+json`),
+**unchanged** — field names, coordinates, and the top-level GeoJSON `crs` member are served
+byte-for-field as sourced. No pagination.
 
-| Query parameter      | Behaviour                                                                                                                   |
-| -------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `query`              | Free-text search across `name`, `code`, `areaType`, `parentCode`, `parentName`                                              |
-| `code`, `parentCode` | Exact match, case-insensitive. `parentCode: null` never matches any filter value; there is no hierarchy expansion/recursion |
-| `bbox`               | Same true-intersection/antimeridian-rejection rule as map land                                                              |
+- **Geometry/CRS**: `MultiPolygon`, **EPSG:3857 (Web Mercator, metres)** — **not** WGS84 degrees.
+  The collection response's `metadata.crs` is `"EPSG:3857"`, and the stored collection's raw
+  top-level GeoJSON `crs` member (`{ "type": "name", "properties": { "name":
+"urn:ogc:def:crs:EPSG::3857" } }`) is passed through unchanged at the top level of the collection
+  response.
+- **Feature shape**: raw ArcGIS properties — `OBJECTID`, `OBJECTID_1`, `ICESNAME`, `SOUTH`, `WEST`,
+  `NORTH`, `EAST`, `AREA_KM2`, `stat_x`, `stat_y`, `sub_code`, `sub_str`, `sub_x`, `sub_y`,
+  `Shape_Leng`, `Shape_Area`. There is **no `Feature.id`**.
+- **`{id}` lookup**: the integer **`OBJECTID`** (not a GUID, not `code`). A non-integer `{id}`
+  returns `400 invalid_request`; an unknown `OBJECTID` returns `404`.
 
-Item lookup is GUID-only (`{id}` is the feature's `id`, not its `code`).
+| Query parameter        | Behaviour                                                                                                                                                        |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `query`                | Free-text search across `ICESNAME` and `sub_code`                                                                                                                |
+| `sub_code`, `ICESNAME` | Exact match, case-insensitive. `sub_code` is the business-uniqueness key; `ICESNAME` legitimately repeats across subrectangles of the same parent ICES rectangle |
+
+**Removed for this dataset** (compared with the previously documented contract): `bbox`, `code`,
+`parentCode` — all now return `400 invalid_request` (unrecognised query parameter). A WGS84-degree
+`bbox` cannot be applied to this dataset's EPSG:3857 metre coordinates without reprojection, which
+this dataset deliberately does not perform (see ADR 0001). `code`/`parentCode` have no analogue in
+the raw ArcGIS shape.
 
 ## Map ports (derived)
 

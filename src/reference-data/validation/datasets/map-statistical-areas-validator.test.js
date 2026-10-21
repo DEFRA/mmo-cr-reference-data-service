@@ -5,30 +5,22 @@ import { validateMapStatisticalAreasCollection } from './map-statistical-areas-v
 function statAreaFeature(overrides = {}) {
   return {
     type: 'Feature',
-    id: '12639177-7614-4616-83cd-6141ecb83924',
     properties: {
-      id: '12639177-7614-4616-83cd-6141ecb83924',
-      code: '27D86',
-      name: 'ICES subrectangle 27D86',
-      areaType: 'ices-subrectangle',
-      parentCode: '27D8'
+      OBJECTID: 1,
+      ICESNAME: '27D8',
+      sub_code: '27D85'
     },
     ...overrides
   }
 }
 
 describe('#validateMapStatisticalAreasCollection', () => {
-  test('accepts unique area codes', () => {
+  test('accepts unique sub_codes', () => {
     const result = validateMapStatisticalAreasCollection({
       features: [
         statAreaFeature(),
         statAreaFeature({
-          id: '22222222-2222-4222-8222-222222222222',
-          properties: {
-            ...statAreaFeature().properties,
-            id: '22222222-2222-4222-8222-222222222222',
-            code: '27D87'
-          }
+          properties: { OBJECTID: 2, ICESNAME: '27D8', sub_code: '27D86' }
         })
       ]
     })
@@ -36,17 +28,30 @@ describe('#validateMapStatisticalAreasCollection', () => {
     expect(result).toEqual({ valid: true, errors: [], warnings: [] })
   })
 
-  test('detects a duplicate area code (case-insensitive)', () => {
+  test('a repeated ICESNAME across subrectangles with distinct sub_codes is not a duplicate', () => {
+    const result = validateMapStatisticalAreasCollection({
+      features: [
+        statAreaFeature({
+          properties: { OBJECTID: 1, ICESNAME: '27D8', sub_code: '27D85' }
+        }),
+        statAreaFeature({
+          properties: { OBJECTID: 2, ICESNAME: '27D8', sub_code: '27D86' }
+        }),
+        statAreaFeature({
+          properties: { OBJECTID: 3, ICESNAME: '27D8', sub_code: '27D89' }
+        })
+      ]
+    })
+
+    expect(result.valid).toBe(true)
+  })
+
+  test('detects a duplicate sub_code (case-insensitive)', () => {
     const result = validateMapStatisticalAreasCollection({
       features: [
         statAreaFeature(),
         statAreaFeature({
-          id: '22222222-2222-4222-8222-222222222222',
-          properties: {
-            ...statAreaFeature().properties,
-            id: '22222222-2222-4222-8222-222222222222',
-            code: '27d86'
-          }
+          properties: { OBJECTID: 2, ICESNAME: '27D8', sub_code: '27d85' }
         })
       ]
     })
@@ -55,33 +60,6 @@ describe('#validateMapStatisticalAreasCollection', () => {
     expect(result.errors).toEqual([
       expect.objectContaining({ code: 'duplicate_business_code' })
     ])
-  })
-
-  test('a parentCode with no matching feature in the collection is not an error (structural-only)', () => {
-    const result = validateMapStatisticalAreasCollection({
-      features: [
-        statAreaFeature({
-          properties: {
-            ...statAreaFeature().properties,
-            parentCode: 'does-not-exist'
-          }
-        })
-      ]
-    })
-
-    expect(result.valid).toBe(true)
-  })
-
-  test('an optional (null) parentCode is accepted', () => {
-    const result = validateMapStatisticalAreasCollection({
-      features: [
-        statAreaFeature({
-          properties: { ...statAreaFeature().properties, parentCode: null }
-        })
-      ]
-    })
-
-    expect(result.valid).toBe(true)
   })
 
   test('does not mutate the supplied collection', () => {

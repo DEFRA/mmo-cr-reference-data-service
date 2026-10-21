@@ -12,16 +12,16 @@ describe('#normaliseMapStatisticalAreasCollection', () => {
     expect(result.value).toEqual(validMapStatisticalAreasCollection)
   })
 
-  test('trims whitespace from area code/name, preserving parentCode exactly as supplied', () => {
+  test('trims whitespace from ICESNAME/sub_code, preserving other fields exactly as supplied', () => {
     const collection = structuredClone(validMapStatisticalAreasCollection)
-    collection.features[0].properties.code = '  27D86  '
+    collection.features[0].properties.sub_code = '  27D85  '
 
     const result = normaliseMapStatisticalAreasCollection(collection)
 
     expect(result.changed).toBe(true)
-    expect(result.value.features[0].properties.code).toBe('27D86')
-    expect(result.value.features[0].properties.parentCode).toBe(
-      validMapStatisticalAreasCollection.features[0].properties.parentCode
+    expect(result.value.features[0].properties.sub_code).toBe('27D85')
+    expect(result.value.features[0].properties.ICESNAME).toBe(
+      validMapStatisticalAreasCollection.features[0].properties.ICESNAME
     )
   })
 
@@ -36,7 +36,7 @@ describe('#normaliseMapStatisticalAreasCollection', () => {
 
   test('is idempotent', () => {
     const collection = structuredClone(validMapStatisticalAreasCollection)
-    collection.features[0].properties.code = '  27D86  '
+    collection.features[0].properties.sub_code = '  27D85  '
 
     const first = normaliseMapStatisticalAreasCollection(collection)
     const second = normaliseMapStatisticalAreasCollection(first.value)
