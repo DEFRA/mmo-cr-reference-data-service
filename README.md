@@ -227,6 +227,8 @@ git config --global core.autocrlf false
 
 Full request/response detail, query parameters, canonical/mobile views, ETag behaviour, and
 examples for every route below live in the authoritative [API reference](./docs/api-reference.md).
+A machine-readable [OpenAPI 3.1 contract](./openapi/openapi.yaml) is also published — see
+[OpenAPI specification](#openapi-specification) below.
 
 | Endpoint                                                     | Description                                               |
 | :----------------------------------------------------------- | :-------------------------------------------------------- |
@@ -290,6 +292,31 @@ provisional Authentication Service integration (`Authorization: Bearer <token>`)
 - Returns `503` (`reference_data_unavailable`) if startup hydration has not yet produced a valid
   active manifest — never an empty successful manifest.
 - Reads only from the in-memory active manifest (Step 11); it never calls S3/Floci per request.
+
+### OpenAPI specification
+
+An [OpenAPI 3.1 YAML contract](./openapi/openapi.yaml) documents every implemented public route
+(health/readiness/dependency-status, manifest, the four JSON datasets, the three map/GeoJSON
+layers, and the upload/replacement route), generated from the registered Hapi routes, validation
+schemas, authentication/authorization configuration, controllers, error mapping, and tests — not
+from `docs/api-reference.md` (used only as supporting/discrepancy-detection evidence; one
+discrepancy between it and the implementation is documented in the spec's `info.description`). No
+endpoint, request, response, authentication, or error-shape behaviour was changed to produce it.
+
+- **Validate**: `npm run openapi:validate` parses the YAML and validates it against the official
+  OpenAPI 3.1 meta-schema (via [`@seriousme/openapi-schema-validator`](https://www.npmjs.com/package/@seriousme/openapi-schema-validator)),
+  failing the process on error. It also runs as part of `npm run git:pre-commit-hook`.
+- **Drift detection**: [`src/openapi-contract.test.js`](./src/openapi-contract.test.js) (part of
+  `npm test`) confirms the spec parses, is schema-valid, that every registered Hapi route has
+  exactly one matching OpenAPI operation and vice versa, that every `operationId` is unique, that
+  only `Health`-tagged operations opt out of the global `bearerAuth` security requirement, that the
+  shared `ErrorEnvelope` schema matches the runtime error-envelope shape, and that the upload
+  route's `{dataset}` enum lists every uploadable dataset and excludes the derived `map-ports`.
+- **Maintenance**: update `openapi/openapi.yaml` whenever a route, validation schema, response
+  shape, or authentication/authorization rule changes, in the same change that implements it — the
+  drift-detection suite will fail CI if the two fall out of sync. Keep `docs/api-reference.md` as
+  narrative documentation alongside it; if the two ever disagree, the implementation (and this
+  OpenAPI contract) is authoritative.
 
 ## Observability
 

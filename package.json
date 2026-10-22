@@ -23,9 +23,10 @@
     "test:e2e": "npm run floci:up && TZ=UTC vitest run src/e2e/reference-data-service.e2e.test.js",
     "format": "prettier --write \"**/*.{cjs,js,json,md}\"",
     "format:check": "prettier --check \"**/*.{cjs,js,json,md}\"",
-    "git:pre-commit-hook": "npm run security-audit && npm run format:check && npm run lint && npm test",
+    "git:pre-commit-hook": "npm run security-audit && npm run format:check && npm run lint && npm run openapi:validate && npm test",
     "lint": "eslint --cache --cache-strategy content \"**/*.{cjs,js}\"",
     "lint:fix": "npm run lint -- --fix",
+    "openapi:validate": "node openapi/validate.js",
     "security-audit": "npm audit --audit-level=critical",
     "server:debug": "node --watch --inspect-brk=0.0.0.0 --env-file-if-exists=.env ./src",
     "server:watch": "node --watch --inspect=0.0.0.0 --env-file-if-exists=.env ./src",
@@ -57,9 +58,11 @@
     "pino": "10.3.1"
   },
   "devDependencies": {
+    "@seriousme/openapi-schema-validator": "2.11.0",
     "@vitest/coverage-v8": "4.1.11",
     "eslint": "9.39.5",
     "husky": "9.1.7",
+    "js-yaml": "5.4.3",
     "neostandard": "0.13.0",
     "pino-pretty": "13.1.3",
     "prettier": "3.9.6",

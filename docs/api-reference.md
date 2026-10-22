@@ -1,10 +1,22 @@
 # Reference Data Service — API Reference
 
-This is the authoritative API contract for the Reference Data Service, generated from the
-implemented routes, controllers, and query configurations under [`src/routes`](../src/routes) and
-[`src/reference-data`](../src/reference-data). It documents behaviour as implemented, not as
+This is the authoritative narrative API contract for the Reference Data Service, generated from
+the implemented routes, controllers, and query configurations under [`src/routes`](../src/routes)
+and [`src/reference-data`](../src/reference-data). It documents behaviour as implemented, not as
 originally planned — see [Known limitations and deferred work](../README.md#known-limitations-and-deferred-work)
-for gaps.
+for gaps. A machine-readable [OpenAPI 3.1 contract](../openapi/openapi.yaml) is also published (see
+[README § OpenAPI specification](../README.md#openapi-specification)); where the two ever disagree,
+the implementation — and the OpenAPI contract, verified by automated drift detection — is
+authoritative.
+
+> **Correction (found while authoring the OpenAPI contract, see
+> [Step 33](../design/github-prompts/Step-33-Reference-Data-Service-OpenAPI.md)):** this document
+> previously stated that `PUT /api/v1/reference-data/{dataset}` with an unsupported `{dataset}`
+> value (e.g. `map-ports`) returns `400` with `error.code = "invalid_dataset"`. The implemented
+> route validates `{dataset}` with Hapi/Joi route validation, which returns
+> `error.code = "invalid_request"` instead — confirmed by
+> [`src/routes/upload-validation.test.js`](../src/routes/upload-validation.test.js). The two
+> mentions below have been corrected to match the implementation.
 
 All routes are prefixed `/api/v1/reference-data` unless otherwise noted. All examples use
 fictional, deterministic GUIDs (`00000000-0000-4000-8000-...`, the same convention used by the
@@ -362,7 +374,7 @@ Authorization: Bearer <token with reference-data.write>
 ```
 
 - `{dataset}` — one of `vessels`, `gears`, `ports`, `species`, `map-land`,
-  `map-statistical-areas`. `map-ports` is rejected (`400 invalid_dataset`) — it can never be
+  `map-statistical-areas`. `map-ports` is rejected (`400 invalid_request`) — it can never be
   uploaded.
 - Multipart body: one `file` part (`application/json` or `application/geo+json` matching the
   dataset's format — a mismatch returns `415 unsupported_media_type`), plus optional text fields
@@ -435,7 +447,7 @@ Runs the same validation/normalisation pipeline as the validation-only mode, the
 entry's `{collectionId, version}` ETag returns `409 collection_modified`. A failed replacement
 (validation failure, conflict, or persistence error) never modifies the active collection or
 manifest — the previous version remains fully active. `map-ports` cannot be uploaded
-(`400 invalid_dataset`), being always derived from `ports`.
+(`400 invalid_request`), being always derived from `ports`.
 
 **Multi-instance note**: this service holds active data as process-local memory (see
 [README § In-Memory Data Store](../README.md#in-memory-data-store)). A successful replacement is

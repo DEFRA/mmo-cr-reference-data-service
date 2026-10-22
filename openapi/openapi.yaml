@@ -1,0 +1,1630 @@
+openapi: 3.1.0
+info:
+  title: MMO Catch Recording — Reference Data Service API
+  version: '1.0.0'
+  description: |
+    OpenAPI 3.1 contract for the Reference Data Service, built from the implemented
+    Hapi routes, validation schemas, authentication/authorization rules, controllers
+    and tests under `src/` (not from pre-existing narrative documentation). It
+    documents **implemented behaviour only** — no endpoint, request, response,
+    authentication or error-shape changes were made to produce this contract.
+
+    Evidence precedence used while authoring this spec (highest first): registered
+    Hapi routes → route validation schemas → authentication/authorization
+    configuration → controllers/response construction → error mapping → tests →
+    manual testing docs → `docs/api-reference.md` → design/planning documents.
+
+    ### Documented discrepancy (implementation wins)
+
+    `docs/api-reference.md` states that `PUT /api/v1/reference-data/{dataset}` with an
+    unsupported `{dataset}` value (e.g. the derived `map-ports` dataset) returns
+    `400` with `error.code = "invalid_dataset"`. The implemented route validates
+    `{dataset}` with a Joi `valid(...uploadableDatasetIds)` check
+    ([`src/routes/upload-validation.js`](../src/routes/upload-validation.js)); a
+    failure there is a generic Hapi route-validation (Boom) failure, which
+    [`mapErrorToResponse`](../src/common/helpers/api/map-error-to-response.js) maps to
+    `error.code = "invalid_request"` — confirmed by
+    [`src/routes/upload-validation.test.js`](../src/routes/upload-validation.test.js)
+    (`'rejects the derived map-ports dataset'`, asserting `error.code` is
+    `invalid_request`, not `invalid_dataset`). This specification documents the
+    **implemented** `invalid_request` response; `error.code` is `invalid_dataset` only
+    in narrative documentation, never at runtime for this path. The
+    `SERVICE_ERROR_CODES.INVALID_DATASET` code exists in
+    [`src/common/domain/errors.js`](../src/common/domain/errors.js) and is used
+    internally by the In-Memory Data Store / Persistence Module, but it is never
+    surfaced through this route.
+servers:
+  - url: /
+    description: Relative to the deployed service origin (no fixed host is published)
+tags:
+  - name: Health
+    description: Unauthenticated liveness, readiness and dependency-status endpoints
+  - name: Manifest
+    description: Active dataset manifest
+  - name: Vessels
+  - name: Gears
+  - name: Ports
+  - name: Species
+  - name: Map
+    description: GeoJSON map layers (land, statistical areas, derived ports)
+  - name: Administration
+    description: Authenticated dataset upload (validation-only and atomic replacement)
+
+security:
+  - bearerAuth: []
+
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      summary: Liveness probe
+      description: >-
+        Constant-time liveness check with no dependency calls. Never requires
+        authentication. Always returns `200` while the process is running.
+      tags: [Health]
+      security: []
+      responses:
+        '200':
+          description: The service process is alive.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControlNoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /health/ready:
+    get:
+      operationId: getReadiness
+      summary: Readiness probe
+      description: >-
+        Reports whether startup hydration has produced valid active data for every
+        mandatory dataset. Never requires authentication.
+      tags: [Health]
+      security: []
+      responses:
+        '200':
+          description: The service is ready to serve reference data.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControlNoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadinessResponse'
+        '503':
+          description: The service is not yet ready (or is shutting down).
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControlNoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadinessResponse'
+
+  /health/dependencies:
+    get:
+      operationId: getDependencyStatus
+      summary: Dependency status probe
+      description: >-
+        Diagnostic-only endpoint reporting high-level dependency status (never raw
+        URLs, bucket names, object keys or dependency error detail). Never triggers a
+        collection read, cache refresh, or mutation. Never requires authentication.
+      tags: [Health]
+      security: []
+      responses:
+        '200':
+          description: All checked dependencies are healthy.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControlNoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DependencyStatusResponse'
+        '503':
+          description: At least one checked dependency is unavailable.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControlNoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DependencyStatusResponse'
+
+  /api/v1/reference-data/manifest:
+    get:
+      operationId: getManifest
+      summary: Get the active dataset manifest
+      description: >-
+        Returns the active version, GUID, ETag, format and public URL of every
+        persisted dataset. `map-ports` (derived, never persisted) is never included.
+      tags: [Manifest]
+      parameters:
+        - $ref: '#/components/parameters/ManifestIncludeParam'
+        - $ref: '#/components/parameters/IfNoneMatchHeader'
+      responses:
+        '200':
+          description: The active manifest.
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
+            Cache-Control: { $ref: '#/components/headers/CacheControlRead' }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Manifest'
+        '304': { $ref: '#/components/responses/NotModified' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /api/v1/reference-data/vessels:
+    get:
+      operationId: listVessels
+      summary: List/search vessels
+      tags: [Vessels]
+      parameters:
+        - $ref: '#/components/parameters/ViewParam'
+        - $ref: '#/components/parameters/QueryParam'
+        - name: cfr
+          in: query
+          schema: { type: string }
+          description: Exact match against `identifiers.cfr`, case-insensitive.
+        - name: uvi
+          in: query
+          schema: { type: string }
+          description: Exact match against `identifiers.uvi`, case-insensitive.
+        - name: mmsi
+          in: query
+          schema: { type: string }
+          description: Exact match against `identifiers.mmsi`, case-sensitive.
+        - name: ircs
+          in: query
+          schema: { type: string }
+          description: Exact match against `identifiers.ircs`, case-insensitive.
+        - name: externalMark
+          in: query
+          schema: { type: string }
+          description: Exact match against `identifiers.externalMark`, case-insensitive.
+        - name: registrationNumber
+          in: query
+          schema: { type: string }
+          description: Exact match against `identifiers.registrationNumber`, case-insensitive.
+        - $ref: '#/components/parameters/IdsParam'
+        - $ref: '#/components/parameters/IncludeInactiveParam'
+        - name: sort
+          in: query
+          description: >-
+            Sort field, optionally prefixed with `-` for descending order.
+          schema:
+            type: string
+            enum:
+              - name
+              - -name
+              - namePln
+              - -namePln
+              - cfr
+              - -cfr
+              - externalMark
+              - -externalMark
+              - registrationNumber
+              - -registrationNumber
+              - lengthOverallMetres
+              - -lengthOverallMetres
+        - $ref: '#/components/parameters/OffsetParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/IfNoneMatchHeader'
+      responses:
+        '200':
+          description: A page of vessels (canonical or mobile view).
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
+            Cache-Control: { $ref: '#/components/headers/CacheControlRead' }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VesselsCollectionResponse'
+        '304': { $ref: '#/components/responses/NotModified' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /api/v1/reference-data/vessels/{id}:
+    get:
+      operationId: getVesselById
+      summary: Get a single vessel by GUID
+      tags: [Vessels]
+      parameters:
+        - $ref: '#/components/parameters/GuidIdParam'
+        - $ref: '#/components/parameters/ViewParam'
+        - $ref: '#/components/parameters/IfNoneMatchHeader'
+      responses:
+        '200':
+          description: A single vessel (canonical or mobile view).
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
+            Cache-Control: { $ref: '#/components/headers/CacheControlRead' }
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/VesselItem'
+                  - $ref: '#/components/schemas/VesselMobileItem'
+        '304': { $ref: '#/components/responses/NotModified' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /api/v1/reference-data/gears:
+    get:
+      operationId: listGears
+      summary: List/search gears
+      tags: [Gears]
+      parameters:
+        - $ref: '#/components/parameters/ViewParam'
+        - $ref: '#/components/parameters/QueryParam'
+        - name: code
+          in: query
+          schema: { type: string }
+          description: Exact match, case-insensitive.
+        - name: categoryCode
+          in: query
+          schema: { type: string }
+          description: Exact match, case-insensitive.
+        - name: categoryId
+          in: query
+          schema: { type: string, format: uuid }
+          description: Exact match, case-sensitive.
+        - name: pairFishing
+          in: query
+          schema: { type: string, enum: ['true', 'false'] }
+        - name: vesselLengthMetres
+          in: query
+          schema: { type: string }
+          description: >-
+            A positive number giving mobile-view vessel-length context (bands:
+            `under-10m` `<10`, `10-to-12m` `>=10 and <=12`, `over-12m` `>12`). Narrows
+            which characteristics appear in the mobile `measurements`/
+            `context.vesselLengthBand` output; never removes a gear from the result set.
+        - $ref: '#/components/parameters/IncludeInactiveParam'
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum:
+              - name
+              - -name
+              - code
+              - -code
+              - type
+              - -type
+              - categoryName
+              - -categoryName
+              - categoryCode
+              - -categoryCode
+              - pairFishing
+              - -pairFishing
+        - $ref: '#/components/parameters/OffsetParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/IfNoneMatchHeader'
+      responses:
+        '200':
+          description: A page of gears (canonical or mobile view).
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
+            Cache-Control: { $ref: '#/components/headers/CacheControlRead' }
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/GearsCollectionResponse'
+                  - $ref: '#/components/schemas/GearsMobileCollectionResponse'
+        '304': { $ref: '#/components/responses/NotModified' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /api/v1/reference-data/gears/{id}:
+    get:
+      operationId: getGearById
+      summary: Get a single gear by GUID
+      tags: [Gears]
+      parameters:
+        - $ref: '#/components/parameters/GuidIdParam'
+        - $ref: '#/components/parameters/ViewParam'
+        - $ref: '#/components/parameters/IfNoneMatchHeader'
+      responses:
+        '200':
+          description: A single gear (canonical or mobile view).
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
+            Cache-Control: { $ref: '#/components/headers/CacheControlRead' }
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/GearItem'
+                  - $ref: '#/components/schemas/GearMobileItem'
+        '304': { $ref: '#/components/responses/NotModified' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /api/v1/reference-data/ports:
+    get:
+      operationId: listPorts
+      summary: List/search ports
+      tags: [Ports]
+      parameters:
+        - $ref: '#/components/parameters/ViewParam'
+        - $ref: '#/components/parameters/QueryParam'
+        - name: code
+          in: query
+          schema: { type: string }
+          description: Exact match, case-sensitive (leading zeros/case never normalised).
+        - name: countryCode
+          in: query
+          schema: { type: string }
+          description: Exact match, case-insensitive.
+        - name: latitude
+          in: query
+          schema: { type: string }
+          description: Radius search — must be supplied together with `longitude` and `radiusKm`.
+        - name: longitude
+          in: query
+          schema: { type: string }
+          description: Radius search — must be supplied together with `latitude` and `radiusKm`.
+        - name: radiusKm
+          in: query
+          schema: { type: string }
+          description: >-
+            Radius search — must be supplied together with `latitude` and
+            `longitude`; must be `>0` and `<=1000`. Haversine great-circle distance,
+            inclusive boundary. Ports with no `coordinate` never match.
+        - $ref: '#/components/parameters/IncludeInactiveParam'
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [name, -name, code, -code, countryCode, -countryCode]
+        - $ref: '#/components/parameters/OffsetParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/IfNoneMatchHeader'
+      responses:
+        '200':
+          description: A page of ports (canonical or mobile view).
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
+            Cache-Control: { $ref: '#/components/headers/CacheControlRead' }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PortsCollectionResponse'
+        '304': { $ref: '#/components/responses/NotModified' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /api/v1/reference-data/ports/{id}:
+    get:
+      operationId: getPortById
+      summary: Get a single port by GUID
+      tags: [Ports]
+      parameters:
+        - $ref: '#/components/parameters/GuidIdParam'
+        - $ref: '#/components/parameters/ViewParam'
+        - $ref: '#/components/parameters/IfNoneMatchHeader'
+      responses:
+        '200':
+          description: A single port (canonical or mobile view).
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
+            Cache-Control: { $ref: '#/components/headers/CacheControlRead' }
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/PortItem'
+                  - $ref: '#/components/schemas/PortMobileItem'
+        '304': { $ref: '#/components/responses/NotModified' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /api/v1/reference-data/species:
+    get:
+      operationId: listSpecies
+      summary: List/search species
+      tags: [Species]
+      parameters:
+        - $ref: '#/components/parameters/ViewParam'
+        - $ref: '#/components/parameters/QueryParam'
+        - name: faoCode
+          in: query
+          schema: { type: string }
+          description: Exact match, case-insensitive.
+        - name: scientificName
+          in: query
+          schema: { type: string }
+          description: Exact match, case-insensitive.
+        - name: countryCode
+          in: query
+          schema: { type: string }
+          description: >-
+            Exact match, case-insensitive; matches if any `commonNames[].countryCode`
+            matches. Also supplies the "requested country" context used by mobile
+            name resolution.
+        - name: languageCode
+          in: query
+          schema: { type: string }
+          description: >-
+            Exact match, case-insensitive, full tag only (`en` does not match
+            `en-GB`); matches if any `localNames[].languageCode` matches.
+        - name: Accept-Language
+          in: header
+          schema: { type: string }
+          description: >-
+            First tag only (before any `;q=`), case-insensitive; supplies the
+            "requested language" context for mobile name resolution. Absent header
+            means no language context (never implicitly `en-GB`).
+        - $ref: '#/components/parameters/IncludeInactiveParam'
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [faoCode, -faoCode, scientificName, -scientificName]
+        - $ref: '#/components/parameters/OffsetParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/IfNoneMatchHeader'
+      responses:
+        '200':
+          description: A page of species (canonical or mobile view).
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
+            Cache-Control: { $ref: '#/components/headers/CacheControlRead' }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpeciesCollectionResponse'
+        '304': { $ref: '#/components/responses/NotModified' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /api/v1/reference-data/species/{id}:
+    get:
+      operationId: getSpeciesById
+      summary: Get a single species by GUID
+      tags: [Species]
+      parameters:
+        - $ref: '#/components/parameters/GuidIdParam'
+        - $ref: '#/components/parameters/ViewParam'
+        - name: Accept-Language
+          in: header
+          schema: { type: string }
+          description: Supplies the "requested language" context for mobile name resolution.
+        - $ref: '#/components/parameters/IfNoneMatchHeader'
+      responses:
+        '200':
+          description: A single species (canonical or mobile view).
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
+            Cache-Control: { $ref: '#/components/headers/CacheControlRead' }
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/SpeciesItem'
+                  - $ref: '#/components/schemas/SpeciesMobileItem'
+        '304': { $ref: '#/components/responses/NotModified' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /api/v1/reference-data/map/land:
+    get:
+      operationId: getMapLand
+      summary: Get the map-land GeoJSON FeatureCollection
+      description: >-
+        Returns a GeoJSON `FeatureCollection` (WGS84, longitude-first). No item route
+        exists (collection-only). No pagination (`offset`/`limit` are not accepted).
+      tags: [Map]
+      parameters:
+        - $ref: '#/components/parameters/QueryParam'
+        - name: bbox
+          in: query
+          schema: { type: string }
+          description: >-
+            `minLongitude,minLatitude,maxLongitude,maxLatitude`; true polygon/
+            multi-polygon geometric intersection (not just an envelope check).
+            Antimeridian-crossing boxes (`minLongitude > maxLongitude`) are rejected
+            with `400 invalid_request`.
+        - $ref: '#/components/parameters/IfNoneMatchHeader'
+      responses:
+        '200':
+          description: The map-land GeoJSON FeatureCollection.
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
+            Cache-Control: { $ref: '#/components/headers/CacheControlRead' }
+          content:
+            application/geo+json:
+              schema:
+                $ref: '#/components/schemas/MapLandFeatureCollectionResponse'
+        '304': { $ref: '#/components/responses/NotModified' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /api/v1/reference-data/map/statistical-areas:
+    get:
+      operationId: listMapStatisticalAreas
+      summary: List the map-statistical-areas GeoJSON FeatureCollection
+      description: |
+        **Breaking change (this dataset only).** Serves the raw upstream ArcGIS
+        export, unchanged — see
+        [ADR 0001](../docs/adr/0001-map-statistical-areas-raw-epsg3857-contract.md).
+        Not RFC 7946-conformant (non-WGS84 CRS + a `crs` member + id-less features).
+        Geometry/CRS: `MultiPolygon`, EPSG:3857 (Web Mercator, metres) — not WGS84
+        degrees. No pagination. `bbox`, `code`, `parentCode` are all removed for this
+        dataset and return `400 invalid_request`.
+      tags: [Map]
+      parameters:
+        - $ref: '#/components/parameters/QueryParam'
+        - name: sub_code
+          in: query
+          schema: { type: string }
+          description: >-
+            Exact match, case-insensitive. The business-uniqueness key for this
+            dataset.
+        - name: ICESNAME
+          in: query
+          schema: { type: string }
+          description: >-
+            Exact match, case-insensitive. Legitimately repeats across subrectangles
+            of the same parent ICES rectangle.
+        - $ref: '#/components/parameters/IfNoneMatchHeader'
+      responses:
+        '200':
+          description: The map-statistical-areas raw ArcGIS GeoJSON FeatureCollection.
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
+            Cache-Control: { $ref: '#/components/headers/CacheControlRead' }
+          content:
+            application/geo+json:
+              schema:
+                $ref: '#/components/schemas/MapStatisticalAreasFeatureCollectionResponse'
+        '304': { $ref: '#/components/responses/NotModified' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /api/v1/reference-data/map/statistical-areas/{id}:
+    get:
+      operationId: getMapStatisticalAreaById
+      summary: Get a single map-statistical-areas feature by OBJECTID
+      description: >-
+        `{id}` is the raw ArcGIS integer `OBJECTID` — not a GUID, not `code`. A
+        non-integer `{id}` returns `400 invalid_request`; an unknown `OBJECTID`
+        returns `404`.
+      tags: [Map]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, pattern: '^\d+$' }
+          description: The ArcGIS `OBJECTID` as a decimal integer string.
+        - $ref: '#/components/parameters/IfNoneMatchHeader'
+      responses:
+        '200':
+          description: A single raw ArcGIS GeoJSON Feature.
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
+            Cache-Control: { $ref: '#/components/headers/CacheControlRead' }
+          content:
+            application/geo+json:
+              schema:
+                $ref: '#/components/schemas/MapStatisticalAreaFeature'
+        '304': { $ref: '#/components/responses/NotModified' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /api/v1/reference-data/map/ports:
+    get:
+      operationId: getMapPorts
+      summary: Get the derived map-ports GeoJSON FeatureCollection
+      description: >-
+        A derived GeoJSON `FeatureCollection` computed from the active `ports`
+        collection — never independently uploaded, persisted, or given its own
+        manifest entry. Ports without a `coordinate` are excluded.
+      tags: [Map]
+      parameters:
+        - name: bbox
+          in: query
+          schema: { type: string }
+          description: Point-in-bounding-box check (ports are point geometry).
+        - $ref: '#/components/parameters/IfNoneMatchHeader'
+      responses:
+        '200':
+          description: The derived map-ports GeoJSON FeatureCollection.
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
+            Cache-Control: { $ref: '#/components/headers/CacheControlRead' }
+          content:
+            application/geo+json:
+              schema:
+                $ref: '#/components/schemas/MapPortsFeatureCollectionResponse'
+        '304': { $ref: '#/components/responses/NotModified' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /api/v1/reference-data/{dataset}:
+    put:
+      operationId: uploadReferenceDataCollection
+      summary: Validate (and optionally replace) a reference-data collection
+      description: |
+        Single route covering two modes, selected by the `validateOnly` query
+        parameter:
+
+        - `validateOnly=true` — runs the full structural → canonical normalisation →
+          business validation pipeline and returns counts, `changed`, and
+          `warnings`. **Never persists, never updates the manifest, never replaces
+          the in-memory active collection.**
+        - absent or `validateOnly=false` — runs the same pipeline, then writes a new
+          immutable versioned collection object, conditionally activates the
+          manifest (optimistic concurrency on the manifest's own ETag), and
+          atomically publishes the new collection into the in-memory active store.
+          Uploading the same `version` with identical content again succeeds with
+          `idempotent: true` and performs no new writes; the same `version` with
+          different content returns `409 collection_version_exists`. A supplied
+          `If-Match` that does not match the active manifest entry's
+          `{collectionId, version}` ETag returns `409 collection_modified` (compute
+          it from a fresh `GET /manifest` response, not from a `GET` collection
+          response).
+
+        `map-ports` can never be uploaded; an unsupported `{dataset}` path value is
+        rejected by route-level validation (see the documented discrepancy in the
+        top-level `info.description` of this specification).
+      tags: [Administration]
+      parameters:
+        - name: dataset
+          in: path
+          required: true
+          schema:
+            type: string
+            enum:
+              - vessels
+              - gears
+              - ports
+              - species
+              - map-land
+              - map-statistical-areas
+          description: >-
+            One of the uploadable datasets. `map-ports` is never valid here (derived,
+            never uploadable).
+        - name: validateOnly
+          in: query
+          schema: { type: string, enum: ['true', 'false'] }
+          description: >-
+            Absent or `false` performs full atomic replacement; `true` performs
+            non-persistent validation-only checking.
+        - name: If-Match
+          in: header
+          required: false
+          schema: { type: string }
+          description: >-
+            Optional. Full-replacement mode only. Checked against the active
+            manifest entry's deterministic `{collectionId, version}` ETag.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UploadRequestBody'
+      responses:
+        '200':
+          description: Validation succeeded (validation-only mode) or the collection was replaced/idempotent (full-replacement mode).
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ValidationUploadResponse'
+                  - $ref: '#/components/schemas/ReplacementResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '413': { $ref: '#/components/responses/PayloadTooLarge' }
+        '415': { $ref: '#/components/responses/UnsupportedMediaType' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: >-
+        `Authorization: Bearer <token>`, validated by the Authentication Service
+        integration. Authentication fails closed: missing/invalid/expired token →
+        `401 unauthorized`; valid token lacking the required permission →
+        `403 forbidden`; Authentication Service unavailable →
+        `503 authentication_service_unavailable`. Read routes require
+        `reference-data.read`; the upload route requires `reference-data.write`.
+        Health/readiness/dependency-status routes never require authentication.
+
+  parameters:
+    GuidIdParam:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+      description: The resource GUID.
+    ViewParam:
+      name: view
+      in: query
+      schema:
+        type: string
+        enum: [canonical, mobile]
+        default: canonical
+      description: >-
+        `canonical` (default) returns the complete authoritative record; `mobile`
+        returns the smaller mobile-app projection. An unsupported value returns
+        `400 invalid_request`.
+    QueryParam:
+      name: query
+      in: query
+      schema: { type: string, maxLength: 200 }
+      description: Free-text search (dataset-specific fields; see each operation).
+    IdsParam:
+      name: ids
+      in: query
+      schema: { type: string }
+      description: Comma-separated list of GUIDs (max 50), deduplicated.
+    IncludeInactiveParam:
+      name: includeInactive
+      in: query
+      schema: { type: string, enum: ['true', 'false'], default: 'false' }
+      description: '"active" means the dataset''s active field equals the active state.'
+    OffsetParam:
+      name: offset
+      in: query
+      schema: { type: integer, minimum: 0, default: 0 }
+    LimitParam:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 500, default: 50 }
+      description: Default 50, maximum 500 (per-dataset default may be overridden; pagination is disabled entirely for GeoJSON map-land/map-statistical-areas).
+    ManifestIncludeParam:
+      name: include
+      in: query
+      schema: { type: string }
+      description: >-
+        Optional, comma-separated, case-sensitive canonical dataset identifiers. An
+        unsupported or empty value returns `400 invalid_request`.
+    IfNoneMatchHeader:
+      name: If-None-Match
+      in: header
+      schema: { type: string }
+      description: A matching value returns a bodyless `304 Not Modified`.
+
+  headers:
+    ETag:
+      description: Deterministic ETag for the returned resource/collection view.
+      schema: { type: string }
+    CacheControlRead:
+      description: '`public, max-age=3600, stale-while-revalidate=86400`'
+      schema: { type: string }
+    CacheControlNoStore:
+      description: '`no-store`'
+      schema: { type: string }
+
+  responses:
+    NotModified:
+      description: The resource has not changed since the value supplied in `If-None-Match`.
+      headers:
+        ETag: { $ref: '#/components/headers/ETag' }
+        Cache-Control: { $ref: '#/components/headers/CacheControlRead' }
+    BadRequest:
+      description: Malformed query/path/body input (`invalid_request`, `invalid_json`).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+    Unauthorized:
+      description: Missing, invalid, or expired token (`unauthorized`).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+    Forbidden:
+      description: Authenticated but missing the required permission (`forbidden`).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+    NotFound:
+      description: Unknown GUID/OBJECTID or route (`reference_item_not_found`, `map_layer_not_found`, `route_not_found`).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+    Conflict:
+      description: Duplicate version or a stale `If-Match`/manifest race (`collection_version_exists`, `collection_modified`). This service never returns `412`.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+    PayloadTooLarge:
+      description: Upload exceeds `REFERENCE_DATA_MAX_UPLOAD_BYTES` (`payload_too_large`).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+    UnsupportedMediaType:
+      description: Wrong file content type for the dataset's format (`unsupported_media_type`).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+    UnprocessableEntity:
+      description: Structural or business validation failed (`schema_validation_failed`, `business_validation_failed`).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+    ServiceUnavailable:
+      description: A dependency is unavailable, or startup hydration has not yet produced valid active data (`authentication_service_unavailable`, `reference_store_unavailable`, `reference_data_unavailable`).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+
+  schemas:
+    HealthResponse:
+      type: object
+      required: [status, service, timestamp]
+      properties:
+        status: { type: string, const: ok }
+        service: { type: string }
+        timestamp: { type: string, format: date-time }
+
+    ReadinessResponse:
+      type: object
+      required:
+        - status
+        - ready
+        - hydrated
+        - timestamp
+        - datasets
+        - missingMandatoryDatasets
+        - lastHydratedAt
+        - lastRefreshAt
+        - lastRefreshStatus
+      properties:
+        status: { type: string, enum: [ready, not-ready, shutting-down] }
+        ready: { type: boolean }
+        hydrated: { type: boolean }
+        timestamp: { type: string, format: date-time }
+        datasets:
+          type: object
+          required: [mandatory]
+          properties:
+            mandatory:
+              type: object
+              required: [expected, loaded, missing]
+              properties:
+                expected: { type: integer, minimum: 0 }
+                loaded: { type: integer, minimum: 0 }
+                missing: { type: array, items: { type: string } }
+        missingMandatoryDatasets:
+          type: array
+          items: { type: string }
+        lastHydratedAt: { type: ['string', 'null'], format: date-time }
+        lastRefreshAt: { type: ['string', 'null'], format: date-time }
+        lastRefreshStatus: { type: ['string', 'null'] }
+
+    DependencyStatusResponse:
+      type: object
+      required: [status, timestamp, dependencies]
+      properties:
+        status: { type: string }
+        timestamp: { type: string, format: date-time }
+        dependencies:
+          type: object
+          additionalProperties: true
+          description: High-level per-dependency status values only; never URLs, bucket names, object keys, or raw dependency errors.
+
+    ErrorDetail:
+      type: object
+      required: [message]
+      properties:
+        path: { type: string }
+        message: { type: string }
+        code: { type: string }
+        itemIndex: { type: integer }
+      additionalProperties: true
+
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, traceId]
+          properties:
+            code: { type: string }
+            message: { type: string }
+            traceId:
+              type: string
+              description: Echoes the request's `x-cdp-request-id` correlation header.
+            dataset: { type: string, description: Omitted when not applicable. }
+            retryable:
+              { type: boolean, description: Omitted when not applicable. }
+            details:
+              type: array
+              items: { $ref: '#/components/schemas/ErrorDetail' }
+              description: Omitted when not applicable.
+
+    Coordinate:
+      type: object
+      required: [latitude, longitude]
+      properties:
+        latitude: { type: number, minimum: -90, maximum: 90 }
+        longitude: { type: number, minimum: -180, maximum: 180 }
+
+    CollectionMetadata:
+      type: object
+      required: [collectionId, schemaVersion, version, generatedAt, itemCount]
+      properties:
+        collectionId: { type: string, format: uuid }
+        schemaVersion: { type: string }
+        version: { type: string }
+        generatedAt: { type: string, format: date-time }
+        effectiveFrom: { type: string, format: date-time }
+        itemCount: { type: integer, minimum: 0 }
+
+    # ---------- Vessels ----------
+    VesselIdentifiers:
+      type: object
+      properties:
+        cfr: { type: ['string', 'null'] }
+        uvi: { type: ['string', 'null'] }
+        mmsi: { type: ['string', 'null'] }
+        ircs: { type: ['string', 'null'] }
+        externalMark: { type: ['string', 'null'] }
+        registrationNumber: { type: ['string', 'null'] }
+
+    VesselItem:
+      type: object
+      required:
+        - id
+        - name
+        - identifiers
+        - typeCode
+        - registrationCountryCode
+        - lengthOverallMetres
+        - status
+        - activeFrom
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string, minLength: 1 }
+        namePln: { type: ['string', 'null'] }
+        identifiers: { $ref: '#/components/schemas/VesselIdentifiers' }
+        typeCode: { type: string, minLength: 1 }
+        registrationCountryCode: { type: string, minLength: 1 }
+        lengthOverallMetres: { type: number, exclusiveMinimum: 0 }
+        status: { type: string, minLength: 1 }
+        activeFrom: { type: string, format: date }
+        activeTo: { type: ['string', 'null'], format: date }
+
+    VesselMobileItem:
+      type: object
+      required: [id, name, pln, cfr, displayName, lengthOverallMetres]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        pln: { type: ['string', 'null'] }
+        cfr: { type: ['string', 'null'] }
+        displayName: { type: string }
+        lengthOverallMetres: { type: number }
+
+    VesselsCollectionResponse:
+      allOf:
+        - { $ref: '#/components/schemas/CollectionMetadata' }
+        - type: object
+          required: [dataset, view, total, items]
+          properties:
+            dataset: { type: string, const: vessels }
+            view: { type: string, enum: [canonical, mobile] }
+            total: { type: integer, minimum: 0 }
+            offset: { type: integer, minimum: 0 }
+            limit: { type: integer, minimum: 1 }
+            items:
+              type: array
+              items:
+                oneOf:
+                  - { $ref: '#/components/schemas/VesselItem' }
+                  - { $ref: '#/components/schemas/VesselMobileItem' }
+
+    # ---------- Gears ----------
+    GearCategory:
+      type: object
+      required: [id, code, name]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, minLength: 1 }
+        name: { type: string, minLength: 1 }
+
+    GearCharacteristic:
+      type: object
+      required: [id, code, name, dataType]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, minLength: 1 }
+        name: { type: string, minLength: 1 }
+        dataType: { type: string, minLength: 1 }
+        unit: { type: ['string', 'null'] }
+        minValue: { type: ['number', 'null'] }
+        maxValue: { type: ['number', 'null'] }
+
+    GearApplicableCharacteristic:
+      type: object
+      required: [id, characteristicId, fixed, required]
+      properties:
+        id: { type: string, format: uuid }
+        characteristicId: { type: string, format: uuid }
+        fixed: { type: boolean }
+        required: { type: boolean }
+        vesselLengthApplicability:
+          type: array
+          items: { type: string, enum: [under-10m, 10-to-12m, over-12m] }
+
+    GearItem:
+      type: object
+      required:
+        [
+          id,
+          code,
+          name,
+          type,
+          categoryId,
+          pairFishing,
+          applicableCharacteristics,
+          active
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, minLength: 1 }
+        name: { type: string, minLength: 1 }
+        type: { type: string, minLength: 1 }
+        categoryId: { type: string, format: uuid }
+        pairFishing: { type: boolean }
+        applicableCharacteristics:
+          type: array
+          items: { $ref: '#/components/schemas/GearApplicableCharacteristic' }
+        active: { type: boolean }
+
+    GearMeasurement:
+      type: object
+      required: [id, code, label, kind, unit, minimumValue, maximumValue]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        label: { type: string }
+        kind: { type: string }
+        unit: { type: ['string', 'null'] }
+        minimumValue: { type: ['number', 'null'] }
+        maximumValue: { type: ['number', 'null'] }
+
+    GearMobileItem:
+      type: object
+      required:
+        [
+          id,
+          code,
+          name,
+          category,
+          pairFishing,
+          requiredMeasurementIds,
+          variableMeasurementIds
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        name: { type: string }
+        category:
+          type: object
+          required: [id, code, name]
+          properties:
+            id: { type: string, format: uuid }
+            code: { type: string }
+            name: { type: string }
+        pairFishing: { type: boolean }
+        requiredMeasurementIds:
+          type: array
+          items: { type: string, format: uuid }
+        variableMeasurementIds:
+          type: array
+          items: { type: string, format: uuid }
+
+    GearsCollectionResponse:
+      allOf:
+        - { $ref: '#/components/schemas/CollectionMetadata' }
+        - type: object
+          required: [dataset, view, total, categories, characteristics, items]
+          properties:
+            dataset: { type: string, const: gears }
+            view: { type: string, const: canonical }
+            total: { type: integer, minimum: 0 }
+            offset: { type: integer, minimum: 0 }
+            limit: { type: integer, minimum: 1 }
+            categories:
+              type: array
+              items: { $ref: '#/components/schemas/GearCategory' }
+            characteristics:
+              type: array
+              items: { $ref: '#/components/schemas/GearCharacteristic' }
+            items:
+              type: array
+              items: { $ref: '#/components/schemas/GearItem' }
+
+    GearsMobileCollectionResponse:
+      description: >-
+        Gears collection response when `view=mobile`. Adds a collection-level
+        `measurements` array (the characteristics referenced by any item on this
+        page) and, when `vesselLengthMetres` was supplied, a `context.vesselLengthBand`.
+      allOf:
+        - { $ref: '#/components/schemas/CollectionMetadata' }
+        - type: object
+          required: [dataset, view, total, measurements, items]
+          properties:
+            dataset: { type: string, const: gears }
+            view: { type: string, const: mobile }
+            total: { type: integer, minimum: 0 }
+            offset: { type: integer, minimum: 0 }
+            limit: { type: integer, minimum: 1 }
+            context:
+              type: object
+              properties:
+                vesselLengthMetres: { type: number }
+                vesselLengthBand:
+                  { type: string, enum: [under-10m, 10-to-12m, over-12m] }
+            measurements:
+              type: array
+              items: { $ref: '#/components/schemas/GearMeasurement' }
+            items:
+              type: array
+              items: { $ref: '#/components/schemas/GearMobileItem' }
+
+    # ---------- Ports ----------
+    PortItem:
+      type: object
+      required: [id, code, name, countryCode, active]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, minLength: 1 }
+        name: { type: string, minLength: 1 }
+        countryCode: { type: string, minLength: 1 }
+        coordinate:
+          oneOf:
+            - { $ref: '#/components/schemas/Coordinate' }
+            - type: 'null'
+        active: { type: boolean }
+
+    PortMobileItem:
+      type: object
+      required: [id, code, name, displayName]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        name: { type: string }
+        displayName: { type: string }
+        coordinate:
+          oneOf:
+            - { $ref: '#/components/schemas/Coordinate' }
+            - type: 'null'
+
+    PortsCollectionResponse:
+      allOf:
+        - { $ref: '#/components/schemas/CollectionMetadata' }
+        - type: object
+          required: [dataset, view, total, items]
+          properties:
+            dataset: { type: string, const: ports }
+            view: { type: string, enum: [canonical, mobile] }
+            total: { type: integer, minimum: 0 }
+            offset: { type: integer, minimum: 0 }
+            limit: { type: integer, minimum: 1 }
+            items:
+              type: array
+              items:
+                oneOf:
+                  - { $ref: '#/components/schemas/PortItem' }
+                  - { $ref: '#/components/schemas/PortMobileItem' }
+
+    # ---------- Species ----------
+    SpeciesCommonName:
+      type: object
+      required: [id, countryCode, name]
+      properties:
+        id: { type: string, format: uuid }
+        countryCode: { type: string, minLength: 1 }
+        name: { type: string, minLength: 1 }
+
+    SpeciesLocalName:
+      type: object
+      required: [id, languageCode, name, official]
+      properties:
+        id: { type: string, format: uuid }
+        languageCode: { type: string, minLength: 1 }
+        name: { type: string, minLength: 1 }
+        official: { type: boolean }
+
+    SpeciesItem:
+      type: object
+      required: [id, faoCode, scientificName, commonNames, localNames, active]
+      properties:
+        id: { type: string, format: uuid }
+        faoCode: { type: string, minLength: 1 }
+        scientificName: { type: string, minLength: 1 }
+        commonNames:
+          type: array
+          items: { $ref: '#/components/schemas/SpeciesCommonName' }
+        localNames:
+          type: array
+          items: { $ref: '#/components/schemas/SpeciesLocalName' }
+        active: { type: boolean }
+
+    SpeciesMobileItem:
+      type: object
+      required: [id, faoCode, scientificName, displayName]
+      properties:
+        id: { type: string, format: uuid }
+        faoCode: { type: string }
+        scientificName: { type: string }
+        displayName:
+          type: string
+          description: >-
+            Resolution order: official local name matching `Accept-Language` →
+            common name matching `countryCode` → official `en-GB` local name →
+            first available country common name → scientific name → FAO code.
+
+    SpeciesCollectionResponse:
+      allOf:
+        - { $ref: '#/components/schemas/CollectionMetadata' }
+        - type: object
+          required: [dataset, view, total, items]
+          properties:
+            dataset: { type: string, const: species }
+            view: { type: string, enum: [canonical, mobile] }
+            total: { type: integer, minimum: 0 }
+            offset: { type: integer, minimum: 0 }
+            limit: { type: integer, minimum: 1 }
+            items:
+              type: array
+              items:
+                oneOf:
+                  - { $ref: '#/components/schemas/SpeciesItem' }
+                  - { $ref: '#/components/schemas/SpeciesMobileItem' }
+
+    # ---------- GeoJSON primitives ----------
+    GeoJsonPosition:
+      type: array
+      items: { type: number }
+      minItems: 2
+      maxItems: 3
+
+    GeoJsonPolygonGeometry:
+      type: object
+      required: [type, coordinates]
+      properties:
+        type: { type: string, const: Polygon }
+        coordinates:
+          type: array
+          items:
+            type: array
+            items: { $ref: '#/components/schemas/GeoJsonPosition' }
+            minItems: 4
+
+    GeoJsonMultiPolygonGeometry:
+      type: object
+      required: [type, coordinates]
+      properties:
+        type: { type: string, const: MultiPolygon }
+        coordinates:
+          type: array
+          items:
+            type: array
+            items:
+              type: array
+              items: { $ref: '#/components/schemas/GeoJsonPosition' }
+              minItems: 4
+
+    # ---------- Map land ----------
+    MapLandFeatureProperties:
+      type: object
+      required: [id]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string, minLength: 1 }
+
+    MapLandFeature:
+      type: object
+      required: [type, id, properties, geometry]
+      properties:
+        type: { type: string, const: Feature }
+        id: { type: string, format: uuid }
+        properties: { $ref: '#/components/schemas/MapLandFeatureProperties' }
+        geometry:
+          oneOf:
+            - { $ref: '#/components/schemas/GeoJsonPolygonGeometry' }
+            - { $ref: '#/components/schemas/GeoJsonMultiPolygonGeometry' }
+
+    MapLandFeatureCollectionResponse:
+      type: object
+      required: [type, metadata, features]
+      properties:
+        type: { type: string, const: FeatureCollection }
+        metadata:
+          type: object
+          required:
+            [dataset, collectionId, schemaVersion, version, crs, featureCount]
+          properties:
+            dataset: { type: string, const: map-land }
+            collectionId: { type: string, format: uuid }
+            schemaVersion: { type: string }
+            version: { type: string }
+            crs: { type: string, const: 'EPSG:4326' }
+            featureCount: { type: integer, minimum: 0 }
+        features:
+          type: array
+          items: { $ref: '#/components/schemas/MapLandFeature' }
+
+    # ---------- Map statistical areas (raw ArcGIS export) ----------
+    StatisticalAreaProperties:
+      type: object
+      required:
+        [
+          OBJECTID,
+          ICESNAME,
+          SOUTH,
+          WEST,
+          NORTH,
+          EAST,
+          AREA_KM2,
+          sub_code,
+          Shape_Leng,
+          Shape_Area
+        ]
+      properties:
+        OBJECTID: { type: integer }
+        OBJECTID_1: { type: integer }
+        ICESNAME: { type: string, minLength: 1 }
+        SOUTH: { type: number }
+        WEST: { type: number }
+        NORTH: { type: number }
+        EAST: { type: number }
+        AREA_KM2: { type: number, exclusiveMinimum: 0 }
+        stat_x: { type: number }
+        stat_y: { type: number }
+        sub_code: { type: string, minLength: 1 }
+        sub_str: { type: integer }
+        sub_x: { type: number }
+        sub_y: { type: number }
+        Shape_Leng: { type: number, exclusiveMinimum: 0 }
+        Shape_Area: { type: number, exclusiveMinimum: 0 }
+
+    MapStatisticalAreaFeature:
+      description: No `Feature.id` — the raw ArcGIS export has no per-feature identifier.
+      type: object
+      required: [type, properties, geometry]
+      properties:
+        type: { type: string, const: Feature }
+        properties: { $ref: '#/components/schemas/StatisticalAreaProperties' }
+        geometry: { $ref: '#/components/schemas/GeoJsonMultiPolygonGeometry' }
+
+    MapStatisticalAreasCrs:
+      type: object
+      required: [type, properties]
+      properties:
+        type: { type: string, const: name }
+        properties:
+          type: object
+          required: [name]
+          properties:
+            name: { type: string, const: 'urn:ogc:def:crs:EPSG::3857' }
+
+    MapStatisticalAreasFeatureCollectionResponse:
+      type: object
+      required: [type, crs, metadata, features]
+      properties:
+        type: { type: string, const: FeatureCollection }
+        crs: { $ref: '#/components/schemas/MapStatisticalAreasCrs' }
+        metadata:
+          type: object
+          required:
+            [dataset, collectionId, schemaVersion, version, crs, featureCount]
+          properties:
+            dataset: { type: string, const: map-statistical-areas }
+            collectionId: { type: string, format: uuid }
+            schemaVersion: { type: string }
+            version: { type: string }
+            crs: { type: string, const: 'EPSG:3857' }
+            featureCount: { type: integer, minimum: 0 }
+        features:
+          type: array
+          items: { $ref: '#/components/schemas/MapStatisticalAreaFeature' }
+
+    # ---------- Map ports (derived) ----------
+    MapPortsFeatureProperties:
+      type: object
+      required: [id, code, name]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, minLength: 1 }
+        name: { type: string, minLength: 1 }
+
+    MapPortsFeature:
+      type: object
+      required: [type, id, properties, geometry]
+      properties:
+        type: { type: string, const: Feature }
+        id: { type: string, format: uuid }
+        properties: { $ref: '#/components/schemas/MapPortsFeatureProperties' }
+        geometry:
+          type: object
+          required: [type, coordinates]
+          properties:
+            type: { type: string, const: Point }
+            coordinates: { $ref: '#/components/schemas/GeoJsonPosition' }
+
+    MapPortsFeatureCollectionResponse:
+      type: object
+      required: [type, features]
+      properties:
+        type: { type: string, const: FeatureCollection }
+        features:
+          type: array
+          items: { $ref: '#/components/schemas/MapPortsFeature' }
+
+    # ---------- Manifest ----------
+    ManifestDatasetEntry:
+      type: object
+      required:
+        [
+          dataset,
+          collectionId,
+          schemaVersion,
+          version,
+          format,
+          itemCount,
+          lastModified,
+          url
+        ]
+      properties:
+        dataset:
+          type: string
+          enum:
+            [vessels, gears, ports, species, map-land, map-statistical-areas]
+        collectionId: { type: string, format: uuid }
+        schemaVersion: { type: string }
+        version: { type: string }
+        format: { type: string, enum: [json, geojson] }
+        itemCount: { type: integer, minimum: 0 }
+        lastModified: { type: string, format: date-time }
+        url: { type: string }
+
+    Manifest:
+      type: object
+      required: [manifestId, version, datasets]
+      properties:
+        manifestId: { type: string, format: uuid }
+        version: { type: string }
+        generatedAt: { type: string, format: date-time }
+        datasets:
+          type: array
+          items: { $ref: '#/components/schemas/ManifestDatasetEntry' }
+
+    # ---------- Upload ----------
+    UploadRequestBody:
+      type: object
+      required: [file]
+      properties:
+        file:
+          type: string
+          contentEncoding: binary
+          description: >-
+            The collection file. Must be `application/json` for JSON datasets
+            (vessels, gears, ports, species) or `application/geo+json` for GeoJSON
+            datasets (map-land, map-statistical-areas) — a mismatch returns
+            `415 unsupported_media_type`. Bounded by `REFERENCE_DATA_MAX_UPLOAD_BYTES`
+            (25 MiB default).
+        schemaVersion:
+          type: string
+          description: Optional; cross-checked against the collection envelope's `schemaVersion`.
+        version:
+          type: string
+          description: Optional; cross-checked against the collection envelope's `version`.
+        effectiveFrom:
+          type: string
+          description: Optional; cross-checked against the collection envelope's `effectiveFrom`.
+        description:
+          type: string
+          description: Optional free-text description.
+
+    ValidationUploadResponse:
+      type: object
+      required: [dataset, valid, schemaVersion, version, changed, warnings]
+      properties:
+        dataset: { type: string }
+        valid: { type: boolean, const: true }
+        schemaVersion: { type: string }
+        version: { type: string }
+        receivedItemCount: { type: integer, minimum: 0 }
+        normalisedItemCount: { type: integer, minimum: 0 }
+        receivedFeatureCount: { type: integer, minimum: 0 }
+        normalisedFeatureCount: { type: integer, minimum: 0 }
+        changed: { type: boolean }
+        warnings:
+          type: array
+          items: { type: string }
+
+    ReplacementPreviousCollection:
+      type: object
+      required: [version, collectionId]
+      properties:
+        version: { type: string }
+        collectionId: { type: string, format: uuid }
+
+    ReplacementResponse:
+      type: object
+      required:
+        [
+          dataset,
+          collectionId,
+          schemaVersion,
+          version,
+          status,
+          itemCount,
+          etag,
+          checksum,
+          sizeBytes,
+          manifest,
+          warnings
+        ]
+      properties:
+        dataset: { type: string }
+        collectionId: { type: string, format: uuid }
+        schemaVersion: { type: string }
+        version: { type: string }
+        status: { type: string, const: active }
+        itemCount: { type: integer, minimum: 0 }
+        etag: { type: string }
+        checksum: { type: string }
+        sizeBytes: { type: integer, minimum: 0 }
+        manifest:
+          type: object
+          required: [manifestId, version]
+          properties:
+            manifestId: { type: string, format: uuid }
+            version: { type: string }
+        warnings:
+          type: array
+          items: { type: string }
+        idempotent:
+          type: boolean
+          description: Present and `true` only when the same `version` was re-uploaded with identical content.
+        previousCollection:
+          $ref: '#/components/schemas/ReplacementPreviousCollection'
