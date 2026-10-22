@@ -1,8 +1,9 @@
-// Step 33: OpenAPI 3.1 contract-drift detection. Confirms `openapi/openapi.yaml`
+// Step 33/34: OpenAPI 3.1 contract-drift detection. Confirms `src/openapi/openapi.yaml`
 // parses, is schema-valid, and never drifts from the registered Hapi routes — every
 // public route has exactly one matching OpenAPI operation and vice versa. Also
-// cross-checks operationId uniqueness, the Health tag's unauthenticated security
-// override, and the shared error envelope shape against the runtime implementation.
+// cross-checks operationId uniqueness, the public (Health/Documentation) tags'
+// unauthenticated security override, and the shared error envelope shape against the
+// runtime implementation.
 
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
@@ -18,8 +19,13 @@ import { createErrorEnvelope } from '#/common/helpers/api/error-envelope.js'
 const yaml = yamlModule.default ?? yamlModule
 
 const OPENAPI_PATH = fileURLToPath(
-  new URL('../openapi/openapi.yaml', import.meta.url)
+  new URL('./openapi/openapi.yaml', import.meta.url)
 )
+
+// Tags whose operations are allowed to opt out of the global bearerAuth requirement
+// (unauthenticated routes only — health/readiness/dependency-status and the
+// self-describing OpenAPI document endpoints).
+const PUBLIC_TAGS = ['Health', 'Documentation']
 
 // Hapi's internal `/{p*}` not-found catch-all and any ad-hoc test-only routes
 // registered elsewhere are not part of the published contract.
@@ -119,12 +125,14 @@ describe('#openApiContract', () => {
     expect(new Set(operationIds).size).toBe(operationIds.length)
   })
 
-  test('only Health-tagged operations opt out of bearer authentication', () => {
+  test('only public-tagged operations opt out of bearer authentication', () => {
     const operations = collectOperations(spec)
 
     for (const { path, method, operation } of operations) {
-      const isHealthTagged = (operation.tags ?? []).includes('Health')
-      if (isHealthTagged) {
+      const isPublicTagged = (operation.tags ?? []).some((tag) =>
+        PUBLIC_TAGS.includes(tag)
+      )
+      if (isPublicTagged) {
         expect(
           operation.security,
           `${method} ${path} must explicitly opt out of security`

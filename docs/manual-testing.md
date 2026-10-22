@@ -12,6 +12,7 @@ from the committed local seed data under
 - [1a. Configuring .env for manual testing](#1a-configuring-env-for-manual-testing)
 - [2. Start a local authentication stub (required for authenticated routes)](#2-start-a-local-authentication-stub-required-for-authenticated-routes)
 - [3. Health and readiness (no auth)](#3-health-and-readiness-no-auth)
+- [3a. OpenAPI specification (no auth)](#3a-openapi-specification-no-auth)
 - [4. Manifest](#4-manifest)
 - [5. Vessels](#5-vessels)
 - [6. Gears](#6-gears)
@@ -115,6 +116,32 @@ export BASE_URL=http://localhost:3001
 curl -s "$BASE_URL/health" | jq
 curl -s "$BASE_URL/health/ready" | jq
 curl -s "$BASE_URL/health/dependencies" | jq
+```
+
+## 3a. OpenAPI specification (no auth)
+
+`GET /openapi.json` and `GET /openapi.yaml` serve this service's own
+[OpenAPI 3.1 contract](../src/openapi/openapi.yaml) live — no `Authorization` header required,
+same as the health routes above:
+
+```bash
+# Parsed JSON — confirm it is this service's own contract
+curl -s "$BASE_URL/openapi.json" | jq '{openapi, title: .info.title}'
+
+# Raw YAML (exactly the committed src/openapi/openapi.yaml file)
+curl -s "$BASE_URL/openapi.yaml" | head -5
+
+# Confirm no token is required (still 200, not 401)
+curl -s -o /dev/null -w "%{http_code}\n" "$BASE_URL/openapi.json"
+curl -s -o /dev/null -w "%{http_code}\n" "$BASE_URL/openapi.yaml"
+
+# Cross-check every documented path actually responds — spot-check a few
+curl -s "$BASE_URL/openapi.json" | jq -r '.paths | keys[]'
+
+# Optional: validate the live document against the OpenAPI 3.1 meta-schema
+# (same check as `npm run openapi:validate`, but against the running service)
+curl -s "$BASE_URL/openapi.json" -o /tmp/openapi.json
+npx --yes -p @seriousme/openapi-schema-validator validate-api /tmp/openapi.json
 ```
 
 ## 4. Manifest

@@ -20,17 +20,17 @@ info:
     unsupported `{dataset}` value (e.g. the derived `map-ports` dataset) returns
     `400` with `error.code = "invalid_dataset"`. The implemented route validates
     `{dataset}` with a Joi `valid(...uploadableDatasetIds)` check
-    ([`src/routes/upload-validation.js`](../src/routes/upload-validation.js)); a
+    ([`src/routes/upload-validation.js`](../routes/upload-validation.js)); a
     failure there is a generic Hapi route-validation (Boom) failure, which
-    [`mapErrorToResponse`](../src/common/helpers/api/map-error-to-response.js) maps to
+    [`mapErrorToResponse`](../common/helpers/api/map-error-to-response.js) maps to
     `error.code = "invalid_request"` — confirmed by
-    [`src/routes/upload-validation.test.js`](../src/routes/upload-validation.test.js)
+    [`src/routes/upload-validation.test.js`](../routes/upload-validation.test.js)
     (`'rejects the derived map-ports dataset'`, asserting `error.code` is
     `invalid_request`, not `invalid_dataset`). This specification documents the
     **implemented** `invalid_request` response; `error.code` is `invalid_dataset` only
     in narrative documentation, never at runtime for this path. The
     `SERVICE_ERROR_CODES.INVALID_DATASET` code exists in
-    [`src/common/domain/errors.js`](../src/common/domain/errors.js) and is used
+    [`src/common/domain/errors.js`](../common/domain/errors.js) and is used
     internally by the In-Memory Data Store / Persistence Module, but it is never
     surfaced through this route.
 servers:
@@ -39,6 +39,8 @@ servers:
 tags:
   - name: Health
     description: Unauthenticated liveness, readiness and dependency-status endpoints
+  - name: Documentation
+    description: Unauthenticated self-describing API documentation endpoints
   - name: Manifest
     description: Active dataset manifest
   - name: Vessels
@@ -132,6 +134,51 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DependencyStatusResponse'
+
+  /openapi.json:
+    get:
+      operationId: getOpenApiSpecJson
+      summary: Get this OpenAPI 3.1 contract as JSON
+      description: >-
+        Serves the committed `src/openapi/openapi.yaml` contract — the same file
+        validated by the `openapi:validate` script and checked for route/operation
+        drift by the automated test suite — parsed to JSON. Read once at process
+        startup from the static, version-controlled file; never generated from a
+        live introspection of the running route table. Never requires
+        authentication.
+      tags: [Documentation]
+      security: []
+      responses:
+        '200':
+          description: This service's OpenAPI 3.1 document, as JSON.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControlRead'
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+
+  /openapi.yaml:
+    get:
+      operationId: getOpenApiSpecYaml
+      summary: Get this OpenAPI 3.1 contract as raw YAML
+      description: >-
+        Serves the exact, byte-for-byte committed `src/openapi/openapi.yaml` file
+        content. Never requires authentication.
+      tags: [Documentation]
+      security: []
+      responses:
+        '200':
+          description: This service's OpenAPI 3.1 document, as raw YAML text.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControlRead'
+          content:
+            application/yaml:
+              schema:
+                type: string
 
   /api/v1/reference-data/manifest:
     get:
@@ -577,7 +624,7 @@ paths:
       description: |
         **Breaking change (this dataset only).** Serves the raw upstream ArcGIS
         export, unchanged — see
-        [ADR 0001](../docs/adr/0001-map-statistical-areas-raw-epsg3857-contract.md).
+        [ADR 0001](../../docs/adr/0001-map-statistical-areas-raw-epsg3857-contract.md).
         Not RFC 7946-conformant (non-WGS84 CRS + a `crs` member + id-less features).
         Geometry/CRS: `MultiPolygon`, EPSG:3857 (Web Mercator, metres) — not WGS84
         degrees. No pagination. `bbox`, `code`, `parentCode` are all removed for this

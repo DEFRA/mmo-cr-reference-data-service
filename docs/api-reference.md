@@ -4,10 +4,11 @@ This is the authoritative narrative API contract for the Reference Data Service,
 the implemented routes, controllers, and query configurations under [`src/routes`](../src/routes)
 and [`src/reference-data`](../src/reference-data). It documents behaviour as implemented, not as
 originally planned — see [Known limitations and deferred work](../README.md#known-limitations-and-deferred-work)
-for gaps. A machine-readable [OpenAPI 3.1 contract](../openapi/openapi.yaml) is also published (see
-[README § OpenAPI specification](../README.md#openapi-specification)); where the two ever disagree,
-the implementation — and the OpenAPI contract, verified by automated drift detection — is
-authoritative.
+for gaps. A machine-readable [OpenAPI 3.1 contract](../src/openapi/openapi.yaml) is also published
+(see [README § OpenAPI specification](../README.md#openapi-specification)) and is also served live
+by this service at [`GET /openapi.json`](#openapi-document-endpoints) and `GET /openapi.yaml`;
+where the two ever disagree, the implementation — and the OpenAPI contract, verified by automated
+drift detection — is authoritative.
 
 > **Corrections (found while authoring the OpenAPI contract, see
 > [Step 33](../design/github-prompts/Step-33-Reference-Data-Service-OpenAPI.md)):**
@@ -33,6 +34,7 @@ committed local seed data) — never real data or credentials.
 - [Authentication and permissions](#authentication-and-permissions)
 - [Standard error envelope](#standard-error-envelope)
 - [Conditional requests and caching](#conditional-requests-and-caching)
+- [OpenAPI document endpoints](#openapi-document-endpoints)
 - [Manifest](#manifest)
 - [Canonical and mobile views](#canonical-and-mobile-views)
 - [Vessels](#vessels)
@@ -48,12 +50,15 @@ committed local seed data) — never real data or credentials.
 ## Authentication and permissions
 
 Every route below except the three health/operational endpoints (`/health`, `/health/ready`,
-`/health/dependencies`) requires a `Bearer` token validated by the Authentication Service
-integration (see [README § Security](../README.md#security)). Authentication fails **closed**.
+`/health/dependencies`) and the two [OpenAPI document endpoints](#openapi-document-endpoints)
+(`/openapi.json`, `/openapi.yaml`) requires a `Bearer` token validated by the Authentication
+Service integration (see [README § Security](../README.md#security)). Authentication fails
+**closed**.
 
 | Route                                                                                | Permission             |
 | ------------------------------------------------------------------------------------ | ---------------------- |
 | `GET /health`, `/health/ready`, `/health/dependencies`                               | None (unauthenticated) |
+| `GET /openapi.json`, `/openapi.yaml`                                                 | None (unauthenticated) |
 | `GET /api/v1/reference-data/manifest`                                                | `reference-data.read`  |
 | `GET .../vessels`, `.../gears`, `.../ports`, `.../species` (collection + item)       | `reference-data.read`  |
 | `GET .../map/land`, `.../map/statistical-areas` (collection + item), `.../map/ports` | `reference-data.read`  |
@@ -134,6 +139,27 @@ responses use `Cache-Control: no-store`.
 - **`If-Match`** on the replacement `PUT` route is checked against the _active manifest entry's_
   deterministic `{collectionId, version}` ETag — **not** the per-request collection-read ETag.
   Compute it from a fresh `GET /manifest` response, not from a `GET` collection response.
+
+## OpenAPI document endpoints
+
+```http
+GET /openapi.json
+GET /openapi.yaml
+```
+
+Serves this service's own [OpenAPI 3.1 contract](../src/openapi/openapi.yaml) — the exact,
+version-controlled file validated by `npm run openapi:validate` and checked for route/operation
+drift by the automated test suite (see [README § OpenAPI specification](../README.md#openapi-specification))
+— as parsed JSON (`/openapi.json`) or raw YAML text (`/openapi.yaml`). Read once at process
+startup; the file never changes at runtime, so there is no per-request parsing cost and no
+`ETag`/`If-None-Match` support.
+
+- **Unauthenticated**, like `/health`, `/health/ready`, and `/health/dependencies` — this publishes
+  API documentation, not reference data, so no `Bearer` token or permission is required.
+- Returns `Cache-Control: public, max-age=3600, stale-while-revalidate=86400` (the same policy as
+  every other read endpoint).
+- `/openapi.json` responds with `Content-Type: application/json`; `/openapi.yaml` responds with
+  `Content-Type: application/yaml`.
 
 ## Manifest
 
