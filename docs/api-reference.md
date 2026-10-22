@@ -9,14 +9,22 @@ for gaps. A machine-readable [OpenAPI 3.1 contract](../openapi/openapi.yaml) is 
 the implementation — and the OpenAPI contract, verified by automated drift detection — is
 authoritative.
 
-> **Correction (found while authoring the OpenAPI contract, see
-> [Step 33](../design/github-prompts/Step-33-Reference-Data-Service-OpenAPI.md)):** this document
-> previously stated that `PUT /api/v1/reference-data/{dataset}` with an unsupported `{dataset}`
-> value (e.g. `map-ports`) returns `400` with `error.code = "invalid_dataset"`. The implemented
-> route validates `{dataset}` with Hapi/Joi route validation, which returns
-> `error.code = "invalid_request"` instead — confirmed by
-> [`src/routes/upload-validation.test.js`](../src/routes/upload-validation.test.js). The two
-> mentions below have been corrected to match the implementation.
+> **Corrections (found while authoring the OpenAPI contract, see
+> [Step 33](../design/github-prompts/Step-33-Reference-Data-Service-OpenAPI.md)):**
+>
+> 1. This document previously stated that `PUT /api/v1/reference-data/{dataset}` with an
+>    unsupported `{dataset}` value (e.g. `map-ports`) returns `400` with
+>    `error.code = "invalid_dataset"`. The implemented route validates `{dataset}` with Hapi/Joi
+>    route validation, which returns `error.code = "invalid_request"` instead — confirmed by
+>    [`src/routes/upload-validation.test.js`](../src/routes/upload-validation.test.js).
+> 2. This document previously stated that [Map ports (derived)](#map-ports-derived) supports
+>    `code`, `countryCode`, and `query` "with the same semantics as the Ports JSON API". The
+>    implementation ([`map-ports-query-service.js`](../src/reference-data/query/map-ports-query-service.js))
+>    recognises only `bbox`; any other query parameter returns `400 invalid_request` — confirmed by
+>    [`map-ports-query-service.test.js`](../src/reference-data/query/map-ports-query-service.test.js)
+>    (`'rejects an unsupported query parameter'`).
+>
+> All affected mentions below have been corrected to match the implementation.
 
 All routes are prefixed `/api/v1/reference-data` unless otherwise noted. All examples use
 fictional, deterministic GUIDs (`00000000-0000-4000-8000-...`, the same convention used by the
@@ -360,10 +368,15 @@ A derived GeoJSON `FeatureCollection` computed from the **active `ports` collect
 independently uploaded, persisted, or given its own manifest entry. Ports without a `coordinate`
 are excluded from this layer but remain present in the canonical `ports` JSON collection.
 
-| Query parameter                | Behaviour                                                                 |
-| ------------------------------ | ------------------------------------------------------------------------- |
-| `bbox`                         | Point-in-bounding-box check (ports are point geometry)                    |
-| `code`, `countryCode`, `query` | Same semantics as the [Ports](#ports) JSON API, applied before projection |
+| Query parameter | Behaviour                                              |
+| --------------- | ------------------------------------------------------ |
+| `bbox`          | Point-in-bounding-box check (ports are point geometry) |
+
+`code`, `countryCode`, and `query` are **not** supported on this derived route (unlike the
+[Ports](#ports) JSON API) and return `400 invalid_request` ("Unsupported query parameter(s)") —
+confirmed by [`map-ports-query-service.test.js`](../src/reference-data/query/map-ports-query-service.test.js)
+(`'rejects an unsupported query parameter'`). Filter on the canonical [Ports](#ports) collection
+instead if you need to narrow by those fields before consuming `map/ports`.
 
 ## Validation-only upload
 

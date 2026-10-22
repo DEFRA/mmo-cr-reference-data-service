@@ -175,10 +175,17 @@ curl -s "$BASE_URL/api/v1/reference-data/vessels?offset=0&limit=1" \
 ## 6. Gears
 
 ```bash
-GEAR_ID=00000000-0000-4000-8000-000000000020
+GEAR_ID=00000000-0000-4000-8000-000000000025
 
 curl -s "$BASE_URL/api/v1/reference-data/gears" \
   -H "Authorization: Bearer $READ_TOKEN" | jq
+
+# Item, canonical vs mobile
+curl -s "$BASE_URL/api/v1/reference-data/gears/$GEAR_ID" \
+  -H "Authorization: Bearer $READ_TOKEN" | jq
+curl -s "$BASE_URL/api/v1/reference-data/gears/$GEAR_ID?view=mobile" \
+  -H "Authorization: Bearer $READ_TOKEN" | jq
+
 curl -s "$BASE_URL/api/v1/reference-data/gears?query=trawl" \
   -H "Authorization: Bearer $READ_TOKEN" | jq
 curl -s "$BASE_URL/api/v1/reference-data/gears?code=OTB" \
@@ -255,7 +262,7 @@ curl -s "$BASE_URL/api/v1/reference-data/species/$SPECIES_ID?view=mobile" \
 ```bash
 curl -s "$BASE_URL/api/v1/reference-data/map/land" \
   -H "Authorization: Bearer $READ_TOKEN" | jq
-curl -s "$BASE_URL/api/v1/reference-data/map/land?query=cornwall" \
+curl -s "$BASE_URL/api/v1/reference-data/map/land?query=Looe" \
   -H "Authorization: Bearer $READ_TOKEN" | jq
 curl -s "$BASE_URL/api/v1/reference-data/map/land?bbox=-6,49,-3,51" \
   -H "Authorization: Bearer $READ_TOKEN" | jq
@@ -263,31 +270,44 @@ curl -s "$BASE_URL/api/v1/reference-data/map/land?bbox=-6,49,-3,51" \
 
 ## 10. Map statistical areas
 
+> ⚠️ This dataset serves the raw upstream ArcGIS export unchanged (EPSG:3857 metres, not
+> WGS84 degrees — see [ADR 0001](./adr/0001-map-statistical-areas-raw-epsg3857-contract.md)).
+> The item id is the raw integer `OBJECTID` (not a GUID), and `bbox`/`code`/`parentCode` are
+> **not supported** on this dataset — they return `400 invalid_request`. Use `sub_code` /
+> `ICESNAME` instead.
+
 ```bash
-AREA_ID=00000000-0000-4000-8000-000000000061
+AREA_OBJECT_ID=25719
 
 curl -s "$BASE_URL/api/v1/reference-data/map/statistical-areas" \
   -H "Authorization: Bearer $READ_TOKEN" | jq
-curl -s "$BASE_URL/api/v1/reference-data/map/statistical-areas/$AREA_ID" \
+curl -s "$BASE_URL/api/v1/reference-data/map/statistical-areas/$AREA_OBJECT_ID" \
   -H "Authorization: Bearer $READ_TOKEN" | jq
-curl -s "$BASE_URL/api/v1/reference-data/map/statistical-areas?query=ICES" \
+curl -s "$BASE_URL/api/v1/reference-data/map/statistical-areas?query=27D8" \
   -H "Authorization: Bearer $READ_TOKEN" | jq
-curl -s "$BASE_URL/api/v1/reference-data/map/statistical-areas?code=27D8" \
+curl -s "$BASE_URL/api/v1/reference-data/map/statistical-areas?sub_code=27D86" \
   -H "Authorization: Bearer $READ_TOKEN" | jq
+curl -s "$BASE_URL/api/v1/reference-data/map/statistical-areas?ICESNAME=27D8" \
+  -H "Authorization: Bearer $READ_TOKEN" | jq
+
+# 400 — bbox/code/parentCode are no longer accepted on this dataset
 curl -s "$BASE_URL/api/v1/reference-data/map/statistical-areas?bbox=-5,50,-4,50.5" \
   -H "Authorization: Bearer $READ_TOKEN" | jq
 ```
 
 ## 11. Map ports (derived)
 
+> `map/ports` recognises only `bbox`; `code`, `countryCode`, and `query` are **not** supported
+> here (unlike the [Ports](#7-ports) JSON API above) and return `400 invalid_request`.
+
 ```bash
 curl -s "$BASE_URL/api/v1/reference-data/map/ports" \
   -H "Authorization: Bearer $READ_TOKEN" | jq
-curl -s "$BASE_URL/api/v1/reference-data/map/ports?code=GBPLY" \
-  -H "Authorization: Bearer $READ_TOKEN" | jq
-curl -s "$BASE_URL/api/v1/reference-data/map/ports?countryCode=GBR" \
-  -H "Authorization: Bearer $READ_TOKEN" | jq
 curl -s "$BASE_URL/api/v1/reference-data/map/ports?bbox=-6,49,-3,51" \
+  -H "Authorization: Bearer $READ_TOKEN" | jq
+
+# 400 — unsupported query parameter(s) on this derived route
+curl -s "$BASE_URL/api/v1/reference-data/map/ports?code=GBPLY" \
   -H "Authorization: Bearer $READ_TOKEN" | jq
 ```
 
@@ -305,7 +325,7 @@ curl -s -X PUT "$BASE_URL/api/v1/reference-data/ports?validateOnly=true" \
   -F "schemaVersion=1.0" \
   -F "version=manual-test-1" | jq
 
-# map-ports can never be uploaded — expect 400 invalid_dataset
+# map-ports can never be uploaded — expect 400 invalid_request
 curl -s -X PUT "$BASE_URL/api/v1/reference-data/map-ports?validateOnly=true" \
   -H "Authorization: Bearer $WRITE_TOKEN" \
   -F "file=@/tmp/ports-upload.json;type=application/json" | jq
@@ -379,10 +399,19 @@ curl -s "$BASE_URL/api/v1/reference-data/vessels?notAParam=1" \
 curl -s "$BASE_URL/api/v1/reference-data/vessels?view=bogus" \
   -H "Authorization: Bearer $READ_TOKEN" | jq
 
-# 400 — invalid dataset on the write route
+# 400 — unsupported dataset path value on the write route (error.code is
+# "invalid_request", not "invalid_dataset" — see docs/api-reference.md)
 curl -s -X PUT "$BASE_URL/api/v1/reference-data/not-a-dataset" \
   -H "Authorization: Bearer $WRITE_TOKEN" \
   -F "file=@/tmp/ports-upload.json;type=application/json" | jq
+
+# 400 — map/ports only recognises `bbox`; any other query parameter is unsupported
+curl -s "$BASE_URL/api/v1/reference-data/map/ports?code=GBPLY" \
+  -H "Authorization: Bearer $READ_TOKEN" | jq
+
+# 400 — map/statistical-areas no longer accepts `bbox`/`code`/`parentCode` (see §10)
+curl -s "$BASE_URL/api/v1/reference-data/map/statistical-areas?bbox=-6,49,-3,51" \
+  -H "Authorization: Bearer $READ_TOKEN" | jq
 ```
 
 ## 15. Shut everything down

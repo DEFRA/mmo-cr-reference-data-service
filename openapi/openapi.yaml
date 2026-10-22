@@ -654,7 +654,10 @@ paths:
       description: >-
         A derived GeoJSON `FeatureCollection` computed from the active `ports`
         collection — never independently uploaded, persisted, or given its own
-        manifest entry. Ports without a `coordinate` are excluded.
+        manifest entry. Ports without a `coordinate` are excluded. Only `bbox` is a
+        recognised query parameter here; `code`, `countryCode`, and `query` (valid on
+        the canonical Ports JSON API) are not supported on this derived route and
+        return `400 invalid_request`.
       tags: [Map]
       parameters:
         - name: bbox
