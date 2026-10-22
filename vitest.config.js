@@ -10,7 +10,7 @@ export default defineConfig({
       provider: 'v8',
       reportsDirectory: './coverage',
       reporter: ['text', 'lcov'],
-      include: ['src/**/*.js'],
+      include: ['src/**/*.js', 'openapi/**/*.js'],
       exclude: [...configDefaults.exclude, 'coverage'],
       thresholds: {
         statements: 90,
