@@ -227,22 +227,25 @@ git config --global core.autocrlf false
 
 Full request/response detail, query parameters, canonical/mobile views, ETag behaviour, and
 examples for every route below live in the authoritative [API reference](./docs/api-reference.md).
+A machine-readable [OpenAPI 3.1 contract](./openapi/openapi.yaml) is also published — see
+[OpenAPI specification](#openapi-specification) below.
 
-| Endpoint                                                     | Description                                               |
-| :----------------------------------------------------------- | :-------------------------------------------------------- |
-| `GET: /health`                                               | Liveness                                                  |
-| `GET: /health/ready`                                         | Readiness (cache-hydration state)                         |
-| `GET: /health/dependencies`                                  | Safe dependency status summary (see below)                |
-| `GET: /api/v1/reference-data/manifest`                       | Active dataset versions and metadata (see below)          |
-| `GET: /api/v1/reference-data/vessels`, `/vessels/{id}`       | Vessel reference data (canonical/mobile)                  |
-| `GET: /api/v1/reference-data/gears`, `/gears/{id}`           | Gear reference data (canonical/mobile)                    |
-| `GET: /api/v1/reference-data/ports`, `/ports/{id}`           | Port reference data (canonical/mobile), radius search     |
-| `GET: /api/v1/reference-data/species`, `/species/{id}`       | Species reference data (canonical/mobile)                 |
-| `GET: /api/v1/reference-data/map/land`                       | Land GeoJSON layer                                        |
-| `GET: /api/v1/reference-data/map/statistical-areas`, `/{id}` | Statistical-area GeoJSON layer                            |
-| `GET: /api/v1/reference-data/map/ports`                      | Derived port GeoJSON layer (from `ports`, never uploaded) |
-| `PUT: /api/v1/reference-data/{dataset}?validateOnly=true`    | Validate a full collection upload without activating it   |
-| `PUT: /api/v1/reference-data/{dataset}`                      | Atomically replace and activate a full collection         |
+| Endpoint                                                     | Description                                                |
+| :----------------------------------------------------------- | :--------------------------------------------------------- |
+| `GET: /health`                                               | Liveness                                                   |
+| `GET: /health/ready`                                         | Readiness (cache-hydration state)                          |
+| `GET: /health/dependencies`                                  | Safe dependency status summary (see below)                 |
+| `GET: /openapi.json`, `/openapi.yaml`                        | This service's OpenAPI 3.1 contract (JSON/YAML, see below) |
+| `GET: /api/v1/reference-data/manifest`                       | Active dataset versions and metadata (see below)           |
+| `GET: /api/v1/reference-data/vessels`, `/vessels/{id}`       | Vessel reference data (canonical/mobile)                   |
+| `GET: /api/v1/reference-data/gears`, `/gears/{id}`           | Gear reference data (canonical/mobile)                     |
+| `GET: /api/v1/reference-data/ports`, `/ports/{id}`           | Port reference data (canonical/mobile), radius search      |
+| `GET: /api/v1/reference-data/species`, `/species/{id}`       | Species reference data (canonical/mobile)                  |
+| `GET: /api/v1/reference-data/map/land`                       | Land GeoJSON layer                                         |
+| `GET: /api/v1/reference-data/map/statistical-areas`, `/{id}` | Statistical-area GeoJSON layer                             |
+| `GET: /api/v1/reference-data/map/ports`                      | Derived port GeoJSON layer (from `ports`, never uploaded)  |
+| `PUT: /api/v1/reference-data/{dataset}?validateOnly=true`    | Validate a full collection upload without activating it    |
+| `PUT: /api/v1/reference-data/{dataset}`                      | Atomically replace and activate a full collection          |
 
 ### Health, readiness, and dependency status
 
@@ -290,6 +293,48 @@ provisional Authentication Service integration (`Authorization: Bearer <token>`)
 - Returns `503` (`reference_data_unavailable`) if startup hydration has not yet produced a valid
   active manifest — never an empty successful manifest.
 - Reads only from the in-memory active manifest (Step 11); it never calls S3/Floci per request.
+
+### OpenAPI specification
+
+An [OpenAPI 3.1 YAML contract](./src/openapi/openapi.yaml) documents every implemented public
+route (health/readiness/dependency-status, this OpenAPI document itself, manifest, the four JSON
+datasets, the three map/GeoJSON layers, and the upload/replacement route), generated from the
+registered Hapi routes, validation schemas, authentication/authorization configuration,
+controllers, error mapping, and tests — not from `docs/api-reference.md` (used only as
+supporting/discrepancy-detection evidence; discrepancies between it and the implementation are
+documented in the spec's `info.description`). No existing endpoint's request, response,
+authentication, or error-shape behaviour was changed to produce it.
+
+- **Served live**: `GET /openapi.json` and `GET /openapi.yaml` serve this same committed file (as
+  parsed JSON and raw YAML respectively) directly from the running service — see
+  [OpenAPI document endpoints](#openapi-document-endpoints) below. The file lives under `src/` (not
+  a separate top-level directory) specifically so it ships in the production Docker image and is
+  available to these two routes at runtime; only the standalone `openapi/validate.js` CLI script
+  (dev/CI tooling, not required at runtime) remains outside `src/`.
+- **Validate**: `npm run openapi:validate` parses the YAML and validates it against the official
+  OpenAPI 3.1 meta-schema (via [`@seriousme/openapi-schema-validator`](https://www.npmjs.com/package/@seriousme/openapi-schema-validator)),
+  failing the process on error. It also runs as part of `npm run git:pre-commit-hook`.
+- **Drift detection**: [`src/openapi-contract.test.js`](./src/openapi-contract.test.js) (part of
+  `npm test`) confirms the spec parses, is schema-valid, that every registered Hapi route has
+  exactly one matching OpenAPI operation and vice versa, that every `operationId` is unique, that
+  only `Health`/`Documentation`-tagged operations opt out of the global `bearerAuth` security
+  requirement, that the shared `ErrorEnvelope` schema matches the runtime error-envelope shape, and
+  that the upload route's `{dataset}` enum lists every uploadable dataset and excludes the derived
+  `map-ports`.
+- **Maintenance**: update `src/openapi/openapi.yaml` whenever a route, validation schema, response
+  shape, or authentication/authorization rule changes, in the same change that implements it — the
+  drift-detection suite will fail CI if the two fall out of sync. Keep `docs/api-reference.md` as
+  narrative documentation alongside it; if the two ever disagree, the implementation (and this
+  OpenAPI contract) is authoritative.
+
+### OpenAPI document endpoints
+
+`GET /openapi.json` and `GET /openapi.yaml` serve this service's own OpenAPI 3.1 contract — the
+same committed [`src/openapi/openapi.yaml`](./src/openapi/openapi.yaml) file described above, read
+once at process startup (it never changes at runtime) and returned as parsed JSON or raw YAML text
+respectively. Like `/health`, `/health/ready`, and `/health/dependencies`, both are **public and
+never require authentication** (they publish API documentation, not reference data) and both
+return `Cache-Control: public, max-age=3600, stale-while-revalidate=86400`.
 
 ## Observability
 

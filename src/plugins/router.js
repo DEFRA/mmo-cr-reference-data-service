@@ -1,6 +1,7 @@
 import { health } from '#/routes/health.js'
 import { readiness } from '#/routes/readiness.js'
 import { dependencyStatus } from '#/routes/dependency-status.js'
+import { openApiJson, openApiYaml } from '#/routes/openapi.js'
 import { manifest } from '#/routes/manifest.js'
 import { vesselsCollection, vesselsItem } from '#/routes/vessels.js'
 import { gearsCollection, gearsItem } from '#/routes/gears.js'
@@ -22,6 +23,8 @@ export const router = {
         health,
         readiness,
         dependencyStatus,
+        openApiJson,
+        openApiYaml,
         manifest,
         vesselsCollection,
         vesselsItem,

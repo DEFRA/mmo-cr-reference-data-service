@@ -12,6 +12,7 @@ from the committed local seed data under
 - [1a. Configuring .env for manual testing](#1a-configuring-env-for-manual-testing)
 - [2. Start a local authentication stub (required for authenticated routes)](#2-start-a-local-authentication-stub-required-for-authenticated-routes)
 - [3. Health and readiness (no auth)](#3-health-and-readiness-no-auth)
+- [3a. OpenAPI specification (no auth)](#3a-openapi-specification-no-auth)
 - [4. Manifest](#4-manifest)
 - [5. Vessels](#5-vessels)
 - [6. Gears](#6-gears)
@@ -117,6 +118,32 @@ curl -s "$BASE_URL/health/ready" | jq
 curl -s "$BASE_URL/health/dependencies" | jq
 ```
 
+## 3a. OpenAPI specification (no auth)
+
+`GET /openapi.json` and `GET /openapi.yaml` serve this service's own
+[OpenAPI 3.1 contract](../src/openapi/openapi.yaml) live — no `Authorization` header required,
+same as the health routes above:
+
+```bash
+# Parsed JSON — confirm it is this service's own contract
+curl -s "$BASE_URL/openapi.json" | jq '{openapi, title: .info.title}'
+
+# Raw YAML (exactly the committed src/openapi/openapi.yaml file)
+curl -s "$BASE_URL/openapi.yaml" | head -5
+
+# Confirm no token is required (still 200, not 401)
+curl -s -o /dev/null -w "%{http_code}\n" "$BASE_URL/openapi.json"
+curl -s -o /dev/null -w "%{http_code}\n" "$BASE_URL/openapi.yaml"
+
+# Cross-check every documented path actually responds — spot-check a few
+curl -s "$BASE_URL/openapi.json" | jq -r '.paths | keys[]'
+
+# Optional: validate the live document against the OpenAPI 3.1 meta-schema
+# (same check as `npm run openapi:validate`, but against the running service)
+curl -s "$BASE_URL/openapi.json" -o /tmp/openapi.json
+npx --yes -p @seriousme/openapi-schema-validator validate-api /tmp/openapi.json
+```
+
 ## 4. Manifest
 
 ```bash
@@ -175,10 +202,17 @@ curl -s "$BASE_URL/api/v1/reference-data/vessels?offset=0&limit=1" \
 ## 6. Gears
 
 ```bash
-GEAR_ID=00000000-0000-4000-8000-000000000020
+GEAR_ID=00000000-0000-4000-8000-000000000025
 
 curl -s "$BASE_URL/api/v1/reference-data/gears" \
   -H "Authorization: Bearer $READ_TOKEN" | jq
+
+# Item, canonical vs mobile
+curl -s "$BASE_URL/api/v1/reference-data/gears/$GEAR_ID" \
+  -H "Authorization: Bearer $READ_TOKEN" | jq
+curl -s "$BASE_URL/api/v1/reference-data/gears/$GEAR_ID?view=mobile" \
+  -H "Authorization: Bearer $READ_TOKEN" | jq
+
 curl -s "$BASE_URL/api/v1/reference-data/gears?query=trawl" \
   -H "Authorization: Bearer $READ_TOKEN" | jq
 curl -s "$BASE_URL/api/v1/reference-data/gears?code=OTB" \
@@ -255,7 +289,7 @@ curl -s "$BASE_URL/api/v1/reference-data/species/$SPECIES_ID?view=mobile" \
 ```bash
 curl -s "$BASE_URL/api/v1/reference-data/map/land" \
   -H "Authorization: Bearer $READ_TOKEN" | jq
-curl -s "$BASE_URL/api/v1/reference-data/map/land?query=cornwall" \
+curl -s "$BASE_URL/api/v1/reference-data/map/land?query=Looe" \
   -H "Authorization: Bearer $READ_TOKEN" | jq
 curl -s "$BASE_URL/api/v1/reference-data/map/land?bbox=-6,49,-3,51" \
   -H "Authorization: Bearer $READ_TOKEN" | jq
@@ -263,31 +297,44 @@ curl -s "$BASE_URL/api/v1/reference-data/map/land?bbox=-6,49,-3,51" \
 
 ## 10. Map statistical areas
 
+> ⚠️ This dataset serves the raw upstream ArcGIS export unchanged (EPSG:3857 metres, not
+> WGS84 degrees — see [ADR 0001](./adr/0001-map-statistical-areas-raw-epsg3857-contract.md)).
+> The item id is the raw integer `OBJECTID` (not a GUID), and `bbox`/`code`/`parentCode` are
+> **not supported** on this dataset — they return `400 invalid_request`. Use `sub_code` /
+> `ICESNAME` instead.
+
 ```bash
-AREA_ID=00000000-0000-4000-8000-000000000061
+AREA_OBJECT_ID=25719
 
 curl -s "$BASE_URL/api/v1/reference-data/map/statistical-areas" \
   -H "Authorization: Bearer $READ_TOKEN" | jq
-curl -s "$BASE_URL/api/v1/reference-data/map/statistical-areas/$AREA_ID" \
+curl -s "$BASE_URL/api/v1/reference-data/map/statistical-areas/$AREA_OBJECT_ID" \
   -H "Authorization: Bearer $READ_TOKEN" | jq
-curl -s "$BASE_URL/api/v1/reference-data/map/statistical-areas?query=ICES" \
+curl -s "$BASE_URL/api/v1/reference-data/map/statistical-areas?query=27D8" \
   -H "Authorization: Bearer $READ_TOKEN" | jq
-curl -s "$BASE_URL/api/v1/reference-data/map/statistical-areas?code=27D8" \
+curl -s "$BASE_URL/api/v1/reference-data/map/statistical-areas?sub_code=27D86" \
   -H "Authorization: Bearer $READ_TOKEN" | jq
+curl -s "$BASE_URL/api/v1/reference-data/map/statistical-areas?ICESNAME=27D8" \
+  -H "Authorization: Bearer $READ_TOKEN" | jq
+
+# 400 — bbox/code/parentCode are no longer accepted on this dataset
 curl -s "$BASE_URL/api/v1/reference-data/map/statistical-areas?bbox=-5,50,-4,50.5" \
   -H "Authorization: Bearer $READ_TOKEN" | jq
 ```
 
 ## 11. Map ports (derived)
 
+> `map/ports` recognises only `bbox`; `code`, `countryCode`, and `query` are **not** supported
+> here (unlike the [Ports](#7-ports) JSON API above) and return `400 invalid_request`.
+
 ```bash
 curl -s "$BASE_URL/api/v1/reference-data/map/ports" \
   -H "Authorization: Bearer $READ_TOKEN" | jq
-curl -s "$BASE_URL/api/v1/reference-data/map/ports?code=GBPLY" \
-  -H "Authorization: Bearer $READ_TOKEN" | jq
-curl -s "$BASE_URL/api/v1/reference-data/map/ports?countryCode=GBR" \
-  -H "Authorization: Bearer $READ_TOKEN" | jq
 curl -s "$BASE_URL/api/v1/reference-data/map/ports?bbox=-6,49,-3,51" \
+  -H "Authorization: Bearer $READ_TOKEN" | jq
+
+# 400 — unsupported query parameter(s) on this derived route
+curl -s "$BASE_URL/api/v1/reference-data/map/ports?code=GBPLY" \
   -H "Authorization: Bearer $READ_TOKEN" | jq
 ```
 
@@ -305,7 +352,7 @@ curl -s -X PUT "$BASE_URL/api/v1/reference-data/ports?validateOnly=true" \
   -F "schemaVersion=1.0" \
   -F "version=manual-test-1" | jq
 
-# map-ports can never be uploaded — expect 400 invalid_dataset
+# map-ports can never be uploaded — expect 400 invalid_request
 curl -s -X PUT "$BASE_URL/api/v1/reference-data/map-ports?validateOnly=true" \
   -H "Authorization: Bearer $WRITE_TOKEN" \
   -F "file=@/tmp/ports-upload.json;type=application/json" | jq
@@ -379,10 +426,19 @@ curl -s "$BASE_URL/api/v1/reference-data/vessels?notAParam=1" \
 curl -s "$BASE_URL/api/v1/reference-data/vessels?view=bogus" \
   -H "Authorization: Bearer $READ_TOKEN" | jq
 
-# 400 — invalid dataset on the write route
+# 400 — unsupported dataset path value on the write route (error.code is
+# "invalid_request", not "invalid_dataset" — see docs/api-reference.md)
 curl -s -X PUT "$BASE_URL/api/v1/reference-data/not-a-dataset" \
   -H "Authorization: Bearer $WRITE_TOKEN" \
   -F "file=@/tmp/ports-upload.json;type=application/json" | jq
+
+# 400 — map/ports only recognises `bbox`; any other query parameter is unsupported
+curl -s "$BASE_URL/api/v1/reference-data/map/ports?code=GBPLY" \
+  -H "Authorization: Bearer $READ_TOKEN" | jq
+
+# 400 — map/statistical-areas no longer accepts `bbox`/`code`/`parentCode` (see §10)
+curl -s "$BASE_URL/api/v1/reference-data/map/statistical-areas?bbox=-6,49,-3,51" \
+  -H "Authorization: Bearer $READ_TOKEN" | jq
 ```
 
 ## 15. Shut everything down

@@ -1,10 +1,31 @@
 # Reference Data Service — API Reference
 
-This is the authoritative API contract for the Reference Data Service, generated from the
-implemented routes, controllers, and query configurations under [`src/routes`](../src/routes) and
-[`src/reference-data`](../src/reference-data). It documents behaviour as implemented, not as
+This is the authoritative narrative API contract for the Reference Data Service, generated from
+the implemented routes, controllers, and query configurations under [`src/routes`](../src/routes)
+and [`src/reference-data`](../src/reference-data). It documents behaviour as implemented, not as
 originally planned — see [Known limitations and deferred work](../README.md#known-limitations-and-deferred-work)
-for gaps.
+for gaps. A machine-readable [OpenAPI 3.1 contract](../src/openapi/openapi.yaml) is also published
+(see [README § OpenAPI specification](../README.md#openapi-specification)) and is also served live
+by this service at [`GET /openapi.json`](#openapi-document-endpoints) and `GET /openapi.yaml`;
+where the two ever disagree, the implementation — and the OpenAPI contract, verified by automated
+drift detection — is authoritative.
+
+> **Corrections (found while authoring the OpenAPI contract, see
+> [Step 33](../design/github-prompts/Step-33-Reference-Data-Service-OpenAPI.md)):**
+>
+> 1. This document previously stated that `PUT /api/v1/reference-data/{dataset}` with an
+>    unsupported `{dataset}` value (e.g. `map-ports`) returns `400` with
+>    `error.code = "invalid_dataset"`. The implemented route validates `{dataset}` with Hapi/Joi
+>    route validation, which returns `error.code = "invalid_request"` instead — confirmed by
+>    [`src/routes/upload-validation.test.js`](../src/routes/upload-validation.test.js).
+> 2. This document previously stated that [Map ports (derived)](#map-ports-derived) supports
+>    `code`, `countryCode`, and `query` "with the same semantics as the Ports JSON API". The
+>    implementation ([`map-ports-query-service.js`](../src/reference-data/query/map-ports-query-service.js))
+>    recognises only `bbox`; any other query parameter returns `400 invalid_request` — confirmed by
+>    [`map-ports-query-service.test.js`](../src/reference-data/query/map-ports-query-service.test.js)
+>    (`'rejects an unsupported query parameter'`).
+>
+> All affected mentions below have been corrected to match the implementation.
 
 All routes are prefixed `/api/v1/reference-data` unless otherwise noted. All examples use
 fictional, deterministic GUIDs (`00000000-0000-4000-8000-...`, the same convention used by the
@@ -13,6 +34,7 @@ committed local seed data) — never real data or credentials.
 - [Authentication and permissions](#authentication-and-permissions)
 - [Standard error envelope](#standard-error-envelope)
 - [Conditional requests and caching](#conditional-requests-and-caching)
+- [OpenAPI document endpoints](#openapi-document-endpoints)
 - [Manifest](#manifest)
 - [Canonical and mobile views](#canonical-and-mobile-views)
 - [Vessels](#vessels)
@@ -28,12 +50,15 @@ committed local seed data) — never real data or credentials.
 ## Authentication and permissions
 
 Every route below except the three health/operational endpoints (`/health`, `/health/ready`,
-`/health/dependencies`) requires a `Bearer` token validated by the Authentication Service
-integration (see [README § Security](../README.md#security)). Authentication fails **closed**.
+`/health/dependencies`) and the two [OpenAPI document endpoints](#openapi-document-endpoints)
+(`/openapi.json`, `/openapi.yaml`) requires a `Bearer` token validated by the Authentication
+Service integration (see [README § Security](../README.md#security)). Authentication fails
+**closed**.
 
 | Route                                                                                | Permission             |
 | ------------------------------------------------------------------------------------ | ---------------------- |
 | `GET /health`, `/health/ready`, `/health/dependencies`                               | None (unauthenticated) |
+| `GET /openapi.json`, `/openapi.yaml`                                                 | None (unauthenticated) |
 | `GET /api/v1/reference-data/manifest`                                                | `reference-data.read`  |
 | `GET .../vessels`, `.../gears`, `.../ports`, `.../species` (collection + item)       | `reference-data.read`  |
 | `GET .../map/land`, `.../map/statistical-areas` (collection + item), `.../map/ports` | `reference-data.read`  |
@@ -114,6 +139,27 @@ responses use `Cache-Control: no-store`.
 - **`If-Match`** on the replacement `PUT` route is checked against the _active manifest entry's_
   deterministic `{collectionId, version}` ETag — **not** the per-request collection-read ETag.
   Compute it from a fresh `GET /manifest` response, not from a `GET` collection response.
+
+## OpenAPI document endpoints
+
+```http
+GET /openapi.json
+GET /openapi.yaml
+```
+
+Serves this service's own [OpenAPI 3.1 contract](../src/openapi/openapi.yaml) — the exact,
+version-controlled file validated by `npm run openapi:validate` and checked for route/operation
+drift by the automated test suite (see [README § OpenAPI specification](../README.md#openapi-specification))
+— as parsed JSON (`/openapi.json`) or raw YAML text (`/openapi.yaml`). Read once at process
+startup; the file never changes at runtime, so there is no per-request parsing cost and no
+`ETag`/`If-None-Match` support.
+
+- **Unauthenticated**, like `/health`, `/health/ready`, and `/health/dependencies` — this publishes
+  API documentation, not reference data, so no `Bearer` token or permission is required.
+- Returns `Cache-Control: public, max-age=3600, stale-while-revalidate=86400` (the same policy as
+  every other read endpoint).
+- `/openapi.json` responds with `Content-Type: application/json`; `/openapi.yaml` responds with
+  `Content-Type: application/yaml`.
 
 ## Manifest
 
@@ -348,10 +394,15 @@ A derived GeoJSON `FeatureCollection` computed from the **active `ports` collect
 independently uploaded, persisted, or given its own manifest entry. Ports without a `coordinate`
 are excluded from this layer but remain present in the canonical `ports` JSON collection.
 
-| Query parameter                | Behaviour                                                                 |
-| ------------------------------ | ------------------------------------------------------------------------- |
-| `bbox`                         | Point-in-bounding-box check (ports are point geometry)                    |
-| `code`, `countryCode`, `query` | Same semantics as the [Ports](#ports) JSON API, applied before projection |
+| Query parameter | Behaviour                                              |
+| --------------- | ------------------------------------------------------ |
+| `bbox`          | Point-in-bounding-box check (ports are point geometry) |
+
+`code`, `countryCode`, and `query` are **not** supported on this derived route (unlike the
+[Ports](#ports) JSON API) and return `400 invalid_request` ("Unsupported query parameter(s)") —
+confirmed by [`map-ports-query-service.test.js`](../src/reference-data/query/map-ports-query-service.test.js)
+(`'rejects an unsupported query parameter'`). Filter on the canonical [Ports](#ports) collection
+instead if you need to narrow by those fields before consuming `map/ports`.
 
 ## Validation-only upload
 
@@ -362,7 +413,7 @@ Authorization: Bearer <token with reference-data.write>
 ```
 
 - `{dataset}` — one of `vessels`, `gears`, `ports`, `species`, `map-land`,
-  `map-statistical-areas`. `map-ports` is rejected (`400 invalid_dataset`) — it can never be
+  `map-statistical-areas`. `map-ports` is rejected (`400 invalid_request`) — it can never be
   uploaded.
 - Multipart body: one `file` part (`application/json` or `application/geo+json` matching the
   dataset's format — a mismatch returns `415 unsupported_media_type`), plus optional text fields
@@ -435,7 +486,7 @@ Runs the same validation/normalisation pipeline as the validation-only mode, the
 entry's `{collectionId, version}` ETag returns `409 collection_modified`. A failed replacement
 (validation failure, conflict, or persistence error) never modifies the active collection or
 manifest — the previous version remains fully active. `map-ports` cannot be uploaded
-(`400 invalid_dataset`), being always derived from `ports`.
+(`400 invalid_request`), being always derived from `ports`.
 
 **Multi-instance note**: this service holds active data as process-local memory (see
 [README § In-Memory Data Store](../README.md#in-memory-data-store)). A successful replacement is
