@@ -17,10 +17,16 @@ function raiseInvalid(message) {
 /**
  * @param {string|undefined} headerValue raw `Accept-Language` header
  * @returns {string|null} the first valid language tag, or `null` when the header is
- *   absent. Never exposes the complete raw header in its error message.
+ *   absent, or present but empty/blank (treated the same as absent — no language
+ *   context). Never exposes the complete raw header in its error message.
  */
 export function parseAcceptLanguageTag(headerValue) {
   if (headerValue === undefined) {
+    return null
+  }
+  // A header sent with no value (e.g. `Accept-Language:`) is indistinguishable from
+  // "no language context" for callers and must not be treated as malformed.
+  if (typeof headerValue === 'string' && headerValue.trim() === '') {
     return null
   }
   if (
