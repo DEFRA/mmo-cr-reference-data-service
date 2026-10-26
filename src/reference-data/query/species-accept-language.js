@@ -26,7 +26,7 @@ export function parseAcceptLanguageTag(headerValue) {
   }
   // A header sent with no value (e.g. `Accept-Language:`) is indistinguishable from
   // "no language context" for callers and must not be treated as malformed.
-  if (typeof headerValue === 'string' && headerValue.trim() === '') {
+  if (typeof headerValue === 'string' && ( headerValue.trim() === '' || headerValue.trim() === '*')) {
     return null
   }
   if (
