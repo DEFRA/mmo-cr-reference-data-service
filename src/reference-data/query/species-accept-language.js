@@ -17,10 +17,22 @@ function raiseInvalid(message) {
 /**
  * @param {string|undefined} headerValue raw `Accept-Language` header
  * @returns {string|null} the first valid language tag, or `null` when the header is
- *   absent. Never exposes the complete raw header in its error message.
+ *   absent, present but empty/blank, or the wildcard `*` (RFC 7231 §5.3.5 — "any
+ *   language is acceptable", i.e. no specific language requested). All three are
+ *   treated as no language context. Never exposes the complete raw header in its
+ *   error message.
  */
 export function parseAcceptLanguageTag(headerValue) {
   if (headerValue === undefined) {
+    return null
+  }
+  // A header sent with no value (e.g. `Accept-Language:`), or the `*` wildcard, is
+  // indistinguishable from "no language context" for callers and must not be
+  // treated as malformed.
+  if (
+    typeof headerValue === 'string' &&
+    (headerValue.trim() === '' || headerValue.trim() === '*')
+  ) {
     return null
   }
   if (
