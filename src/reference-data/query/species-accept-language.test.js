@@ -15,6 +15,14 @@ describe('#parseAcceptLanguageTag', () => {
     expect(parseAcceptLanguageTag('   ')).toBeNull()
   })
 
+  test('returns null when the header is the `*` wildcard (RFC 7231 — any language acceptable)', () => {
+    expect(parseAcceptLanguageTag('*')).toBeNull()
+  })
+
+  test('returns null when the header is the `*` wildcard with surrounding whitespace', () => {
+    expect(parseAcceptLanguageTag('  *  ')).toBeNull()
+  })
+
   test.each([
     ['en-GB', 'en-GB'],
     ['cy-GB, en-GB;q=0.8, en;q=0.6', 'cy-GB'],

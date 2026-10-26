@@ -213,6 +213,19 @@ describe('#speciesRoute', () => {
     expect(response.statusCode).toBe(200)
   })
 
+  test('a `*` Accept-Language header returns 200 with no language context', async () => {
+    server = await buildTestServer()
+    const response = await server.inject({
+      method: 'GET',
+      url: COLLECTION_PATH,
+      headers: {
+        authorization: 'Bearer read-token',
+        'accept-language': '*'
+      }
+    })
+    expect(response.statusCode).toBe(200)
+  })
+
   test('returns a species by GUID', async () => {
     server = await buildTestServer()
     const response = await server.inject({
@@ -232,6 +245,20 @@ describe('#speciesRoute', () => {
       headers: {
         authorization: 'Bearer read-token',
         'accept-language': ''
+      }
+    })
+    expect(response.statusCode).toBe(200)
+    expect(JSON.parse(response.payload).id).toBe(SPECIES_ID)
+  })
+
+  test('species by GUID with a `*` Accept-Language header returns 200', async () => {
+    server = await buildTestServer()
+    const response = await server.inject({
+      method: 'GET',
+      url: `/__test/species/${SPECIES_ID}`,
+      headers: {
+        authorization: 'Bearer read-token',
+        'accept-language': '*'
       }
     })
     expect(response.statusCode).toBe(200)
