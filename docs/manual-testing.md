@@ -201,6 +201,11 @@ curl -s "$BASE_URL/api/v1/reference-data/vessels?offset=0&limit=1" \
 
 ## 6. Gears
 
+> The canonical (default) response below now embeds a resolved `category` object on each item and a
+> resolved `measurement` object on each `applicableCharacteristics[]` entry — check the first `curl`
+> command's output for `.items[0].category` and `.items[0].applicableCharacteristics[0].measurement`.
+> `categoryId`/`characteristicId` and the mobile view (`?view=mobile`) are unchanged.
+
 ```bash
 GEAR_ID=00000000-0000-4000-8000-000000000025
 

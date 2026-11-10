@@ -4,7 +4,10 @@ import { createInMemoryDataStore } from '#/reference-data/in-memory-store/in-mem
 import { createCollectionQueryService } from '#/reference-data/query/collection-query-service.js'
 import { gearsQueryConfiguration } from '#/reference-data/query/gears-query-configuration.js'
 import { createCollectionRouteController } from '#/reference-data/controller/collection-route-controller.js'
-import { addMobileMeasurements, addMobileItemContext } from '#/routes/gears.js'
+import {
+  postProcessCollectionBody,
+  postProcessItemBody
+} from '#/routes/gears.js'
 import {
   createStubAuthenticationClient,
   buildCollectionRouteTestServer,
@@ -66,8 +69,8 @@ async function buildTestServer(gears = [buildGear()]) {
     config: gearsQueryConfiguration,
     query,
     authenticationClient: createStubAuthenticationClient(),
-    postProcessCollectionBody: addMobileMeasurements,
-    postProcessItemBody: addMobileItemContext
+    postProcessCollectionBody,
+    postProcessItemBody
   })
 
   return buildCollectionRouteTestServer({
@@ -90,6 +93,52 @@ describe('#gearsRoute', () => {
     const body = JSON.parse(response.payload)
     expect(body.items).toHaveLength(1)
     expect(body.items[0].applicableCharacteristics[0].fixed).toBe(true)
+  })
+
+  test('canonical gear collection embeds resolved category and measurement details, retaining existing ids', async () => {
+    server = await buildTestServer()
+    const response = await injectAuthenticatedGet(server, COLLECTION_PATH)
+    const body = JSON.parse(response.payload)
+    const [gear] = body.items
+
+    expect(gear.categoryId).toBe(CATEGORY_ID)
+    expect(gear.category).toEqual({
+      id: CATEGORY_ID,
+      code: 'TRAWL',
+      name: 'Trawls'
+    })
+
+    const [applicable] = gear.applicableCharacteristics
+    expect(applicable.characteristicId).toBe(CHARACTERISTIC_ID)
+    expect(applicable.fixed).toBe(true)
+    expect(applicable.required).toBe(true)
+    expect(applicable.vesselLengthApplicability).toEqual(['under-10m'])
+    expect(applicable.measurement).toEqual({
+      id: CHARACTERISTIC_ID,
+      code: 'MESH_SIZE',
+      name: 'Mesh size',
+      unit: 'mm',
+      dataType: 'number',
+      minValue: 1,
+      maxValue: null
+    })
+  })
+
+  test('canonical gear item embeds resolved category and measurement details', async () => {
+    server = await buildTestServer()
+    const response = await injectAuthenticatedGet(
+      server,
+      `/__test/gears/${GEAR_ID}`
+    )
+    const body = JSON.parse(response.payload)
+
+    expect(body.categoryId).toBe(CATEGORY_ID)
+    expect(body.category).toEqual({
+      id: CATEGORY_ID,
+      code: 'TRAWL',
+      name: 'Trawls'
+    })
+    expect(body.applicableCharacteristics[0].measurement.code).toBe('MESH_SIZE')
   })
 
   test('returns the mobile gear collection with page-specific measurements', async () => {

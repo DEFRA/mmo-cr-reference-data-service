@@ -361,7 +361,11 @@ paths:
         - $ref: '#/components/parameters/IfNoneMatchHeader'
       responses:
         '200':
-          description: A page of gears (canonical or mobile view).
+          description: >-
+            A page of gears (canonical or mobile view). The canonical `GearItem`
+            embeds a resolved `category` and, per applicable characteristic, a
+            resolved `measurement` object, so no separate mobile-view request is
+            needed to resolve `categoryId`/`characteristicId`.
           headers:
             ETag: { $ref: '#/components/headers/ETag' }
             Cache-Control: { $ref: '#/components/headers/CacheControlRead' }
@@ -1129,12 +1133,30 @@ components:
         minValue: { type: ['number', 'null'] }
         maxValue: { type: ['number', 'null'] }
 
+    GearApplicableCharacteristicMeasurement:
+      description: >-
+        Resolved measurement details embedded on each standard (canonical)
+        `applicableCharacteristics[]` entry so a consumer never has to look up
+        `characteristicId` in a separate request.
+      type: object
+      required: [id, code, name, unit, dataType, minValue, maxValue]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, minLength: 1 }
+        name: { type: string, minLength: 1 }
+        unit: { type: ['string', 'null'] }
+        dataType: { type: string, minLength: 1 }
+        minValue: { type: ['number', 'null'] }
+        maxValue: { type: ['number', 'null'] }
+
     GearApplicableCharacteristic:
       type: object
-      required: [id, characteristicId, fixed, required]
+      required: [id, characteristicId, measurement, fixed, required]
       properties:
         id: { type: string, format: uuid }
         characteristicId: { type: string, format: uuid }
+        measurement:
+          { $ref: '#/components/schemas/GearApplicableCharacteristicMeasurement' }
         fixed: { type: boolean }
         required: { type: boolean }
         vesselLengthApplicability:
@@ -1150,6 +1172,7 @@ components:
           name,
           type,
           categoryId,
+          category,
           pairFishing,
           applicableCharacteristics,
           active
@@ -1160,6 +1183,12 @@ components:
         name: { type: string, minLength: 1 }
         type: { type: string, minLength: 1 }
         categoryId: { type: string, format: uuid }
+        category:
+          allOf:
+            - { $ref: '#/components/schemas/GearCategory' }
+          description: >-
+            Resolved category details, embedded so a consumer never has to
+            look up `categoryId` in a separate request.
         pairFishing: { type: boolean }
         applicableCharacteristics:
           type: array
