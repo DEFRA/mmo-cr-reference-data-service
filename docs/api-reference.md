@@ -290,6 +290,52 @@ The canonical `fixed` characteristic field is preserved as-is; the mobile view's
 `variable` measurement-id split follows the documented mapping: `fixed && required` →
 `requiredMeasurementIds`; anything else (including `fixed && !required`) → `variableMeasurementIds`.
 
+Canonical `GearItem`/`GearApplicableCharacteristic` entries also embed resolved reference details
+directly, so a single standard request carries everything previously only available by also calling
+the mobile view: each item gets a `category { id, code, name }` object alongside the existing
+`categoryId`, and each `applicableCharacteristics[]` entry gets a `measurement { id, code, name, unit,
+dataType, minValue, maxValue }` object alongside the existing `characteristicId`. `fixed`, `required`
+and `vesselLengthApplicability` are unchanged. This is additive only — no existing field is renamed or
+removed, and the mobile view's own response shape is unaffected.
+
+Example — canonical gear item (abridged):
+
+```json
+// GET /api/v1/reference-data/gears/00000000-0000-4000-8000-000000000025
+{
+  "id": "00000000-0000-4000-8000-000000000025",
+  "code": "OTB",
+  "name": "Otter trawl",
+  "type": "trawl",
+  "categoryId": "00000000-0000-4000-8000-000000000021",
+  "category": {
+    "id": "00000000-0000-4000-8000-000000000021",
+    "code": "TOWED",
+    "name": "Towed gear"
+  },
+  "pairFishing": false,
+  "applicableCharacteristics": [
+    {
+      "id": "00000000-0000-4000-8000-000000000041",
+      "characteristicId": "00000000-0000-4000-8000-000000000051",
+      "measurement": {
+        "id": "00000000-0000-4000-8000-000000000051",
+        "code": "MESH_SIZE",
+        "name": "Mesh size",
+        "unit": "mm",
+        "dataType": "number",
+        "minValue": 20,
+        "maxValue": 300
+      },
+      "fixed": true,
+      "required": false,
+      "vesselLengthApplicability": ["under-10m", "10-to-12m"]
+    }
+  ],
+  "active": true
+}
+```
+
 ## Ports
 
 ```http

@@ -6,6 +6,7 @@ import {
   collectPageMeasurements,
   stripInternalProjectionFields
 } from '#/reference-data/query/gears-mobile-projector.js'
+import { projectGearToStandard } from '#/reference-data/query/gears-standard-projector.js'
 import { resolveVesselLengthBand } from '#/reference-data/query/vessel-length-band.js'
 import { authenticationClient } from '#/reference-data/validation/index.js'
 import { DATASETS } from '#/common/domain/datasets.js'
@@ -48,12 +49,41 @@ export function addMobileItemContext(body, result) {
   return stripInternalProjectionFields(body)
 }
 
+// Embeds a resolved `category`/`measurement` object on the standard (canonical)
+// view only, so a consumer no longer has to join against the mobile view (or a
+// separate lookup) to resolve a bare categoryId/characteristicId. No-op for the
+// mobile view, which already has its own resolved shape.
+export function addStandardGearDetails(body, result) {
+  if (result.view === REPRESENTATIONS.MOBILE) {
+    return body
+  }
+  return {
+    ...body,
+    items: body.items.map((gear) => projectGearToStandard(gear, result.context))
+  }
+}
+
+export function addStandardGearItemDetails(body, result) {
+  if (result.view === REPRESENTATIONS.MOBILE) {
+    return body
+  }
+  return projectGearToStandard(body, result.context)
+}
+
+export function postProcessCollectionBody(body, result) {
+  return addMobileMeasurements(addStandardGearDetails(body, result), result)
+}
+
+export function postProcessItemBody(body, result) {
+  return addMobileItemContext(addStandardGearItemDetails(body, result), result)
+}
+
 const { collectionHandler, itemHandler } = createCollectionRouteController({
   config: gearsQueryConfiguration,
   query,
   authenticationClient,
-  postProcessCollectionBody: addMobileMeasurements,
-  postProcessItemBody: addMobileItemContext
+  postProcessCollectionBody,
+  postProcessItemBody
 })
 
 export const gearsCollection = {
